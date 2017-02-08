@@ -1,0 +1,16 @@
+<library path="lib/liboculus_rviz_plugins">
+  <class name="oculus_rviz_plugins/OculusDisplay"
+         type="oculus_rviz_plugins::OculusDisplay"
+         base_class_type="rviz::Display">
+    <description>
+      Renders the rviz scene to the Oculus Rift.
+    </description>
+  </class>
+  <class name="oculus_rviz_plugins/FixedFrame"
+         type="oculus_rviz_plugins::FixedViewController"
+         base_class_type="rviz::ViewController">
+    <description>
+      Renders the main rviz view from the origin of a particular tf frame.
+    </description>
+  </class>
+</library>
