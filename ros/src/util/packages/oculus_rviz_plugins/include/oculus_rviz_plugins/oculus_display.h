@@ -97,24 +97,32 @@ protected Q_SLOTS:
   void onFollowCamChanged();
 
   void onScreenCountChanged( int newCount );
+  
+  void current_pose_Callback(const geometry_msgs::PoseStamped::ConstPtr& input);
 
 private:
 
   rviz::BoolProperty *fullscreen_property_;
   rviz::FloatProperty *prediction_dt_property_;
 
-  rviz::BoolProperty *pub_tf_property_;
-  rviz::StringProperty *pub_tf_frame_property_;
+  //  rviz::BoolProperty *pub_tf_property_;
+  //  rviz::StringProperty *pub_tf_frame_property_;
 
   rviz::BoolProperty *follow_cam_property_;
-  rviz::BoolProperty *horizontal_property_;
-  rviz::TfFrameProperty *tf_frame_property_;
+  //  rviz::BoolProperty *horizontal_property_;
+  rviz::BoolProperty *vertical_property_;
+  //  rviz::TfFrameProperty *tf_frame_property_;
   rviz::VectorProperty *offset_property_;
 
   rviz::FloatProperty *near_clip_property_;
 
   rviz::RenderWidget *render_widget_;
   Ogre::SceneNode *scene_node_;
+
+  rviz::BoolProperty *reset_orientation_property_;
+  rviz::BoolProperty *riding_mode_property_;
+
+  double roll, pitch, yaw;
 
 #ifndef Q_MOC_RUN
   tf::TransformBroadcaster tf_pub_;
