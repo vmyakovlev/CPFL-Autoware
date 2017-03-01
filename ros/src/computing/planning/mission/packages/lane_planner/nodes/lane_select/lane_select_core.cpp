@@ -586,6 +586,13 @@ void LaneSelectNode::publishVisualizer()
   vis_pub1_.publish(marker_array);
 }
 
+void LaneSelectNode::publishAll(const waypoint_follower::lane &lane, const int32_t clst_wp, const ChangeFlag flag)
+{
+  publishLane(lane);
+  publishClosestWaypoint(clst_wp);
+  publishChangeFlag(flag);
+}
+
 void LaneSelectNode::publishLane(const waypoint_follower::lane &lane)
 {
   // publish global lane

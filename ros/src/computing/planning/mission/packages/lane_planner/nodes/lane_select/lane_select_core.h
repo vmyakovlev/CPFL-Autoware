@@ -128,6 +128,7 @@ private:
   void resetSubscriptionFlag();
   bool isAllTopicsSubscribed();
   void processing();
+  void publishAll(const waypoint_follower::lane &lane, const int32_t clst_wp, const ChangeFlag flag);
   void publishLane(const waypoint_follower::lane &lane);
   void publishClosestWaypoint(const int32_t clst_wp);
   void publishChangeFlag(const ChangeFlag flag);
