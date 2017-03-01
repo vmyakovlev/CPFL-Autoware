@@ -107,9 +107,8 @@ void LaneSelectNode::initForLaneSelect()
   getCurrentChangeFlagForEachLane();
   createLaneForChange();
 
-  publishLane(std::get<0>(tuple_vec_.at(current_lane_idx_)));
-  publishClosestWaypoint(std::get<1>(tuple_vec_.at(current_lane_idx_)));
-  publishChangeFlag(std::get<2>(tuple_vec_.at(current_lane_idx_)));
+  publishAll(std::get<0>(tuple_vec_.at(current_lane_idx_)), std::get<1>(tuple_vec_.at(current_lane_idx_)),
+             std::get<2>(tuple_vec_.at(current_lane_idx_)));
   publishVisualizer();
 
   resetSubscriptionFlag();
