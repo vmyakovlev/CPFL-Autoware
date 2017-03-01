@@ -119,7 +119,7 @@ std::vector<Element2D> generateHermiteCurve(const Element2D &p0, const Element2D
 
     double dt = sqrt(pow((result.at(divide / 2 - 1).x - result.at(divide / 2).x), 2) +
                      pow((result.at(divide / 2 - 1).y - result.at(divide / 2).y), 2));
-    std::cout << "interval : " << dt << std::endl;
+    //std::cout << "interval : " << dt << std::endl;
     if (interval > dt || divide == loop - 1)
       return result;
     else
