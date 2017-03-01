@@ -94,8 +94,8 @@ void LaneSelectNode::initForLaneSelect()
   if(!isAllTopicsSubscribed())
     return;
 
-  // search closest waypoint number for each lanes
-  if (!getClosestWaypointNumberForEachLanes())
+  // search closest waypoint number for each lane
+  if (!getClosestWaypointNumberForEachLane())
   {
     publishClosestWaypoint(-1);
     resetLaneIdx();
@@ -136,8 +136,8 @@ void LaneSelectNode::processing()
   if(!isAllTopicsSubscribed())
     return;
 
-  // search closest waypoint number for each lanes
-  if (!getClosestWaypointNumberForEachLanes())
+  // search closest waypoint number for each lane
+  if (!getClosestWaypointNumberForEachLane())
   {
     publishClosestWaypoint(-1);
     resetLaneIdx();
@@ -310,7 +310,7 @@ void LaneSelectNode::changeLane()
   return;
 }
 
-bool LaneSelectNode::getClosestWaypointNumberForEachLanes()
+bool LaneSelectNode::getClosestWaypointNumberForEachLane()
 {
   for (auto &el : tuple_vec_)
   {

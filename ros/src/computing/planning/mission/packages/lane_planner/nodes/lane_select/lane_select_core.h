@@ -131,7 +131,7 @@ private:
   void publishLane(const waypoint_follower::lane &lane);
   void publishClosestWaypoint(const int32_t clst_wp);
   void publishChangeFlag(const ChangeFlag flag);
-  bool getClosestWaypointNumberForEachLanes();
+  bool getClosestWaypointNumberForEachLane();
   int32_t findMostClosestLane(const std::vector<uint32_t> idx_vec, const geometry_msgs::Point p);
   void findCurrentLane();
   void findNeighborLanes();
