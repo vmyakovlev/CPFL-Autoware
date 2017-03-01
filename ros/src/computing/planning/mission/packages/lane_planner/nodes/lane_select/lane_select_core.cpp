@@ -619,9 +619,7 @@ void LaneSelectNode::callbackFromLaneArray(const waypoint_follower::LaneArrayCon
     tuple_vec_.push_back(t);
   }
 
-  current_lane_idx_ = -1;
-  right_lane_idx_ = -1;
-  left_lane_idx_ = -1;
+  resetLaneIdx();
   is_lane_array_subscribed_ = true;
 
   if(current_lane_idx_ == -1)
