@@ -197,6 +197,20 @@ int32_t LaneSelectNode::getClosestLaneChangeWaypointNumber(const std::vector<way
   return -1;
 }
 
+int32_t LaneSelectNode::findWaypointAhead(const std::vector<waypoint_follower::waypoint> &wps, const uint32_t &start,
+                                          const double &distance)
+{
+  for (uint32_t i = start; i < wps.size(); i++)
+  {
+    if (i == wps.size() - 1 ||
+        distance < getTwoDimensionalDistance(wps.at(start).pose.pose.position, wps.at(i).pose.pose.position))
+    {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void LaneSelectNode::createLaneForChange()
 {
   std::get<0>(lane_for_change_).waypoints.clear();
