@@ -183,7 +183,7 @@ void LaneSelectNode::processing()
   resetSubscriptionFlag();
 }
 
-int32_t LaneSelectNode::getClosestLaneChangeWaypointNumber(const std::vector<waypoint_follower::waypoint> &wps, int32_t cl_wp)
+int32_t LaneSelectNode::getClosestLaneChangeWaypointNumber(const std::vector<waypoint_follower::waypoint> &wps, const int32_t &cl_wp)
 {
 
   for (uint32_t i = cl_wp; i < wps.size(); i++)
