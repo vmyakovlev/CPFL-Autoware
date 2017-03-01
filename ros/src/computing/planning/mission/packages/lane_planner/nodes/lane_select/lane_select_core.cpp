@@ -366,7 +366,7 @@ int32_t LaneSelectNode::findMostClosestLane(const std::vector<uint32_t> idx_vec,
   return idx_vec.at(std::distance(dist_vec.begin(), itr));
 }
 
-int32_t LaneSelectNode::findNeighborLane(const std::string &flag)
+int32_t LaneSelectNode::findNeighborLane(const std::string &str)
 {
   const geometry_msgs::Pose &cur_clst_pose = std::get<0>(tuple_vec_.at(current_lane_idx_))
                                                  .waypoints.at(std::get<1>(tuple_vec_.at(current_lane_idx_)))
@@ -391,9 +391,9 @@ int32_t LaneSelectNode::findNeighborLane(const std::string &flag)
       continue;
     }
 
-    if (converted_p.y > 0 && flag == "left")
+    if (converted_p.y > 0 && str == "left")
       lane_idx_vec.push_back(i);
-    else if (converted_p.y < 0 && flag == "right")
+    else if (converted_p.y < 0 && str == "right")
       lane_idx_vec.push_back(i);
   }
 
