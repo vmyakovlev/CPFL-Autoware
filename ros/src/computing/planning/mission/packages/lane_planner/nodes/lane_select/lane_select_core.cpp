@@ -104,7 +104,7 @@ void LaneSelectNode::initForLaneSelect()
 
   findCurrentLane();
   findNeighborLanes();
-  updateChangeFlag();
+  getCurrentChangeFlagForEachLane();
   createLaneForChange();
 
   publishLane(std::get<0>(tuple_vec_.at(current_lane_idx_)));
@@ -172,7 +172,7 @@ void LaneSelectNode::processing()
   }
   else
   {
-    updateChangeFlag();
+    getCurrentChangeFlagForEachLane();
     createLaneForChange();
 
     publishLane(std::get<0>(tuple_vec_.at(current_lane_idx_)));
@@ -276,19 +276,24 @@ void LaneSelectNode::createLaneForChange()
   std::copy(itr, nghbr_lane.waypoints.end(), std::back_inserter(std::get<0>(lane_for_change_).waypoints));
 }
 
-void LaneSelectNode::updateChangeFlag()
+ChangeFlag LaneSelectNode::getCurrentChangeFlag(const waypoint_follower::lane &lane, const int32_t &cl_wp)
+{
+  ChangeFlag flag;
+  flag = (cl_wp != -1) ? static_cast<ChangeFlag>(lane.waypoints.at(cl_wp).change_flag) : ChangeFlag::unknown;
+
+  if (flag == ChangeFlag::right && right_lane_idx_ == -1)
+    flag = ChangeFlag::unknown;
+  else if (flag == ChangeFlag::left && left_lane_idx_ == -1)
+    flag = ChangeFlag::unknown;
+
+  return flag;
+}
+
+void LaneSelectNode::getCurrentChangeFlagForEachLane()
 {
   for (auto &el : tuple_vec_)
   {
-    std::get<2>(el) = (std::get<1>(el) != -1)
-                          ? static_cast<ChangeFlag>(std::get<0>(el).waypoints.at(std::get<1>(el)).change_flag)
-                          : ChangeFlag::unknown;
-
-    if(std::get<2>(el) == ChangeFlag::right && right_lane_idx_ == -1)
-      std::get<2>(el) = ChangeFlag::unknown;
-    else if(std::get<2>(el) == ChangeFlag::left && left_lane_idx_ == -1)
-      std::get<2>(el) = ChangeFlag::unknown;
-
+    std::get<2>(el) = getCurrentChangeFlag(std::get<0>(el), std::get<1>(el));
     ROS_INFO("change_flag: %d", enumToInteger(std::get<2>(el)));
   }
 }

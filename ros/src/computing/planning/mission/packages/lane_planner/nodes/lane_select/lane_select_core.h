@@ -136,7 +136,8 @@ private:
   void findCurrentLane();
   void findNeighborLanes();
   void changeLane();
-  void updateChangeFlag();
+  ChangeFlag getCurrentChangeFlag(const waypoint_follower::lane &lane, const int32_t &cl_wp);
+  void getCurrentChangeFlagForEachLane();
   void createLaneForChange();
   int32_t getClosestLaneChangeWaypointNumber(const std::vector<waypoint_follower::waypoint> &wps, int32_t cl_wp);
 };
