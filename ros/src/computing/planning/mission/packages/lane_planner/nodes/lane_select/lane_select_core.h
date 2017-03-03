@@ -103,7 +103,7 @@ private:
   // topics
   geometry_msgs::PoseStamped current_pose_;
   geometry_msgs::TwistStamped current_velocity_;
-  std::string current_state_;
+  std::string current_state_, previous_state_;
 
   // callbacks
   void callbackFromLaneArray(const waypoint_follower::LaneArrayConstPtr &msg);

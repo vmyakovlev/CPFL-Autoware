@@ -50,6 +50,7 @@ LaneSelectNode::LaneSelectNode()
   , lane_change_target_minimum_(5.0)
   , vlength_hermite_curve_(10)
   , current_state_("UNKNOWN")
+  , previous_state_("UNKNOWN")
 {
   initForROS();
 }
@@ -672,6 +673,7 @@ void LaneSelectNode::callbackFromTwistStamped(const geometry_msgs::TwistStampedC
 
 void LaneSelectNode::callbackFromState(const std_msgs::StringConstPtr &msg)
 {
+  previous_state_ = current_state_;
   current_state_ = msg->data;
   is_current_state_subscribed_ = true;
 
