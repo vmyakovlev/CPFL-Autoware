@@ -39,7 +39,6 @@ LaneSelectNode::LaneSelectNode()
   , current_lane_idx_(-1)
   , right_lane_idx_(-1)
   , left_lane_idx_(-1)
-  , current_change_flag_(ChangeFlag::unknown)
   , is_lane_array_subscribed_(false)
   , is_current_pose_subscribed_(false)
   , is_current_velocity_subscribed_(false)
@@ -109,7 +108,6 @@ void LaneSelectNode::initForLaneSelect()
   getCurrentChangeFlagForEachLane();
   publishAll(std::get<0>(tuple_vec_.at(current_lane_idx_)), std::get<1>(tuple_vec_.at(current_lane_idx_)),
              std::get<2>(tuple_vec_.at(current_lane_idx_)));
-  current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
   publishVisualizer();
   resetSubscriptionFlag();
   return;
@@ -177,7 +175,6 @@ void LaneSelectNode::decideActionFromState()
 
     publishClosestWaypoint(std::get<1>(lane_for_change_));
     publishChangeFlag(std::get<2>(lane_for_change_));
-    current_change_flag_ = std::get<2>(lane_for_change_);
     getCurrentChangeFlagForEachLane();
   }
   else
@@ -195,7 +192,6 @@ void LaneSelectNode::decideActionFromState()
     getCurrentChangeFlagForEachLane();
     publishClosestWaypoint(std::get<1>(tuple_vec_.at(current_lane_idx_)));
     publishChangeFlag(std::get<2>(tuple_vec_.at(current_lane_idx_)));
-    current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
   }
 }
 
@@ -476,7 +472,11 @@ visualization_msgs::Marker LaneSelectNode::createRightLaneMarker()
   color_neighbor_change.g = 1.0;
   color_neighbor_change.a = 1.0;
 
-  marker.color = current_change_flag_ == ChangeFlag::right ? color_neighbor_change : color_neighbor;
+  if (current_state_ == "LANE_CHANGE")
+    marker.color = std::get<2>(lane_for_change_) == ChangeFlag::right ? color_neighbor_change : color_neighbor;
+  else
+    marker.color =
+        std::get<2>(tuple_vec_.at(current_lane_idx_)) == ChangeFlag::right ? color_neighbor_change : color_neighbor;
 
   for(const auto &em : std::get<0>(tuple_vec_.at(right_lane_idx_)).waypoints)
     marker.points.push_back(em.pose.pose.position);
@@ -512,7 +512,11 @@ visualization_msgs::Marker LaneSelectNode::createLeftLaneMarker()
   color_neighbor_change.g = 1.0;
   color_neighbor_change.a = 1.0;
 
-  marker.color = current_change_flag_ == ChangeFlag::left ? color_neighbor_change : color_neighbor;
+  if (current_state_ == "LANE_CHANGE")
+    marker.color = std::get<2>(lane_for_change_) == ChangeFlag::left ? color_neighbor_change : color_neighbor;
+  else
+    marker.color =
+        std::get<2>(tuple_vec_.at(current_lane_idx_)) == ChangeFlag::left ? color_neighbor_change : color_neighbor;
 
   for(const auto &em : std::get<0>(tuple_vec_.at((left_lane_idx_))).waypoints)
     marker.points.push_back(em.pose.pose.position);
