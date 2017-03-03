@@ -106,7 +106,7 @@ void LaneSelectNode::initForLaneSelect()
 
   findCurrentLane();
   findRightAndLeftLanes();
-
+  getCurrentChangeFlagForEachLane();
   publishAll(std::get<0>(tuple_vec_.at(current_lane_idx_)), std::get<1>(tuple_vec_.at(current_lane_idx_)),
              std::get<2>(tuple_vec_.at(current_lane_idx_)));
   current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
@@ -155,7 +155,6 @@ void LaneSelectNode::processing()
   ROS_INFO("right_lane_idx: %d", right_lane_idx_);
   ROS_INFO("left_lane_idx: %d", left_lane_idx_);
 
-  getCurrentChangeFlagForEachLane();
   decideActionFromState();
   publishVisualizer();
   resetSubscriptionFlag();
@@ -179,6 +178,7 @@ void LaneSelectNode::decideActionFromState()
     publishClosestWaypoint(std::get<1>(lane_for_change_));
     publishChangeFlag(std::get<2>(lane_for_change_));
     current_change_flag_ = std::get<2>(lane_for_change_);
+    getCurrentChangeFlagForEachLane();
   }
   else
   {
@@ -192,6 +192,7 @@ void LaneSelectNode::decideActionFromState()
     }
 
     createLaneForChange();
+    getCurrentChangeFlagForEachLane();
     publishClosestWaypoint(std::get<1>(tuple_vec_.at(current_lane_idx_)));
     publishChangeFlag(std::get<2>(tuple_vec_.at(current_lane_idx_)));
     current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
