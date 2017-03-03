@@ -91,6 +91,7 @@ private:
   int32_t current_lane_idx_;  // the index of the lane we are driving
   int32_t right_lane_idx_;
   int32_t left_lane_idx_;
+  ChangeFlag current_change_flag_;
   std::vector<std::tuple<waypoint_follower::lane, int32_t, ChangeFlag>> tuple_vec_;  // lane, closest_waypoint,
                                                                                      // change_flag
   std::tuple<waypoint_follower::lane, int32_t, ChangeFlag> lane_for_change_;

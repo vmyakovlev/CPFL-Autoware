@@ -39,6 +39,7 @@ LaneSelectNode::LaneSelectNode()
   , current_lane_idx_(-1)
   , right_lane_idx_(-1)
   , left_lane_idx_(-1)
+  , current_change_flag_(ChangeFlag::unknown)
   , is_lane_array_subscribed_(false)
   , is_current_pose_subscribed_(false)
   , is_current_velocity_subscribed_(false)
@@ -105,13 +106,11 @@ void LaneSelectNode::initForLaneSelect()
 
   findCurrentLane();
   findRightAndLeftLanes();
-  getCurrentChangeFlagForEachLane();
-  createLaneForChange();
 
   publishAll(std::get<0>(tuple_vec_.at(current_lane_idx_)), std::get<1>(tuple_vec_.at(current_lane_idx_)),
              std::get<2>(tuple_vec_.at(current_lane_idx_)));
+  current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
   publishVisualizer();
-
   resetSubscriptionFlag();
   return;
 }
@@ -152,7 +151,6 @@ void LaneSelectNode::processing()
     return;
   }
 
-  findRightAndLeftLanes();
   ROS_INFO("current_lane_idx: %d", current_lane_idx_);
   ROS_INFO("right_lane_idx: %d", right_lane_idx_);
   ROS_INFO("left_lane_idx: %d", left_lane_idx_);
@@ -167,20 +165,36 @@ void LaneSelectNode::decideActionFromState()
 {
   if (current_state_ == "LANE_CHANGE")
   {
-    changeLane();
+    ROS_INFO("LANE_CHANGE...");
+
     std::get<1>(lane_for_change_) =
         getClosestWaypointNumber(std::get<0>(lane_for_change_), current_pose_.pose, current_velocity_.twist,
                                  std::get<1>(lane_for_change_), distance_threshold_);
-    std::get<2>(lane_for_change_) =
-        static_cast<ChangeFlag>(std::get<0>(lane_for_change_).waypoints.at(std::get<1>(lane_for_change_)).change_flag);
+    std::get<2>(lane_for_change_) = getCurrentChangeFlag(std::get<0>(lane_for_change_), std::get<1>(lane_for_change_));
     ROS_INFO("closest: %d", std::get<1>(lane_for_change_));
-    publishAll(std::get<0>(lane_for_change_), std::get<1>(lane_for_change_), std::get<2>(lane_for_change_));
+
+    if(previous_state_ == "MOVE_FORWARD")
+      publishLane(std::get<0>(lane_for_change_));
+
+    publishClosestWaypoint(std::get<1>(lane_for_change_));
+    publishChangeFlag(std::get<2>(lane_for_change_));
+    current_change_flag_ = std::get<2>(lane_for_change_);
   }
   else
   {
+    ROS_INFO("MOVE_FORWARD...");
+
+    if(previous_state_ == "LANE_CHANGE")
+    {
+      findCurrentLane();
+      findRightAndLeftLanes();
+      publishLane(std::get<0>(tuple_vec_.at(current_lane_idx_)));
+    }
+
     createLaneForChange();
-    publishAll(std::get<0>(tuple_vec_.at(current_lane_idx_)), std::get<1>(tuple_vec_.at(current_lane_idx_)),
-               std::get<2>(tuple_vec_.at(current_lane_idx_)));
+    publishClosestWaypoint(std::get<1>(tuple_vec_.at(current_lane_idx_)));
+    publishChangeFlag(std::get<2>(tuple_vec_.at(current_lane_idx_)));
+    current_change_flag_ = std::get<2>(tuple_vec_.at(current_lane_idx_));
   }
 }
 
