@@ -639,7 +639,7 @@ void LaneSelectNode::callbackFromLaneArray(const waypoint_follower::LaneArrayCon
   tuple_vec_.reserve(msg->lanes.size());
   for (const auto &el : msg->lanes)
   {
-    auto t = std::make_tuple(el, -1, ChangeFlag::unknown);
+    auto t = std::make_tuple(el, -1, ChangeFlag::straight);
     tuple_vec_.push_back(t);
   }
 
