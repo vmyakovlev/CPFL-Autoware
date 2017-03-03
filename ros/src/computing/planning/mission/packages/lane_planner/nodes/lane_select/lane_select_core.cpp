@@ -218,77 +218,65 @@ void LaneSelectNode::createLaneForChange()
   std::get<0>(lane_for_change_).waypoints.shrink_to_fit();
   std::get<1>(lane_for_change_) = -1;
 
-  const waypoint_follower::lane &cur_lane = std::get<0>(tuple_vec_.at(current_lane_idx_));
-  const int32_t &clst_wp = std::get<1>(tuple_vec_.at(current_lane_idx_));
-
-  int32_t num_lane_change = getClosestLaneChangeWaypointNumber(cur_lane.waypoints, clst_wp);
+  const std::tuple<waypoint_follower::lane, int32_t, ChangeFlag> cur = tuple_vec_.at(current_lane_idx_);
+  int32_t num_lane_change = getClosestLaneChangeWaypointNumber(std::get<0>(cur).waypoints, std::get<1>(cur));
   ROS_INFO("num_lane_change: %d", num_lane_change);
-  if (num_lane_change < 0 || num_lane_change >= static_cast<int32_t>(cur_lane.waypoints.size()))
+  int32_t offset =
+      current_velocity_.twist.linear.x * 1 > 3 ? static_cast<int32_t>(current_velocity_.twist.linear.x * 1) : 3;
+  if (num_lane_change < 0 ||
+      num_lane_change + offset > static_cast<int32_t>(std::get<0>(cur).waypoints.size() - 1)
+      || getTwoDimensionalDistance(std::get<0>(cur).waypoints.at(num_lane_change).pose.pose.position,
+                                   current_pose_.pose.position) > 500)
   {
-    ROS_WARN("current lane doesn't have change flag");
+    ROS_WARN("current lane doesn't have valid right or left flag");
     return;
   }
-
-  if ((static_cast<ChangeFlag>(cur_lane.waypoints.at(num_lane_change).change_flag) == ChangeFlag::right &&
-       right_lane_idx_ < 0) ||
-      (static_cast<ChangeFlag>(cur_lane.waypoints.at(num_lane_change).change_flag) == ChangeFlag::left &&
-       left_lane_idx_ < 0))
+  const ChangeFlag &flag = static_cast<ChangeFlag>(std::get<0>(cur).waypoints.at(num_lane_change).change_flag);
+  if ((flag == ChangeFlag::right && right_lane_idx_ < 0) || (flag == ChangeFlag::left && left_lane_idx_ < 0))
   {
     ROS_WARN("current lane doesn't have the lane for lane change");
     return;
   }
 
-  double dt = getTwoDimensionalDistance(cur_lane.waypoints.at(num_lane_change).pose.pose.position,
-                                        cur_lane.waypoints.at(clst_wp).pose.pose.position);
+  double dt = getTwoDimensionalDistance(std::get<0>(cur).waypoints.at(num_lane_change).pose.pose.position,
+                                        std::get<0>(cur).waypoints.at(std::get<1>(cur)).pose.pose.position);
   double dt_by_vel = current_velocity_.twist.linear.x * lane_change_target_ratio_ > lane_change_target_minimum_
                          ? current_velocity_.twist.linear.x * lane_change_target_ratio_
                          : lane_change_target_minimum_;
   ROS_INFO("dt : %lf, dt_by_vel : %lf", dt, dt_by_vel);
-  waypoint_follower::lane &nghbr_lane =
-      static_cast<ChangeFlag>(cur_lane.waypoints.at(num_lane_change).change_flag) == ChangeFlag::right
-          ? std::get<0>(tuple_vec_.at(right_lane_idx_))
-          : std::get<0>(tuple_vec_.at(left_lane_idx_));
-  const int32_t &nghbr_clst_wp =
-      static_cast<ChangeFlag>(cur_lane.waypoints.at(num_lane_change).change_flag) == ChangeFlag::right
-          ? std::get<1>(tuple_vec_.at(right_lane_idx_))
-          : std::get<1>(tuple_vec_.at(left_lane_idx_));
+  const std::tuple<waypoint_follower::lane, int32_t, ChangeFlag> &nghbr =
+      static_cast<ChangeFlag>(std::get<0>(cur).waypoints.at(num_lane_change).change_flag) == ChangeFlag::right ?
+          tuple_vec_.at(right_lane_idx_) :
+          tuple_vec_.at(left_lane_idx_);
 
-  int32_t target_num = -1;
-  for (uint32_t i = nghbr_clst_wp; i < nghbr_lane.waypoints.size(); i++)
-  {
-    if (i == nghbr_lane.waypoints.size() - 1 ||
-        dt + dt_by_vel < getTwoDimensionalDistance(nghbr_lane.waypoints.at(nghbr_clst_wp).pose.pose.position,
-                                                   nghbr_lane.waypoints.at(i).pose.pose.position))
-    {
-      target_num = i;
-      break;
-    }
-  }
-
+  int32_t target_num = findWaypointAhead(std::get<0>(nghbr).waypoints, std::get<1>(nghbr), dt + dt_by_vel);
   ROS_INFO("target_num : %d", target_num);
-  if (target_num < 0)
+  if (target_num < 0 || target_num + lane_change_interval_ > std::get<0>(nghbr).waypoints.size() - 1)
     return;
 
-  std::get<0>(lane_for_change_).header.stamp = nghbr_lane.header.stamp;
+  //create lane for lane change
+  std::get<0>(lane_for_change_).header.stamp = std::get<0>(nghbr).header.stamp;
+
+  std::copy(std::get<0>(cur).waypoints.begin(), std::get<0>(cur).waypoints.begin() + num_lane_change + offset,
+            std::back_inserter(std::get<0>(lane_for_change_).waypoints));
+  for(auto itr = std::get<0>(lane_for_change_).waypoints.rbegin(); itr != std::get<0>(lane_for_change_).waypoints.rbegin() + offset ;itr++)
+    itr->change_flag = std::get<0>(cur).waypoints.at(num_lane_change).change_flag;
+
   std::vector<waypoint_follower::waypoint> hermite_wps = generateHermiteCurveForROS(
-      cur_lane.waypoints.at(num_lane_change).pose.pose, nghbr_lane.waypoints.at(target_num).pose.pose,
-      cur_lane.waypoints.at(num_lane_change).twist.twist.linear.x, vlength_hermite_curve_);
-
+      std::get<0>(cur).waypoints.at(num_lane_change + offset).pose.pose, std::get<0>(nghbr).waypoints.at(target_num).pose.pose,
+      std::get<0>(cur).waypoints.at(num_lane_change + offset).twist.twist.linear.x, vlength_hermite_curve_);
   for (auto &&el : hermite_wps)
-    el.change_flag = cur_lane.waypoints.at(num_lane_change).change_flag;
-
-  std::get<0>(lane_for_change_).waypoints.reserve(nghbr_lane.waypoints.size() + hermite_wps.size());
+    el.change_flag = std::get<0>(cur).waypoints.at(num_lane_change).change_flag;
   std::move(hermite_wps.begin(), hermite_wps.end(), std::back_inserter(std::get<0>(lane_for_change_).waypoints));
-  auto itr = nghbr_lane.waypoints.begin();
-  std::advance(itr, target_num);
-  for (auto i = itr; i != nghbr_lane.waypoints.end(); i++)
+
+  for(auto i = target_num; i < static_cast<int32_t>(std::get<0>(nghbr).waypoints.size()); i++)
   {
-    if (getTwoDimensionalDistance(itr->pose.pose.position, i->pose.pose.position) < lane_change_interval_)
-      i->change_flag = enumToInteger(ChangeFlag::straight);
+    std::get<0>(lane_for_change_).waypoints.push_back(std::get<0>(nghbr).waypoints.at(i));
+    if(i < target_num + lane_change_interval_)
+      std::get<0>(lane_for_change_).waypoints.rbegin()->change_flag = std::get<0>(cur).waypoints.at(num_lane_change).change_flag;
     else
-      break;
+      std::get<0>(lane_for_change_).waypoints.rbegin()->change_flag = 0;
   }
-  std::copy(itr, nghbr_lane.waypoints.end(), std::back_inserter(std::get<0>(lane_for_change_).waypoints));
 }
 
 ChangeFlag LaneSelectNode::getCurrentChangeFlag(const waypoint_follower::lane &lane, const int32_t &cl_wp)
