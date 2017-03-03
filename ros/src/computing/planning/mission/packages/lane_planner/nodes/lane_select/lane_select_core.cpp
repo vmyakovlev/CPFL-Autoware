@@ -443,13 +443,20 @@ visualization_msgs::Marker LaneSelectNode::createCurrentLaneMarker()
 
   marker.type = visualization_msgs::Marker::LINE_STRIP;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.scale.x = 0.05;
+  marker.scale.x = 0.1;
 
   std_msgs::ColorRGBA color_current;
   color_current.b = 1.0;
   color_current.g = 0.7;
   color_current.a = 1.0;
-  marker.color = color_current;
+
+  std_msgs::ColorRGBA color_change;
+  color_change.r = 0.5;
+  color_change.b = 0.5;
+  color_change.g = 0.5;
+  color_change.a = 1.0;
+
+  marker.color = current_state_ == "LANE_CHANGE" ? color_change : color_current;
 
   for(const auto &em : std::get<0>(tuple_vec_.at(current_lane_idx_)).waypoints)
     marker.points.push_back(em.pose.pose.position);
@@ -472,7 +479,7 @@ visualization_msgs::Marker LaneSelectNode::createRightLaneMarker()
 
   marker.type = visualization_msgs::Marker::LINE_STRIP;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.scale.x = 0.05;
+  marker.scale.x = 0.1;
 
   std_msgs::ColorRGBA color_neighbor;
   color_neighbor.r = 0.5;
@@ -485,8 +492,7 @@ visualization_msgs::Marker LaneSelectNode::createRightLaneMarker()
   color_neighbor_change.g = 1.0;
   color_neighbor_change.a = 1.0;
 
-  const ChangeFlag &change_flag = std::get<2>(tuple_vec_.at(current_lane_idx_));
-  marker.color = change_flag == ChangeFlag::right ? color_neighbor_change : color_neighbor;
+  marker.color = current_change_flag_ == ChangeFlag::right ? color_neighbor_change : color_neighbor;
 
   for(const auto &em : std::get<0>(tuple_vec_.at(right_lane_idx_)).waypoints)
     marker.points.push_back(em.pose.pose.position);
@@ -509,7 +515,7 @@ visualization_msgs::Marker LaneSelectNode::createLeftLaneMarker()
 
   marker.type = visualization_msgs::Marker::LINE_STRIP;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.scale.x = 0.05;
+  marker.scale.x = 0.1;
 
   std_msgs::ColorRGBA color_neighbor;
   color_neighbor.r = 0.5;
@@ -522,8 +528,7 @@ visualization_msgs::Marker LaneSelectNode::createLeftLaneMarker()
   color_neighbor_change.g = 1.0;
   color_neighbor_change.a = 1.0;
 
-  const ChangeFlag &change_flag = std::get<2>(tuple_vec_.at(current_lane_idx_));
-  marker.color = change_flag == ChangeFlag::left ? color_neighbor_change : color_neighbor;
+  marker.color = current_change_flag_ == ChangeFlag::left ? color_neighbor_change : color_neighbor;
 
   for(const auto &em : std::get<0>(tuple_vec_.at((left_lane_idx_))).waypoints)
     marker.points.push_back(em.pose.pose.position);
@@ -546,11 +551,11 @@ visualization_msgs::Marker LaneSelectNode::createChangeLaneMarker()
 
   marker.type = visualization_msgs::Marker::LINE_STRIP;
   marker.action = visualization_msgs::Marker::ADD;
-  marker.scale.x = 0.05;
+  marker.scale.x = 0.1;
 
   std_msgs::ColorRGBA color;
   color.r = 1.0;
-  color.a = 1.0;
+  color.a = 0.7;
 
   std_msgs::ColorRGBA color_current;
   color_current.b = 1.0;
@@ -559,7 +564,10 @@ visualization_msgs::Marker LaneSelectNode::createChangeLaneMarker()
 
   marker.color = current_state_ == "LANE_CHANGE" ? color_current : color;
   for(const auto &em : std::get<0>(lane_for_change_).waypoints)
+  {
     marker.points.push_back(em.pose.pose.position);
+    marker.points.rbegin()->z-=0.1;
+  }
 
   return marker;
 }
