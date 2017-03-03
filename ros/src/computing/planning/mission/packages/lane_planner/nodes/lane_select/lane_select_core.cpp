@@ -311,6 +311,9 @@ void LaneSelectNode::getCurrentChangeFlagForEachLane()
     std::get<2>(el) = getCurrentChangeFlag(std::get<0>(el), std::get<1>(el));
     ROS_INFO("change_flag: %d", enumToInteger(std::get<2>(el)));
   }
+
+  if(std::get<0>(lane_for_change_).waypoints.empty())
+    std::get<2>(tuple_vec_.at(current_lane_idx_)) = ChangeFlag::straight;
 }
 
 void LaneSelectNode::changeLane()
