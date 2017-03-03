@@ -70,7 +70,7 @@ void LaneSelectNode::initForROS()
   sub5_ = nh_.subscribe("/config/lane_select", 1, &LaneSelectNode::callbackFromConfig, this);
 
   // setup publisher
-  pub1_ = nh_.advertise<waypoint_follower::lane>("base_waypoints", 1);
+  pub1_ = nh_.advertise<waypoint_follower::lane>("base_waypoints", 1,true);
   pub2_ = nh_.advertise<std_msgs::Int32>("closest_waypoint", 1);
   pub3_ = nh_.advertise<std_msgs::Int32>("change_flag", 1);
   vis_pub1_ = nh_.advertise<visualization_msgs::MarkerArray>("lane_select_marker", 1);
