@@ -315,7 +315,7 @@ void LaneSelectNode::getCurrentChangeFlagForEachLane()
     ROS_INFO("change_flag: %d", enumToInteger(std::get<2>(el)));
   }
 
-  if(std::get<0>(lane_for_change_).waypoints.empty())
+  if(std::get<0>(lane_for_change_).waypoints.empty() || isObstacleInLane())
     std::get<2>(tuple_vec_.at(current_lane_idx_)) = ChangeFlag::straight;
 }
 
@@ -810,6 +810,11 @@ int32_t getClosestWaypointNumber(const waypoint_follower::lane &current_lane, co
   std::vector<double>::iterator itr = std::min_element(dist_vec.begin(), dist_vec.end());
   int32_t found_number = idx_vec.at(static_cast<uint32_t>(std::distance(dist_vec.begin(), itr)));
   return found_number;
+}
+
+bool isObstacleInLane()
+{
+  return false;
 }
 
 // let the linear equation be "ax + by + c = 0"
