@@ -140,7 +140,6 @@ private:
   void findCurrentLane();
   int32_t findNeighborLane(const std::string &str);
   void findRightAndLeftLanes();
-  void changeLane();
   ChangeFlag getCurrentChangeFlag(const waypoint_follower::lane &lane, const int32_t &cl_wp);
   void getCurrentChangeFlagForEachLane();
   void createLaneForChange();

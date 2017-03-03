@@ -318,23 +318,6 @@ void LaneSelectNode::getCurrentChangeFlagForEachLane()
     std::get<2>(tuple_vec_.at(current_lane_idx_)) = ChangeFlag::straight;
 }
 
-void LaneSelectNode::changeLane()
-{
-  if (std::get<2>(tuple_vec_.at(current_lane_idx_)) == ChangeFlag::right && right_lane_idx_ != -1 &&
-      std::get<1>(tuple_vec_.at(right_lane_idx_)) != -1)
-  {
-    current_lane_idx_ = right_lane_idx_;
-  }
-  else if (std::get<2>(tuple_vec_.at(current_lane_idx_)) == ChangeFlag::left && left_lane_idx_ != -1 &&
-           std::get<1>(tuple_vec_.at(left_lane_idx_)) != -1)
-  {
-    current_lane_idx_ = left_lane_idx_;
-  }
-
-  findRightAndLeftLanes();
-  return;
-}
-
 bool LaneSelectNode::getClosestWaypointNumberForEachLane()
 {
   for (auto &el : tuple_vec_)
