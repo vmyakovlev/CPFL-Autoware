@@ -774,7 +774,7 @@ int32_t getClosestWaypointNumber(const waypoint_follower::lane &current_lane, co
   }
   else
   {
-    if (distance_threshold <
+    if (distance_threshold * 2 <
         getTwoDimensionalDistance(current_lane.waypoints.at(previous_number).pose.pose.position, current_pose.position))
     {
       ROS_WARN("Current_pose is far away from previous closest waypoint. Initilized...");
@@ -782,7 +782,7 @@ int32_t getClosestWaypointNumber(const waypoint_follower::lane &current_lane, co
     }
 
     double ratio = 3;
-    double minimum_dt = 2.0;
+    double minimum_dt = 5.0;
     double dt = current_velocity.linear.x * ratio > minimum_dt ? current_velocity.linear.x * ratio : minimum_dt;
 
     auto range_max = static_cast<uint32_t>(previous_number + dt) < current_lane.waypoints.size()
