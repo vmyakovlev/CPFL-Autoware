@@ -94,7 +94,8 @@ private:
   std::vector<std::tuple<waypoint_follower::lane, int32_t, ChangeFlag>> tuple_vec_;  // lane, closest_waypoint,
                                                                                      // change_flag
   std::tuple<waypoint_follower::lane, int32_t, ChangeFlag> lane_for_change_;
-  bool is_lane_array_subscribed_, is_current_pose_subscribed_, is_current_velocity_subscribed_, is_current_state_subscribed_, is_config_subscribed_;
+  bool is_lane_array_subscribed_, is_current_pose_subscribed_, is_current_velocity_subscribed_,
+      is_current_state_subscribed_, is_config_subscribed_;
 
   // parameter from runtime manager
   double distance_threshold_, lane_change_interval_, lane_change_target_ratio_, lane_change_target_minimum_, vlength_hermite_curve_;
