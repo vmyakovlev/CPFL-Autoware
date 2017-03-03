@@ -138,6 +138,57 @@ void createGlobalLaneArrayVelocityMarker(const waypoint_follower::LaneArray &lan
                                        tmp_marker_array.markers.end());
 }
 
+void createLocalChangeFlagMarker(const waypoint_follower::lane &lane_waypoint)
+{
+  // display by markers the velocity of each waypoint.
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time();
+  marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.scale.z = 0.4;
+  marker.color.a = 1.0;
+  marker.color.r = 1;
+  marker.color.g = 1;
+  marker.color.b = 1;
+  marker.frame_locked = true;
+
+  marker.ns = "local_change_flag_lane_";
+  for (int i = 0; i < static_cast<int>(lane_waypoint.waypoints.size()); i++)
+  {
+    // std::cout << _waypoints[i].GetX() << " " << _waypoints[i].GetY() << " " << _waypoints[i].GetZ() << " " <<
+    // _waypoints[i].GetVelocity_kmh() << std::endl;
+    marker.id = i;
+    geometry_msgs::Point relative_p;
+    relative_p.x = -0.1;
+    marker.pose.position = calcAbsoluteCoordinate(relative_p, lane_waypoint.waypoints[i].pose.pose);
+    marker.pose.position.z += 0.2;
+
+    // double to string
+    std::string str = "";
+    if (lane_waypoint.waypoints[i].change_flag == static_cast<ChangeFlagInteger>(ChangeFlag::straight))
+    {
+      str = "S";
+    }
+    else if (lane_waypoint.waypoints[i].change_flag == static_cast<ChangeFlagInteger>(ChangeFlag::right))
+    {
+      str = "R";
+    }
+    else if (lane_waypoint.waypoints[i].change_flag == static_cast<ChangeFlagInteger>(ChangeFlag::left))
+    {
+      str = "L";
+    }
+    else if (lane_waypoint.waypoints[i].change_flag == static_cast<ChangeFlagInteger>(ChangeFlag::unknown))
+    {
+      str = "U";
+    }
+
+    marker.text = str;
+
+    g_local_waypoints_marker_array.markers.push_back(marker);
+  }
+}
+
 void createGlobalLaneArrayChangeFlagMarker(const waypoint_follower::LaneArray &lane_waypoints_array)
 {
   visualization_msgs::MarkerArray tmp_marker_array;
@@ -411,6 +462,7 @@ void temporalCallback(const waypoint_follower::laneConstPtr &msg)
   g_local_waypoints_marker_array.markers.clear();
   if (_closest_waypoint != -1)
     createLocalWaypointVelocityMarker(g_local_color, _closest_waypoint, *msg);
+  createLocalChangeFlagMarker(*msg);
   createLocalPathMarker(g_local_color, *msg);
   createLocalPointMarker(*msg);
   publishLocalMarker();
