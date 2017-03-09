@@ -281,12 +281,10 @@ subs :
         cmd  : roslaunch road_wizard traffic_light_recognition.launch
         param: region_tlr
         gui  :
-          flags : [ need_camera_info ]
-          sel_cam_dialog_only : [ camera_id ]
-          sel_cam_dialog_allow: [ camera_id ]
-          camera_id :
-            border : 16
-            flags : [ all ]
+         links : [ app, cam ]
+         links_info :
+           cam : { title : "select camera" }
+        include_guis : [ gui_cam_id ]
 
     - name : viewers
       desc : viewers desc sample
@@ -1781,16 +1779,8 @@ params :
       label : Display superimpose result
       kind  : checkbox
       v     : False
-    - name         : camera_id
-      desc         : camera_id desc sample
-      kind         : menu
-      label        : Camera ID
-      choices_type : str
-      v            : ''
-      cmd_param    :
-        dash         : ''
-        delim        : ':='
-        only_enable  : True
+
+    - include_param_vars : cam_id
 
   - name  : traffic_light
     vars :
