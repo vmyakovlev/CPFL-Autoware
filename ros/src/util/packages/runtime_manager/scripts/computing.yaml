@@ -103,8 +103,11 @@ subs :
           camera_id :
             border : 16
             flags : [ all ]
+            depend : not_sync
           camera_id_cmd_param :
             func : pdic.get('camera_id') if not self.button_synchronization.GetValue() else None
+          not_sync :
+            func : not self.button_synchronization.GetValue()
           sync :
             func : self.button_synchronization.GetValue()
 
@@ -707,6 +710,9 @@ params :
         dash         : ''
         delim        : ':='
         only_enable  : True
+    - name      : not_sync
+      kind      : hide
+      v         : True
     - name      : sync
       kind      : hide
       v         : False
