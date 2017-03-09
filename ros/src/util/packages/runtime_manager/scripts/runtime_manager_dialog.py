@@ -2187,14 +2187,14 @@ class VarPanel(wx.Panel):
 		label = self.var.get('label', '')
 		self.kind = self.var.get('kind')
 		if self.kind == 'radio_box':
-			choices = self.var.get('choices', [])
+			choices = self.choices_get()
 			style = wx.RA_SPECIFY_COLS if self.var.get('choices_style') == 'h' else wx.RA_SPECIFY_ROWS
 			self.obj = wx.RadioBox(self, wx.ID_ANY, label, choices=choices, majorDimension=0, style=style)
 			self.choices_sel_set(v)
 			self.Bind(wx.EVT_RADIOBOX, self.OnUpdate, self.obj)
 			return
 		if self.kind == 'menu':
-			choices = self.var.get('choices', [])
+			choices = self.choices_get()
 			self.obj = wx.Choice(self, wx.ID_ANY, choices=choices)
 			self.choices_sel_set(v)
 			self.Bind(wx.EVT_CHOICE, self.OnUpdate, self.obj)
@@ -2360,6 +2360,13 @@ class VarPanel(wx.Panel):
 	def OnRef(self, event):
 		if file_dialog(self, self.tc, self.var) == wx.ID_OK:
 			self.update(self.var)
+
+	def choices_get(self):
+		if 'choices' in self.var:
+			return self.var.get('choices')
+		if 'choices_make' in self.var:
+			return eval( self.var.get('choices_make') )
+		return []
 
 	def choices_sel_get(self):
 		return self.obj.GetStringSelection() if self.var.get('choices_type') == 'str' else self.obj.GetSelection()
