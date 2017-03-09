@@ -250,8 +250,9 @@ subs :
         cmd  : roslaunch lidar_tracker obj_fusion.launch
         param: obj_fusion
         gui  :
-          flags                : [ open_dialog, no_link ]
-          open_dialog_ok_label : Start
+          #flags                : [ open_dialog, no_link ]
+          #open_dialog_ok_label : Start
+          # why avoid link ???
           car :
             user_category : Detection Target
           pedestrian :
