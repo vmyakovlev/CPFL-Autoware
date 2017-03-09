@@ -2057,18 +2057,14 @@ class ParamPanel(wx.Panel):
 			var_lst = lambda name, vars : [ var for var in vars if var.get('name') == name ]
 			vars = reduce( lambda lst, name : lst + var_lst(name, vars), self.gdic.get('show_order'), [] )
 
-		curr_link = self.gdic.get('curr_link')
-		def_link = self.gdic.get('def_link')
+		self.curr_link = self.gdic.get('curr_link')
+		self.def_link = self.gdic.get('def_link')
 
 		for var in vars:
-			if var.get('link', def_link) != curr_link:
+			if not self.is_match_var(var):
 				continue
 
 			name = var.get('name')
-
-			if not gdic_dialog_type_chk(self.gdic, name):
-				continue
-
 			gdic_v = self.get_gdic_v_and_chk_enable(name)
 			if gdic_v is None:
 				continue
@@ -2161,11 +2157,10 @@ class ParamPanel(wx.Panel):
 
 	def detach_func(self):
 		for var in self.prm.get('vars'):
-			name = var.get('name')
-
-			if not gdic_dialog_type_chk(self.gdic, name):
+			if not self.is_match_var(var):
 				continue
 
+			name = var.get('name')
 			gdic_v = self.get_gdic_v_and_chk_enable(name)
 			if gdic_v is None:
 				continue
@@ -2175,6 +2170,10 @@ class ParamPanel(wx.Panel):
 
 			vp = gdic_v.get('var')
 			lst_remove_once(self.gdic.get('ext_toggle_enables', []), vp)
+
+        def is_match_var(self, var):
+		return ( var.get('link', self.def_link) == self.curr_link
+			and gdic_dialog_type_chk(self.gdic, var.get('name')) )
 
 class VarPanel(wx.Panel):
 	def __init__(self, *args, **kwds):
@@ -3112,6 +3111,7 @@ def bak_stk_push(dic, key):
 	if key in dic:
 		k = key + '_bak_str'
 		dic_getset(dic, k, []).append( dic.get(key) )
+                print 'push:', dic.get('k')
 
 def bak_stk_pop(dic, key):
 	k = key + '_bak_str'
