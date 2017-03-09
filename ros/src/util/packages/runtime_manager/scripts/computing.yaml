@@ -204,20 +204,18 @@ subs :
         cmd  : roslaunch cv_tracker reprojection.launch
         param: obj_reproj
         gui  :
-          flags                : [ open_dialog, no_link, need_camera_info ]
-          open_dialog_ok_label : Start
+          links : [ app, cam ]
+          links_info :
+            cam : { title : "select camera" }
+          #flags                : [ open_dialog, no_link ]
+          #open_dialog_ok_label : Start
+          # why avoid link ???
           car :
             user_category : Detection Target
           pedestrian :
             border : 16
             flags  : [ left ]
-          sel_cam_dialog_only : [ camera_id ]
-          sel_cam_dialog_allow: [ camera_id ]
-          camera_id :
-            border : 16
-            flags : [ all ]
-          sync :
-            func : self.button_synchronization.GetValue()
+        include_guis : [ gui_cam_id, gui_sync ]
 
     - name : lidar_detector
       desc : lidar_detector desc sample
@@ -1720,16 +1718,9 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
-    - name         : camera_id
-      desc         : camera_id desc sample
-      kind         : menu
-      label        : Camera ID
-      choices_type : str
-      v            : ''
-      cmd_param    :
-        dash         : ''
-        delim        : ':='
-        only_enable  : True
+
+    - include_param_vars : cam_id
+
     - name      : sync
       kind      : hide
       v         : False
