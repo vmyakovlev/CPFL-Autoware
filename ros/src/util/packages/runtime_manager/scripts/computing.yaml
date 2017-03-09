@@ -177,23 +177,18 @@ subs :
         cmd  : roslaunch cv_tracker kf_tracking.launch
         param: kf_track
         gui  :
-          flags : [ need_camera_info ]
-          links : [ app, car, pedestrian ]
+          links : [ app, car, pedestrian, cam ]
           links_info :
             car : { title : "car_kf" }
             pedestrian : { title : "pedestrian_kf" }
+            cam : { title : "select camera" }
           car :
             user_category : Detection Target
           pedestrian :
             border : 16
             flags  : [ left ]
-          sel_cam_dialog_only : [ camera_id ]
-          sel_cam_dialog_allow: [ camera_id ]
-          camera_id :
-            border : 16
-            flags : [ all ]
-          sync :
-            func : self.button_synchronization.GetValue()
+        include_guis : [ gui_cam_id, gui_sync ]
+
       - name : dummy_track
         desc : dummy_track desc sample
         cmd  : roslaunch cv_tracker dummy_track.launch
@@ -1625,16 +1620,9 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
-    - name         : camera_id
-      desc         : camera_id desc sample
-      kind         : menu
-      label        : Camera ID
-      choices_type : str
-      v            : ''
-      cmd_param    :
-        dash         : ''
-        delim        : ':='
-        only_enable  : True
+
+    - include_param_vars : cam_id
+
     - name      : sync
       kind      : hide
       v         : False
