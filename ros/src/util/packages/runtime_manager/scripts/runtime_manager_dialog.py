@@ -1007,16 +1007,21 @@ class MyFrame(rtmgr.MyFrame):
 		if 'node_name' in var:
 			return var.get('node_name')
 
-		subprocess.call('echo y | rosnode cleanup', shell=True)
-		cmd = "rosnode list | xargs rosnode info | sed -n -e 's/^Node \\[\\(.*\\)\\]/\\1/p' -e 's/^Pid: \\(.*\\)/\\1/p'"
-		lst = subprocess.check_output(cmd, shell=True).strip().split()
-		names = lst[::2]
-		pids = [ int(v) for v in lst[1::2] ]
-		dic = dict( zip(pids, names) )
-		#print dic
+		var_name = var.get('name')
+		cache_dic = dic_getset( self.all_procs.get(proc, {}), 'node_name', {} )
+		if var_name not in cache_dic:
+			subprocess.call('echo y | rosnode cleanup', shell=True)
+			cmd = "rosnode list | xargs rosnode info | sed -n -e 's/^Node \\[\\(.*\\)\\]/\\1/p' -e 's/^Pid: \\(.*\\)/\\1/p'"
+			lst = subprocess.check_output(cmd, shell=True).strip().split()
+			names = lst[::2]
+			pids = [ int(v) for v in lst[1::2] ]
+			dic = dict( zip(pids, names) )
+			#print dic
 
-		procs = [ proc ] + psutil.Process(proc.pid).get_children()
-		return next( ( dic.get(p.pid) for p in procs if p.pid in dic ), None)
+			procs = [ proc ] + psutil.Process(proc.pid).get_children()
+			node_name = next( ( dic.get(p.pid) for p in procs if p.pid in dic ), None)
+			cache_dic[var_name] = node_name
+		return cache_dic.get(var_name)
 
 	def dynamic_reconfig(self, pdic, gdic, prm):
 		if pdic is None or prm is None:
@@ -1028,24 +1033,23 @@ class MyFrame(rtmgr.MyFrame):
 			return
 
 		d = self.cfg_dic( {'pdic':pdic, 'gdic':gdic, 'param':prm} )
-		obj = d.get('obj')		
+		obj = d.get('obj')
 		(_, _, proc) = self.obj_to_cmd_dic_cmd_proc(obj)
 		if proc is None:
-			return
-		node_name = self.proc_to_node_name(var, proc)
-		if not node_name:
 			return
 
 		vdic = {}
 		for var in lst:
-			k = var.get(key_dr)
+			node_name = self.proc_to_node_name(var, proc)
+			if not node_name:
+				continue
 			v = self.param_value_get(pdic, prm, var.get('name'))
-			vdic[k] = v
+			dic_getset( vdic, node_name, {} )[ var.get(key_dr) ] = v
 
-		#print 'node_name=', node_name
 		#print 'vdic=', vdic
-		client = dynamic_reconfigure.client.Client(node_name)
-		client.update_configuration(vdic)
+		for (node_name, dic) in vdic.items():
+			client = dynamic_reconfigure.client.Client(node_name)
+			client.update_configuration(dic)
 
 	def setup_adjust(self, pdic, gdic, prm):
 		def adj_or(a1, a2):
