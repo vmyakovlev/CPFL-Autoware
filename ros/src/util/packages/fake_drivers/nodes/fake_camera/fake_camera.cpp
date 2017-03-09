@@ -72,10 +72,16 @@ static void update_img_msg(const char* image_file, IplImage** img_p, sensor_msgs
 }
 
 static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level,
-		     IplImage** img_p, sensor_msgs::Image* msg)
+		     IplImage** img_p, sensor_msgs::Image* msg, ros::Rate** rate_p)
 {
 	std::cerr << "image_file=" << config.image_file << std::endl;
 	update_img_msg(config.image_file.c_str(), img_p, msg);
+
+	std::cerr << "fps=" << config.fps << std::endl;
+	if (*rate_p != nullptr) {
+		delete *rate_p;
+	}
+	*rate_p = new ros::Rate(config.fps);
 }
 
 int main(int argc, char **argv)
@@ -90,20 +96,16 @@ int main(int argc, char **argv)
 	
 	IplImage* img = nullptr;
 	sensor_msgs::Image msg;
+	ros::Rate* rate = nullptr;
 
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
-	f = boost::bind(&callback, _1, _2, &img, &msg);
+	f = boost::bind(&callback, _1, _2, &img, &msg, &rate);
 	server.setCallback(f);
 
 	update_img_msg(argv[1], &img, &msg);
 
 	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
-
-	int fps;
-	n.param<int>("/fake_camera/fps", fps, 30);
-	fprintf(stderr, "%d fps\n", fps);
-	ros::Rate loop_rate(fps); // Hz
 
 	uint32_t count = 0;
 	while (ros::ok()) {
@@ -113,7 +115,9 @@ int main(int argc, char **argv)
 		msg.header.stamp.nsec = ros::Time::now().toNSec();
 		pub.publish(msg);
 		ros::spinOnce();
-		loop_rate.sleep();
+		if (rate != nullptr) {
+			rate->sleep();
+		}
 		count++;
 	}
 	cvReleaseImage(&img);//Free allocated data
