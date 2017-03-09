@@ -195,6 +195,7 @@ buttons:
     param : calibration_publisher
     gui   :
       flags : [ open_dialog ]
+      def_link : app
       open2_dialog_only : [ camera_id ]
       camera_id :
         border : 16
