@@ -1553,20 +1553,47 @@ class MyFrame(rtmgr.MyFrame):
 		self.OnHyperlinked_obj(event.GetEventObject())
 
 	def add_params(self, params):
+		def inc_vars(vars):
+			for var in vars:
+				inm = var.get('include_param_vars')
+				if inm is None:
+					continue
+				ivars = next( (iprm.get('vars', []) for iprm in params if iprm.get('name') == inm), [])
+				if not ivars:
+					continue
+				inc_vars(ivars)
+				name_prefix = var.get('name_prefix', '')
+				name_postfix = var.get('name_postfix', '')
+				overwrite_all = var.get('overwrite_all')
+				overwrite = var.get('overwrite')
+				if name_prefix or name_postfix or overwrite_all or overwrite:
+					ivars = [ ivar.copy() for ivar in ivars ]
+					for ivar in ivars:
+						name = ivar.get('name')
+						if overwrite_all:
+							ivar.update(overwrite_all)
+						if name in overwrite:
+							ivar.update(overwrite.get(name))
+						if name_prefix or name_postfix:
+							ivar['name'] = name_prefix + name + name_postfix
+				idx = vars.index(var)
+				vars[idx:idx+1] = ivars
+		for prm in params:
+			inc_vars(prm.get('vars', []))
+
 		for prm in params:
 			if 'topics' not in prm and 'topic' in prm and 'msg' in prm:
 				prm['topics'] = [ { 'topic':prm.get('topic'), 'msg':prm.get('msg') } ]
 			for d in prm.get('topics', []):
 				d['klass_msg'] = globals()[ d.get('msg') ]
 				d['pub'] = rospy.Publisher(d.get('topic'), d.get('klass_msg'), latch=True, queue_size=10)
-			if len( prm.get('topics', []) ) == 1:
-				d = prm.get('topics')[0]
+				msg = d.get('klass_msg')()
 				for var in prm.get('vars', []):
-					name = var.get('in_msg', var.get('name'))
-					(obj, attr) = msg_path_to_obj_attr(d.get('klass_msg'), name)
-					if obj and attr in obj.__slots__:
-						var['topic'] = d.get('topic')
-
+					if 'topic' not in var:
+						nm = var.get('in_msg', var.get('name'))
+						(obj, attr) = msg_path_to_obj_attr(msg, nm)
+						if obj and attr in obj.__slots__:
+							var['topic'] = d.get('topic')
 		self.params += params
 
 	def gdic_get_1st(self, dic):
