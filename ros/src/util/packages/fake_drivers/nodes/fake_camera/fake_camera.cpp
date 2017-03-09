@@ -41,47 +41,41 @@
 #include <dynamic_reconfigure/server.h>
 #include <fake_drivers/FakeCameraConfig.h>
 
-static char* def_img_file;
-static IplImage* img = nullptr;
-static sensor_msgs::Image msg;
-
-static void update_img_msg(const char* image_file=def_img_file)
+static void update_img_msg(const char* image_file, IplImage** img_p, sensor_msgs::Image* msg)
 {
 	if (image_file == nullptr || image_file[0] == '\0') {
 		return;
 	}
 	std::cerr << "Image='" << image_file << "'" << std::endl;
-	IplImage* new_img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-	if (new_img == nullptr) {
+	IplImage* img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	if (img == nullptr) {
 		std::cerr << "Can't load " << image_file << "'" << std::endl;
-		if (strcmp(image_file, def_img_file) == 0) {
-			std::exit(1);
-		}
 		return;
 	}
-	if (img != nullptr) {
-		cvReleaseImage(&img); // Free allocated data
+	if (*img_p != nullptr) {
+		cvReleaseImage(img_p); // Free allocated data
 	}
-	img = new_img;
+	*img_p = img;
 
-	msg.width = img->width;
-	msg.height = img->height;
-	msg.is_bigendian = 0;
-	msg.step = img->widthStep;
+	msg->width = img->width;
+	msg->height = img->height;
+	msg->is_bigendian = 0;
+	msg->step = img->widthStep;
 
 	uint8_t *data_ptr = reinterpret_cast<uint8_t*>(img->imageData);
 	std::vector<uint8_t> data(data_ptr, data_ptr + img->imageSize);
-	msg.data = data;
+	msg->data = data;
 
-	msg.encoding = (img->nChannels == 1) ? 
+	msg->encoding = (img->nChannels == 1) ? 
 		sensor_msgs::image_encodings::MONO8 : 
 		sensor_msgs::image_encodings::RGB8;
 }
 
-static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level)
+static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level,
+		     IplImage** img_p, sensor_msgs::Image* msg)
 {
 	std::cerr << "image_file=" << config.image_file << std::endl;
-	update_img_msg(config.image_file.c_str());
+	update_img_msg(config.image_file.c_str(), img_p, msg);
 }
 
 int main(int argc, char **argv)
@@ -93,14 +87,16 @@ int main(int argc, char **argv)
 		std::cerr << "Usage: fake_driver image_file" << std::endl;
 		std::exit(1);
 	}
-	def_img_file = argv[1];
+	
+	IplImage* img = nullptr;
+	sensor_msgs::Image msg;
 
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
-	f = boost::bind(&callback, _1, _2);
+	f = boost::bind(&callback, _1, _2, &img, &msg);
 	server.setCallback(f);
 
-	update_img_msg();
+	update_img_msg(argv[1], &img, &msg);
 
 	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
 
