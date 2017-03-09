@@ -873,7 +873,7 @@ class MyFrame(rtmgr.MyFrame):
 				if hook:
 					hook(hook_var.get('args', {}))
 
-		if 'pub' in prm:
+		if 'topics' in prm:
 			self.publish_param_topic(pdic, prm)
 		self.rosparam_set(pdic, prm)
 		self.update_depend_enable(pdic, gdic, prm)
@@ -945,23 +945,26 @@ class MyFrame(rtmgr.MyFrame):
 			enables_set(vp, 'depend', v)
 
 	def publish_param_topic(self, pdic, prm):
-		pub = prm['pub']
-		klass_msg = globals()[ prm['msg'] ]
-		msg = klass_msg()
+		for d in prm.get('topics'):
+			msg = d.get('klass_msg')()
+			topic = d.get('topic')
+			for (name, v) in pdic.items():
+				var = self.get_var(prm, name, {})
+				if var.get('topic', topic) != topic:
+					continue
+				name = var.get('in_msg', name)
+				if topic == '/twist_cmd' and name == 'twist.angular.z':
+					v = -v
+				(obj, attr) = msg_path_to_obj_attr(msg, name)
+				if obj and attr in obj.__slots__:
+					type_str = obj._slot_types[ obj.__slots__.index(attr) ]
+					setattr(obj, attr, str_to_rosval(v, type_str, v))
 
-		for (name, v) in pdic.items():
-			if prm.get('topic') == '/twist_cmd' and name == 'twist.angular.z':
-				v = -v
-			(obj, attr) = msg_path_to_obj_attr(msg, name)
-			if obj and attr in obj.__slots__:
-				type_str = obj._slot_types[ obj.__slots__.index(attr) ]
-				setattr(obj, attr, str_to_rosval(v, type_str, v))
-		
-		if 'stamp' in prm.get('flags', []):
-			(obj, attr) = msg_path_to_obj_attr(msg, 'header.stamp')
-			setattr(obj, attr, rospy.get_rostime())
+			if 'stamp' in prm.get('flags', []):
+				(obj, attr) = msg_path_to_obj_attr(msg, 'header.stamp')
+				setattr(obj, attr, rospy.get_rostime())
 
-		pub.publish(msg)
+			d.get('pub').publish(msg)
 
 	def rosparam_set(self, pdic, prm):
 		rosparams = None
@@ -1548,9 +1551,19 @@ class MyFrame(rtmgr.MyFrame):
 
 	def add_params(self, params):
 		for prm in params:
-			if 'topic' in prm and 'msg' in prm:
-				klass_msg = globals()[ prm['msg'] ]
-				prm['pub'] = rospy.Publisher(prm['topic'], klass_msg, latch=True, queue_size=10)
+			if 'topics' not in prm and 'topic' in prm and 'msg' in prm:
+				prm['topics'] = [ { 'topic':prm.get('topic'), 'msg':prm.get('msg') } ]
+			for d in prm.get('topics', []):
+				d['klass_msg'] = globals()[ d.get('msg') ]
+				d['pub'] = rospy.Publisher(d.get('topic'), d.get('klass_msg'), latch=True, queue_size=10)
+			if len( prm.get('topics', []) ) == 1:
+				d = prm.get('topics')[0]
+				for var in prm.get('vars', []):
+					name = var.get('in_msg', var.get('name'))
+					(obj, attr) = msg_path_to_obj_attr(d.get('klass_msg'), name)
+					if obj and attr in obj.__slots__:
+						var['topic'] = d.get('topic')
+
 		self.params += params
 
 	def gdic_get_1st(self, dic):
@@ -1997,11 +2010,11 @@ class ParamPanel(wx.Panel):
 			flag = wx_flag_get(gdic_v.get('flags', []))
 
 			do_category = 'no_category' not in gdic_v.get('flags', [])
-			if do_category and self.in_msg(var):
+			if do_category and 'topic' in var:
 				bak = (szr, hszr)
 				(szr, hszr) = topic_szrs
 				if szr is None:
-					szr = static_box_sizer(self, 'topic : ' + self.prm.get('topic'))
+					szr = static_box_sizer(self, 'topic : ' + var.get('topic'))
 					bak[0].Add(szr, 0, wx.EXPAND | wx.ALL, 4)
 			targ_szr = szr
 			if vp.is_nl():
@@ -2031,14 +2044,15 @@ class ParamPanel(wx.Panel):
 			if 'nl' in gdic_v.get('flags', []):
 				hszr = None
 
-			if do_category and self.in_msg(var):
+			if do_category and 'topic' in var:
 				topic_szrs = (szr, hszr)
 				(szr, hszr) = bak
 
 			if 'hline' in gdic_v.get('flags', []) and hszr is None:
 				szr.Add(wx.StaticLine(self, wx.ID_ANY), 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 4)
 
-			if not self.in_msg(var) and var.get('rosparam'):
+			#if not self.in_msg(var) and var.get('rosparam'):
+			if 'topic' not in var and var.get('rosparam'):
 				k = 'ext_toggle_enables'
 				self.gdic[ k ] = self.gdic.get(k, []) + [ vp ]
 				enables_set(vp, 'toggle', proc is None)
@@ -2080,17 +2094,6 @@ class ParamPanel(wx.Panel):
 
 			vp = gdic_v.get('var')
 			lst_remove_once(self.gdic.get('ext_toggle_enables', []), vp)
-
-	def in_msg(self, var):
-		if 'topic' not in self.prm or 'msg' not in self.prm:
-			return False
-		if self.tmp_msg is None:
-			klass_msg = globals().get( self.prm.get('msg') )
-			if klass_msg is None:
-				return False
-			self.tmp_msg = klass_msg()
-		(obj, attr) = msg_path_to_obj_attr(self.tmp_msg, var.get('name'))
-		return obj and attr in obj.__slots__
 
 class VarPanel(wx.Panel):
 	def __init__(self, *args, **kwds):
