@@ -589,6 +589,7 @@ buttons:
 
 sys_gui:
   dialog   : MyDialogParam
+  def_link : sys
   cpu_chks :
     user_category : Migration Allowance
     user_category_add : [ [ all ], 8 ]
