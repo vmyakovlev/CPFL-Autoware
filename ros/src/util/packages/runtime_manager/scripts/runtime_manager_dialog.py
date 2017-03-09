@@ -54,6 +54,7 @@ import syslog
 import rtmgr
 import rospy
 import std_msgs.msg
+import dynamic_reconfigure.client
 from std_msgs.msg import Bool
 from decimal import Decimal
 from runtime_manager.msg import ConfigRcnn
@@ -882,6 +883,7 @@ class MyFrame(rtmgr.MyFrame):
 		if 'topics' in prm:
 			self.publish_param_topic(pdic, prm)
 		self.rosparam_set(pdic, prm)
+		self.dynamic_reconfig(pdic, gdic, prm)
 		self.update_depend_enable(pdic, gdic, prm)
 
 		d = self.cfg_dic( {'pdic':pdic, 'gdic':gdic, 'param':prm}, sys=True )
@@ -1001,14 +1003,62 @@ class MyFrame(rtmgr.MyFrame):
 			print(cmd)
 			subprocess.call(cmd)
 
+	def proc_to_node_name(self, var, proc):
+		if 'node_name' in var:
+			return var.get('node_name')
+
+                subprocess.call('echo y | rosnode cleanup', shell=True)
+		cmd = "rosnode list | xargs rosnode info | sed -n -e 's/^Node \\[\\(.*\\)\\]/\\1/p' -e 's/^Pid: \\(.*\\)/\\1/p'"
+		lst = subprocess.check_output(cmd, shell=True).strip().split()
+		names = lst[::2]
+		pids = [ int(v) for v in lst[1::2] ]
+		dic = dict( zip(pids, names) )
+		#print dic
+
+		procs = [ proc ] + psutil.Process(proc.pid).get_children()
+		return next( ( dic.get(p.pid) for p in procs if p.pid in dic ), None)
+
+	def dynamic_reconfig(self, pdic, gdic, prm):
+		if pdic is None or prm is None:
+			return
+
+		key_dr = 'dynamic_reconfig'
+		lst = [ var for var in prm.get('vars', []) if key_dr in var ]
+		if len(lst) == 0:
+			return
+
+		d = self.cfg_dic( {'pdic':pdic, 'gdic':gdic, 'param':prm} )
+		obj = d.get('obj')		
+		(_, _, proc) = self.obj_to_cmd_dic_cmd_proc(obj)
+		if proc is None:
+			return
+		node_name = self.proc_to_node_name(var, proc)
+		if not node_name:
+			return
+
+		vdic = {}
+		for var in lst:
+			k = var.get(key_dr)
+			v = self.param_value_get(pdic, prm, var.get('name'))
+			vdic[k] = v
+
+		#print 'node_name=', node_name
+		#print 'vdic=', vdic
+		client = dynamic_reconfigure.client.Client(node_name)
+		client.update_configuration(vdic)
+
 	def setup_adjust(self, pdic, gdic, prm):
+		def adj_or(a1, a2):
+			vdic = { 'init':0, 'static':1, 'dynamic':2, 'always':3 }
+			v_or = vdic.get(a1, 0) | vdic.get(a2, 0)
+			return next( (k for (k,v) in vdic.items() if v == v_or), 'init')
+
 		k = 'adjust'
 		for var in prm.get('vars', []):
 			if k not in var:
-				adj = prm.get('def_adj', 'static')
-				if 'topic' in var or 'rosparam' in var:
-					adj = 'always'
-				var[k] = adj
+				dic = {'topic':'always', 'rosparam':'always', 'cmd_param':'static', 'dynamic_reconfig':'dynamic'}
+				adj = reduce( (lambda s, (vk, a): adj_or(s, a) if vk in var else s), dic.items(), 'init')
+				var[k] = adj if adj != 'init' else prm.get('def_adj', 'static')
 
 		def_link = gdic.get('def_link', 'app')
 
@@ -2173,7 +2223,7 @@ class ParamPanel(wx.Panel):
 			vp = gdic_v.get('var')
 			lst_remove_once(self.gdic.get('ext_toggle_enables', []), vp)
 
-        def is_match_var(self, var):
+	def is_match_var(self, var):
 		return ( var.get('link', self.def_link) == self.curr_link
 			and gdic_dialog_type_chk(self.gdic, var.get('name')) )
 

@@ -2219,9 +2219,14 @@ params :
   - name  : fake_camera
     vars  :
     - name  : image_file
-      desc  : image file path
       label : image file path
       kind  : path
       v     : ''
       cmd_param :
         delim : ''
+    - name  : dynamic_image_file
+      label : dynamic image file path
+      kind  : path
+      v     : ''
+      dynamic_reconfig : image_file
+      #node_name : fake_camera
