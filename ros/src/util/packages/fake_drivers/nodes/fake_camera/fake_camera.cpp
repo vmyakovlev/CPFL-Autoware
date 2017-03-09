@@ -41,47 +41,82 @@
 #include <dynamic_reconfigure/server.h>
 #include <fake_drivers/FakeCameraConfig.h>
 
-static void update_img_msg(const char* image_file, IplImage** img_p, sensor_msgs::Image* msg)
+static void update_img_msg(std::string image_file, IplImage** img_p, sensor_msgs::Image& msg)
 {
-	if (image_file == nullptr || image_file[0] == '\0') {
+	if (image_file.empty()) {
 		return;
 	}
 	std::cerr << "Image='" << image_file << "'" << std::endl;
-	IplImage* img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	IplImage* img = cvLoadImage(image_file.c_str(), CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 	if (img == nullptr) {
 		std::cerr << "Can't load " << image_file << "'" << std::endl;
 		return;
 	}
 	if (*img_p != nullptr) {
-		cvReleaseImage(img_p); // Free allocated data
+		cvReleaseImage(img_p);
 	}
 	*img_p = img;
 
-	msg->width = img->width;
-	msg->height = img->height;
-	msg->is_bigendian = 0;
-	msg->step = img->widthStep;
+	msg.width = img->width;
+	msg.height = img->height;
+	msg.is_bigendian = 0;
+	msg.step = img->widthStep;
 
 	uint8_t *data_ptr = reinterpret_cast<uint8_t*>(img->imageData);
 	std::vector<uint8_t> data(data_ptr, data_ptr + img->imageSize);
-	msg->data = data;
+	msg.data = data;
 
-	msg->encoding = (img->nChannels == 1) ? 
+	msg.encoding = (img->nChannels == 1) ? 
 		sensor_msgs::image_encodings::MONO8 : 
 		sensor_msgs::image_encodings::RGB8;
 }
 
-static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level,
-		     IplImage** img_p, sensor_msgs::Image* msg, ros::Rate** rate_p)
+static bool is_1st(uint32_t level)
 {
-	std::cerr << "image_file=" << config.image_file << std::endl;
-	update_img_msg(config.image_file.c_str(), img_p, msg);
+	return level == 0xffffffff;
+}
 
-	std::cerr << "fps=" << config.fps << std::endl;
-	if (*rate_p != nullptr) {
-		delete *rate_p;
+static uint32_t get_level(fake_drivers::FakeCameraConfig &config, std::string name)
+{
+	const std::vector<fake_drivers::FakeCameraConfig::AbstractParamDescriptionConstPtr> &
+		params = config.__getParamDescriptions__();
+
+	for (std::vector<fake_drivers::FakeCameraConfig::AbstractParamDescriptionConstPtr>::const_iterator
+		_i = params.begin(); _i != params.end(); ++_i) {
+		if (name == (*_i)->name) {
+			return (*_i)->level;
+		}
 	}
-	*rate_p = new ros::Rate(config.fps);
+	return 0;
+}
+
+static bool is_update(fake_drivers::FakeCameraConfig &config, uint32_t level, std::string name)
+{
+	uint32_t name_level = get_level(config, name);
+	return name_level ? (level & name_level) != 0 : false;
+}
+
+static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level,
+		     IplImage** img_p, sensor_msgs::Image& msg, ros::Rate** rate_p)
+{
+	if (is_1st(level)) {
+		std::cerr << "1st" << std::endl;
+	}
+	std::cerr << "level=" << level 
+		<< " image_file=" << config.image_file
+		<< " fps=" << config.fps << std::endl;
+
+	if (is_update(config, level, "image_file")) {
+		update_img_msg(config.image_file, img_p, msg);
+		std::cerr << " update image_file" << std::endl;
+	}
+	if (is_update(config, level, "fps")) {
+		if (*rate_p != nullptr) {
+			delete *rate_p;
+		}
+		*rate_p = new ros::Rate(config.fps);
+		std::cerr << " update fps" << std::endl;
+	}
 }
 
 int main(int argc, char **argv)
@@ -96,14 +131,14 @@ int main(int argc, char **argv)
 	
 	IplImage* img = nullptr;
 	sensor_msgs::Image msg;
-	ros::Rate* rate = nullptr;
+	update_img_msg(argv[1], &img, msg);
+
+	ros::Rate* rate = new ros::Rate(30);
 
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
 	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
-	f = boost::bind(&callback, _1, _2, &img, &msg, &rate);
+	f = boost::bind(&callback, _1, _2, &img, msg, &rate);
 	server.setCallback(f);
-
-	update_img_msg(argv[1], &img, &msg);
 
 	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
 
@@ -115,11 +150,11 @@ int main(int argc, char **argv)
 		msg.header.stamp.nsec = ros::Time::now().toNSec();
 		pub.publish(msg);
 		ros::spinOnce();
-		if (rate != nullptr) {
-			rate->sleep();
-		}
+		rate->sleep();
 		count++;
 	}
-	cvReleaseImage(&img);//Free allocated data
+	if (img != nullptr) {
+		cvReleaseImage(&img);
+	}
 	return 0;
 }
