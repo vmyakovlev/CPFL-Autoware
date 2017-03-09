@@ -38,29 +38,27 @@
 #include <ros/ros.h>
 #include <sensor_msgs/image_encodings.h>
 #include <sensor_msgs/Image.h>
+#include <dynamic_reconfigure/server.h>
+#include <fake_drivers/FakeCameraConfig.h>
 
-int main(int argc, char **argv)
+static IplImage* img = nullptr;
+static sensor_msgs::Image msg;
+
+static void update_img_msg(const char* image_file)
 {
-	ros::init(argc, argv, "fake_camera");
-	ros::NodeHandle n;
-
-	if (argc < 2) {
-		std::cerr << "Usage: fake_driver image_file" << std::endl;
-		std::exit(1);
+	if (image_file == nullptr || image_file[0] == '\0') {
+		return;
 	}
-
-	const char *image_file = argv[1];
-	std::cerr << "Image='" << image_file << "'" << std::endl;
-
-	IplImage* img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
-	if (img == nullptr) {
+	IplImage* new_img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
+	if (new_img == nullptr) {
 		std::cerr << "Can't load " << image_file << "'" << std::endl;
 		std::exit(1);
 	}
+	if (img != nullptr) {
+		cvReleaseImage(&img); // Free allocated data
+	}
+	img = new_img;
 
-	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
-
-	sensor_msgs::Image msg;
 	msg.width = img->width;
 	msg.height = img->height;
 	msg.is_bigendian = 0;
@@ -73,6 +71,36 @@ int main(int argc, char **argv)
 	msg.encoding = (img->nChannels == 1) ? 
 		sensor_msgs::image_encodings::MONO8 : 
 		sensor_msgs::image_encodings::RGB8;
+}
+
+static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level)
+{
+	std::cerr << "image_file=" << config.image_file << std::endl;
+	update_img_msg(config.image_file.c_str());
+}
+
+int main(int argc, char **argv)
+{
+	ros::init(argc, argv, "fake_camera");
+
+	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
+	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
+	f = boost::bind(&callback, _1, _2);
+	server.setCallback(f);
+
+	ros::NodeHandle n;
+
+	if (argc < 2) {
+		std::cerr << "Usage: fake_driver image_file" << std::endl;
+		std::exit(1);
+	}
+
+	const char *image_file = argv[1];
+	std::cerr << "Image='" << image_file << "'" << std::endl;
+
+	update_img_msg(image_file);
+
+	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
 
 	int fps;
 	n.param<int>("/fake_camera/fps", fps, 30);

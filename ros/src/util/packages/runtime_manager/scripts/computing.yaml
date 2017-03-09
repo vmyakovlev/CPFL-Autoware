@@ -493,6 +493,14 @@ subs :
         desc : state_machine desc sample
         cmd  : roslaunch state_machine state_machine.launch
 
+  - name : Dynamic Reconfigure Test
+    desc : Dynamic Reconfigure Test desc sample
+    subs :
+    - name : fake_camera
+      desc : fake_camera desc sample
+      cmd  : rosrun fake_drivers fake_camera
+      param: fake_camera
+
 buttons:
   synchronization :
     desc: synchronization desc sample
@@ -2207,3 +2215,13 @@ params :
       cmd_param :
         dash      : ''
         delim     : ':='
+
+  - name  : fake_camera
+    vars  :
+    - name  : image_file
+      desc  : image file path
+      label : image file path
+      kind  : path
+      v     : ''
+      cmd_param :
+        delim : ''
