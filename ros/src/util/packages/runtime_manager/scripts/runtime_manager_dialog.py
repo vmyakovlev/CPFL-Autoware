@@ -3119,7 +3119,6 @@ def bak_stk_push(dic, key):
 	if key in dic:
 		k = key + '_bak_str'
 		dic_getset(dic, k, []).append( dic.get(key) )
-                print 'push:', dic.get('k')
 
 def bak_stk_pop(dic, key):
 	k = key + '_bak_str'
