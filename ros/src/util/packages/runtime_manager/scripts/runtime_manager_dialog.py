@@ -1100,10 +1100,7 @@ class MyFrame(rtmgr.MyFrame):
 		return hszr
 
 	def camera_ids(self):
-		if self.button_synchronization.GetValue():
-			return []
-		cmd = "rostopic list | sed -n 's|/image_raw||p' | sed 's/^$/\//'"
-		return subprocess.check_output(cmd, shell=True).strip().split()
+		return cam_ids() if not self.button_synchronization.GetValue() else []
 
 	def cam_id_to_obj(self, cam_id, v):
 		cam_id_obj = self.cfg_prm_to_obj( {'name':cam_id} )
@@ -3096,6 +3093,10 @@ def obj_refresh(obj):
 			obj = obj.GetParent()
 		tree = obj.GetData()
 		tree.Refresh()
+
+def cam_ids():
+	cmd = "rostopic list | sed -n 's|/image_raw||p' | sed s/^$//"
+	return subprocess.check_output(cmd, shell=True).strip().split()
 
 # dic_list util (push, pop, get)
 def dic_list_push(dic, key, v):
