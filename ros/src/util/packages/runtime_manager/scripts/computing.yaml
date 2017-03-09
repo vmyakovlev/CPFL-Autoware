@@ -88,11 +88,11 @@ subs :
         cmd  : roslaunch cv_tracker dpm_ocv.launch
         param: dpm_ocv
         gui  :
-          flags : [ need_camera_info ]
-          links : [ app, car, pedestrian ]
+          links : [ app, car, pedestrian, cam ]
           links_info :
             car : { title : "dpm_ocv (car)" }
             pedestrian : { title : "dpm_ocv (pedestrian)" }
+            cam : { title : "select camera" }
           use_gpu :
             flags  : [ nl ]
           car :
@@ -100,11 +100,11 @@ subs :
           pedestrian :
             border : 16
             flags  : [ left ]
-          sel_cam_dialog_only : [ camera_id ]
-          sel_cam_dialog_allow: [ camera_id ]
           camera_id :
             border : 16
             flags : [ all ]
+          camera_id_cmd_param :
+            func : pdic.get('camera_id') if not self.button_synchronization.GetValue() else None
           sync :
             func : self.button_synchronization.GetValue()
 
@@ -697,8 +697,13 @@ params :
       kind         : menu
       label        : Camera ID
       choices_type : str
+      choices_make : cam_ids()
       v            : ''
+      link         : cam
+    - name         : camera_id_cmd_param
+      kind         : hide
       cmd_param    :
+        var_name     : camera_id
         dash         : ''
         delim        : ':='
         only_enable  : True
