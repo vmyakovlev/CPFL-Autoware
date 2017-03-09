@@ -1565,8 +1565,8 @@ class MyFrame(rtmgr.MyFrame):
 				inc_vars(ivars)
 				name_prefix = var.get('name_prefix', '')
 				name_postfix = var.get('name_postfix', '')
-				overwrite_all = var.get('overwrite_all')
-				overwrite = var.get('overwrite')
+				overwrite_all = var.get('overwrite_all', {})
+				overwrite = var.get('overwrite', {})
 				if name_prefix or name_postfix or overwrite_all or overwrite:
 					ivars = [ ivar.copy() for ivar in ivars ]
 					for ivar in ivars:
