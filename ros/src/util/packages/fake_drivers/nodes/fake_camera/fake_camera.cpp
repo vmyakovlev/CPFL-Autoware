@@ -41,18 +41,23 @@
 #include <dynamic_reconfigure/server.h>
 #include <fake_drivers/FakeCameraConfig.h>
 
+static char* def_img_file;
 static IplImage* img = nullptr;
 static sensor_msgs::Image msg;
 
-static void update_img_msg(const char* image_file)
+static void update_img_msg(const char* image_file=def_img_file)
 {
 	if (image_file == nullptr || image_file[0] == '\0') {
 		return;
 	}
+	std::cerr << "Image='" << image_file << "'" << std::endl;
 	IplImage* new_img = cvLoadImage(image_file, CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR);
 	if (new_img == nullptr) {
 		std::cerr << "Can't load " << image_file << "'" << std::endl;
-		std::exit(1);
+		if (strcmp(image_file, def_img_file) == 0) {
+			std::exit(1);
+		}
+		return;
 	}
 	if (img != nullptr) {
 		cvReleaseImage(&img); // Free allocated data
@@ -82,23 +87,20 @@ static void callback(fake_drivers::FakeCameraConfig &config, uint32_t level)
 int main(int argc, char **argv)
 {
 	ros::init(argc, argv, "fake_camera");
-
-	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
-	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
-	f = boost::bind(&callback, _1, _2);
-	server.setCallback(f);
-
 	ros::NodeHandle n;
 
 	if (argc < 2) {
 		std::cerr << "Usage: fake_driver image_file" << std::endl;
 		std::exit(1);
 	}
+	def_img_file = argv[1];
 
-	const char *image_file = argv[1];
-	std::cerr << "Image='" << image_file << "'" << std::endl;
+	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig> server;
+	dynamic_reconfigure::Server<fake_drivers::FakeCameraConfig>::CallbackType f;
+	f = boost::bind(&callback, _1, _2);
+	server.setCallback(f);
 
-	update_img_msg(image_file);
+	update_img_msg();
 
 	ros::Publisher pub = n.advertise<sensor_msgs::Image>("image_raw", 1000);
 
