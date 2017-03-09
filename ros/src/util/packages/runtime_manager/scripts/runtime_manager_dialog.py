@@ -231,6 +231,8 @@ class MyFrame(rtmgr.MyFrame):
 
 		self.add_params(items.get('params', []))
 
+		attr_getset(self, 'guis', []).extend( items.get('guis', []) )
+
 		self.sys_gdic = items.get('sys_gui')
 		self.sys_gdic['update_func'] = self.update_func
 
@@ -1635,6 +1637,9 @@ class MyFrame(rtmgr.MyFrame):
 
 	def gdic_get_1st(self, dic):
 		gdic = dic.get('gui', {})
+		for inc_gui_name in dic.get('include_guis', []):
+			gui = next( ( gui.get('gui', {}) for gui in getattr(self, 'guis', []) if gui.get('name') == inc_gui_name), {})
+			gdic.update(gui)
 		gdic['update_func'] = self.update_func
 		return gdic
 
