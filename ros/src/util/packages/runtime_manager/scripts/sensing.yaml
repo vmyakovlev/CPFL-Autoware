@@ -482,6 +482,7 @@ params :
       label        : Camera ID
       choices_type : str
       v            : ''
+      link         : app
       cmd_param    :
         dash         : ''
         delim        : ':='
