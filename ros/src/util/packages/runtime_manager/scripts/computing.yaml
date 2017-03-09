@@ -104,10 +104,10 @@ subs :
             border : 16
             flags : [ all ]
             depend : not_sync
-          camera_id_cmd_param :
-            func : pdic.get('camera_id') if not self.button_synchronization.GetValue() else None
           not_sync :
             func : not self.button_synchronization.GetValue()
+          camera_id_cmd_param :
+            func : pdic.get('camera_id') if pdic.get('not_sync') else None
           sync :
             func : self.button_synchronization.GetValue()
 
@@ -116,11 +116,11 @@ subs :
         cmd  : roslaunch cv_tracker dpm_ttic.launch
         param: dpm_ttic
         gui  :
-          flags : [ need_camera_info ]
-          links : [ app, car, pedestrian ]
+          links : [ app, car, pedestrian, cam ]
           links_info :
             car : { title : "dpm_ttic (car)" }
             pedestrian : { title : "dpm_ttic (pedestrian)" }
+            cam : { title : "select camera" }
           use_gpu :
             flags  : [ nl ]
           car :
@@ -130,11 +130,14 @@ subs :
             flags  : [ left ]
           part_model_car :
             flags  : [ hline ]
-          sel_cam_dialog_only : [ camera_id ]
-          sel_cam_dialog_allow: [ camera_id ]
           camera_id :
             border : 16
             flags : [ all ]
+            depend : not_sync
+          not_sync :
+            func : not self.button_synchronization.GetValue()
+          camera_id_cmd_param :
+            func : pdic.get('camera_id') if pdic.get('not_sync') else None
           sync :
             func : self.button_synchronization.GetValue()
 
@@ -644,6 +647,27 @@ params :
       kind     : num
       v        : 20
 
+  - name  : cam_id
+    vars  :
+    - name         : camera_id
+      desc         : camera_id desc sample
+      kind         : menu
+      label        : Camera ID
+      choices_type : str
+      choices_make : cam_ids()
+      v            : ''
+      link         : cam
+    - name      : not_sync
+      kind      : hide
+      v         : True
+    - name         : camera_id_cmd_param
+      kind         : hide
+      cmd_param    :
+        var_name     : camera_id
+        dash         : ''
+        delim        : ':='
+        only_enable  : True
+
   - name  : dpm_ocv
     topics:
     - topic : /config/car_dpm
@@ -695,24 +719,9 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
-    - name         : camera_id
-      desc         : camera_id desc sample
-      kind         : menu
-      label        : Camera ID
-      choices_type : str
-      choices_make : cam_ids()
-      v            : ''
-      link         : cam
-    - name         : camera_id_cmd_param
-      kind         : hide
-      cmd_param    :
-        var_name     : camera_id
-        dash         : ''
-        delim        : ':='
-        only_enable  : True
-    - name      : not_sync
-      kind      : hide
-      v         : True
+
+    - include_param_vars : cam_id
+
     - name      : sync
       kind      : hide
       v         : False
@@ -807,16 +816,9 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
-    - name         : camera_id
-      desc         : camera_id desc sample
-      kind         : menu
-      label        : Camera ID
-      choices_type : str
-      v            : ''
-      cmd_param    :
-        dash         : ''
-        delim        : ':='
-        only_enable  : True
+
+    - include_param_vars : cam_id
+
     - name      : sync
       kind      : hide
       v         : False
