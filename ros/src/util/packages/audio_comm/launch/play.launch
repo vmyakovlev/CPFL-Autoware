@@ -1,0 +1,8 @@
+<launch>
+  <arg name="topic" default="audio"/>
+  <arg name="dst" default="alsasink"/>
+  <node name="$(anon audio_play)" pkg="audio_play" type="audio_play" output="screen">
+    <param name="dst" value="$(arg dst)"/>
+    <remap from="audio" to="$(arg topic)"/>
+  </node>
+</launch>

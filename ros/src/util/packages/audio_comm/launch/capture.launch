@@ -1,0 +1,8 @@
+<launch>
+  <arg name="topic" default="audio"/>
+  <arg name="bitrate" default="128"/>
+  <node name="$(anon audio_capture)" pkg="audio_capture" type="audio_capture" output="screen">
+    <param name="bitrate" value="$(arg bitrate)"/>
+    <remap from="audio" to="$(arg topic)"/>
+  </node>
+</launch>
