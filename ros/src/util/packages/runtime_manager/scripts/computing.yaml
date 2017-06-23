@@ -581,6 +581,23 @@ subs :
          desc : twist_filter desc sample
          cmd  : roslaunch waypoint_follower twist_filter.launch
          param: twist_filter
+       - name : twist_stat_publisher
+         desc : twist_stat_publisher desc sample
+         cmd  : roslaunch waypoint_follower twist_stat_publisher.launch
+         param: twist_stat_publisher
+         gui  :
+           exe_time_threshold:
+             flags : [ nl ]
+           iteration_threshold:
+             flags : [ nl ]
+           score_threshold:
+             flags : [ nl ]
+           twist_cmd_hz_threshold:
+             flags : [ nl ]
+           ndt_stat_hz_threshold:
+             flags : [ nl ]
+           twist_stat_hz:
+             flags : [ nl ]
        - name : wf_simulator
          desc : wf_simulator desc sample
          cmd  : roslaunch waypoint_follower wf_simulator.launch
@@ -1638,6 +1655,63 @@ params :
       min   : 0
       max   : 1.0
       v         : 0.0
+
+  - name  : twist_stat_publisher
+    vars  :
+    - name      : exe_time_threshold
+      desc      : exe_time_threshold desc sample
+      label     : exe_time_threshold (ms)
+      min       : 0
+      max       : 1000
+      v         : 80.0
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name      : iteration_threshold
+      desc      : iteration_threshold desc sample
+      label     : iteration_threshold
+      min       : 0
+      max       : 100
+      v         : 10
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name      : score_threshold
+      desc      : score_threshold desc sample
+      label     : score_threshold
+      min       : 0
+      max       : 1000
+      v         : 100.0
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name      : twist_cmd_hz_threshold
+      desc      : twist_cmd_hz_threshold desc sample
+      label     : twist_cmd_hz_threshold (Hz)
+      min       : 0
+      max       : 100
+      v         : 1.0
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name      : ndt_stat_hz_threshold
+      desc      : ndt_stat_hz_threshold desc sample
+      label     : ndt_stat_hz_threshold (Hz)
+      min       : 0
+      max       : 100
+      v         : 1.0
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name      : twist_stat_hz
+      desc      : twist_stat_hz desc sample
+      label     : twist_stat_hz (Hz)
+      min       : 0
+      max       : 100
+      v         : 10.0
+      cmd_param :
+        dash        : ''
+        delim       : ':='
 
   - name  : wf_simulator
     vars  :

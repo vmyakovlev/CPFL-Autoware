@@ -1,0 +1,20 @@
+<!-- -->
+<launch>
+
+	<arg name="exe_time_threshold" default="80.0"/>
+	<arg name="iteration_threshold" default="10"/>
+	<arg name="score_threshold" default="100.0"/>
+	<arg name="twist_cmd_hz_threshold" default="1.0"/>
+	<arg name="ndt_stat_hz_threshold" default="1.0"/>
+	<arg name="twist_stat_hz" default="10.0"/>
+	<!-- rosrun waypoint_follower twist_stat_publisher -->
+	<node pkg="waypoint_follower" type="twist_stat_publisher" name="twist_stat_publisher" output="log">
+		<param name="exe_time_threshold" value="$(arg exe_time_threshold)"/>
+		<param name="iteration_threshold" value="$(arg iteration_threshold)"/>
+		<param name="score_threshold" value="$(arg score_threshold)"/>
+		<param name="twist_cmd_hz_threshold" value="$(arg twist_cmd_hz_threshold)"/>
+		<param name="ndt_stat_hz_threshold" value="$(arg ndt_stat_hz_threshold)"/>
+		<param name="twist_stat_hz" value="$(arg twist_stat_hz)"/>
+	</node>
+
+</launch>

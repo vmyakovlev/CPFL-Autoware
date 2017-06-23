@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   runtime_manager
   vehicle_socket
   waypoint_follower_msgs
+  ndt_localizer
 )
 
 ################################################
@@ -62,4 +63,8 @@ target_link_libraries(twist_filter ${catkin_LIBRARIES})
 add_dependencies(twist_filter
 runtime_manager_generate_messages_cpp)
 
+add_executable(twist_stat_publisher nodes/twist_stat_publisher/twist_stat_publisher.cpp)
+target_link_libraries(twist_stat_publisher ${catkin_LIBRARIES})
+add_dependencies(twist_stat_publisher
+ndt_localizer_generate_messages_cpp)
 
