@@ -1,3 +1,6 @@
+*~
+*.o
+#*#
 hevsim
 moc_mainwindow.cpp
 ui_mainwindow.h
