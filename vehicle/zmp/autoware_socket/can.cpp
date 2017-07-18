@@ -140,19 +140,34 @@ void MainWindow::SendCAN(void)
 
   if (_selectLog.drvInf == true) {
     sprintf(tmp, ",%d,%3.2f,%d,%d,%d,%d",
+#ifdef HEVSIM
+            CAN_KEY_VELOC, GetVelocity(),
+            CAN_KEY_ACCEL, (int)GetAccelStroke(),
+            CAN_KEY_SHIFT, GetDrvShiftMode());
+#else /* HEVSIM */
             CAN_KEY_VELOC, _drvInf.veloc,
             CAN_KEY_ACCEL, _drvInf.actualPedalStr,
             CAN_KEY_SHIFT, _drvInf.actualShift);
+#endif /* HEVSIM */
     can += tmp;
   }
   if (_selectLog.strInf == true) {
     sprintf(tmp, ",%d,%3.2f,%d,%d",
+#ifdef HEVSIM
+            CAN_KEY_ANGLE, GetSteerAngle(),
+            CAN_KEY_TORQUE, (int)GetSteerTorque());
+#else /* HEVSIM */
             CAN_KEY_ANGLE, _strInf.angle,
             CAN_KEY_TORQUE, _strInf.torque);
+#endif /* HEVSIM */
     can += tmp;
   }
   if (_selectLog.brkInf == true) {
+#ifdef HEVSIM
+    sprintf(tmp, ",%d,%d", CAN_KEY_BRAKE, (int)GetBrakeStroke());
+#else /* HEVSIM */
     sprintf(tmp, ",%d,%d", CAN_KEY_BRAKE, _brakeInf.actualPedalStr);
+#endif /* HEVSIM */
     can += tmp;
   }
   
