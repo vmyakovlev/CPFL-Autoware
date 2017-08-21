@@ -51,6 +51,9 @@ class VelocitySetInfo
   double decel_;                    // (m/s^2) deceleration
   double velocity_change_limit_;    // (m/s)
   double temporal_waypoints_size_;  // (meter)
+  int loop_rate_; // (hz) replanning rate
+  int deceleration_search_index_; // search range of waypoints for deceleration obstable
+  int stop_search_index_; // for stop obstacle
 
   // ROS param
   double remove_points_upto_;
@@ -110,6 +113,21 @@ class VelocitySetInfo
   double getVelocityChangeLimit() const
   {
     return velocity_change_limit_;
+  }
+
+  double getLoopRate() const
+  {
+    return loop_rate_;
+  }
+
+  double getDecelerationSearchIndex() const
+  {
+    return deceleration_search_index_;
+  }
+
+  double getStopSearchIndex() const
+  {
+    return stop_search_index_;
   }
 
   double getTemporalWaypointsSize() const

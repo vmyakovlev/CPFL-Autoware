@@ -38,10 +38,6 @@
 
 namespace
 {
-constexpr int LOOP_RATE = 10;
-constexpr double DECELERATION_SEARCH_DISTANCE = 30;
-constexpr double STOP_SEARCH_DISTANCE = 60;
-
 
 // Display a detected obstacle
 void displayObstacle(const EControl &kind, const ObstaclePoints& obstacle_points, const ros::Publisher& obstacle_pub)
@@ -89,7 +85,7 @@ void displayObstacle(const EControl &kind, const ObstaclePoints& obstacle_points
   //obstacle_pub.publish(marker);
 }
 
-void displayDetectionRange(const autoware_msgs::lane& lane, const CrossWalk& crosswalk, const int closest_waypoint, const EControl &kind, const int obstacle_waypoint, const double stop_range, const double deceleration_range, const ros::Publisher& detection_range_pub)
+void displayDetectionRange(const autoware_msgs::lane& lane, const CrossWalk& crosswalk, const int closest_waypoint, const EControl &kind, const int obstacle_waypoint, const double stop_range, const double deceleration_range, const int deceleration_search_index, const int stop_search_index, const ros::Publisher& detection_range_pub)
 {
   // set up for marker array
   visualization_msgs::MarkerArray marker_array;
@@ -163,7 +159,7 @@ void displayDetectionRange(const autoware_msgs::lane& lane, const CrossWalk& cro
   crosswalk_marker.frame_locked = true;
 
   // set marker points coordinate
-  for (int i = 0; i < STOP_SEARCH_DISTANCE; i++)
+  for (int i = 0; i < stop_search_index; i++)
   {
     if (closest_waypoint < 0 || i + closest_waypoint > static_cast<int>(lane.waypoints.size()) - 1)
       break;
@@ -173,7 +169,7 @@ void displayDetectionRange(const autoware_msgs::lane& lane, const CrossWalk& cro
 
     waypoint_marker_stop.points.push_back(point);
 
-    if (i > DECELERATION_SEARCH_DISTANCE)
+    if (i > deceleration_search_index)
       continue;
     waypoint_marker_decelerate.points.push_back(point);
   }
@@ -231,11 +227,11 @@ EControl crossWalkDetection(const pcl::PointCloud<pcl::PointXYZ>& points, const 
   return EControl::KEEP;  // find no obstacles
 }
 
-int detectStopObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int closest_waypoint, const autoware_msgs::lane& lane, const CrossWalk& crosswalk, double stop_range, double points_threshold, const geometry_msgs::PoseStamped& localizer_pose, ObstaclePoints* obstacle_points)
+int detectStopObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int closest_waypoint, const autoware_msgs::lane& lane, const CrossWalk& crosswalk, double stop_range, double points_threshold, int search_index, const geometry_msgs::PoseStamped& localizer_pose, ObstaclePoints* obstacle_points)
 {
   int stop_obstacle_waypoint = -1;
   // start search from the closest waypoint
-  for (int i = closest_waypoint; i < closest_waypoint + STOP_SEARCH_DISTANCE; i++)
+  for (int i = closest_waypoint; i < closest_waypoint + search_index; i++)
   {
     // reach the end of waypoints
     if (i >= static_cast<int>(lane.waypoints.size()))
@@ -290,11 +286,11 @@ int detectStopObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int c
   return stop_obstacle_waypoint;
 }
 
-int detectDecelerateObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int closest_waypoint, const autoware_msgs::lane& lane, const double stop_range, const double deceleration_range, const double points_threshold, const geometry_msgs::PoseStamped& localizer_pose, ObstaclePoints* obstacle_points)
+int detectDecelerateObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int closest_waypoint, const autoware_msgs::lane& lane, const double stop_range, const double deceleration_range, const double points_threshold, int search_index, const geometry_msgs::PoseStamped& localizer_pose, ObstaclePoints* obstacle_points)
 {
   int decelerate_obstacle_waypoint = -1;
   // start search from the closest waypoint
-  for (int i = closest_waypoint; i < closest_waypoint + DECELERATION_SEARCH_DISTANCE; i++)
+  for (int i = closest_waypoint; i < closest_waypoint + search_index; i++)
   {
     // reach the end of waypoints
     if (i >= static_cast<int>(lane.waypoints.size()))
@@ -345,7 +341,7 @@ EControl pointsDetection(const pcl::PointCloud<pcl::PointXYZ>& points, const int
   if (points.empty() == true || closest_waypoint < 0)
     return EControl::KEEP;
 
-  int stop_obstacle_waypoint = detectStopObstacle(points, closest_waypoint, lane, crosswalk, vs_info.getStopRange(), vs_info.getPointsThreshold(), vs_info.getLocalizerPose(), obstacle_points);
+  int stop_obstacle_waypoint = detectStopObstacle(points, closest_waypoint, lane, crosswalk, vs_info.getStopRange(), vs_info.getPointsThreshold(), vs_info.getStopSearchIndex(), vs_info.getLocalizerPose(), obstacle_points);
 
   // skip searching deceleration range
   if (vs_info.getDecelerationRange() < 0.01)
@@ -354,7 +350,7 @@ EControl pointsDetection(const pcl::PointCloud<pcl::PointXYZ>& points, const int
     return stop_obstacle_waypoint < 0 ? EControl::KEEP : EControl::STOP;
   }
 
-  int decelerate_obstacle_waypoint = detectDecelerateObstacle(points, closest_waypoint, lane, vs_info.getStopRange(), vs_info.getDecelerationRange(), vs_info.getPointsThreshold(), vs_info.getLocalizerPose(), obstacle_points);
+  int decelerate_obstacle_waypoint = detectDecelerateObstacle(points, closest_waypoint, lane, vs_info.getStopRange(), vs_info.getDecelerationRange(), vs_info.getPointsThreshold(), vs_info.getDecelerationSearchIndex(), vs_info.getLocalizerPose(), obstacle_points);
 
   // stop obstacle was not found
   if (stop_obstacle_waypoint < 0)
@@ -392,7 +388,7 @@ EControl obstacleDetection(int closest_waypoint, const autoware_msgs::lane& lane
 {
   ObstaclePoints obstacle_points;
   EControl detection_result = pointsDetection(vs_info.getPoints(), closest_waypoint, lane, crosswalk, vs_info, obstacle_waypoint, &obstacle_points);
-  displayDetectionRange(lane, crosswalk, closest_waypoint, detection_result, *obstacle_waypoint, vs_info.getStopRange(), vs_info.getDecelerationRange(), detection_range_pub);
+  displayDetectionRange(lane, crosswalk, closest_waypoint, detection_result, *obstacle_waypoint, vs_info.getStopRange(), vs_info.getDecelerationRange(), vs_info.getDecelerationSearchIndex(), vs_info.getStopSearchIndex(), detection_range_pub);
 
   static int false_count = 0;
   static EControl prev_detection = EControl::KEEP;
@@ -413,7 +409,7 @@ EControl obstacleDetection(int closest_waypoint, const autoware_msgs::lane& lane
   {
     false_count++;
 
-    if (false_count < LOOP_RATE / 2)
+    if (false_count < vs_info.getLoopRate() / 2)
     {
       *obstacle_waypoint = prev_obstacle_waypoint;
       displayObstacle(EControl::OTHERS, obstacle_points, obstacle_pub);
@@ -504,10 +500,17 @@ int main(int argc, char **argv)
   ros::Publisher obstacle_pub = nh.advertise<visualization_msgs::Marker>("obstacle", 1);
   ros::Publisher obstacle_waypoint_pub = nh.advertise<std_msgs::Int32>("obstacle_waypoint", 1, true);
 
-  ros::Rate loop_rate(LOOP_RATE);
+  ros::Rate loop_rate(vs_info.getLoopRate());
+  double current_cycle = loop_rate.cycleTime().toSec();
+
   while (ros::ok())
   {
     ros::spinOnce();
+
+    if (current_cycle != 1./vs_info.getLoopRate()) {
+      loop_rate = ros::Rate(vs_info.getLoopRate());
+      current_cycle = loop_rate.cycleTime().toSec();
+    }
 
     int closest_waypoint = 0;
 
@@ -521,7 +524,7 @@ int main(int argc, char **argv)
     }
 
     if (use_crosswalk_detection)
-      crosswalk.setDetectionWaypoint(crosswalk.findClosestCrosswalk(closest_waypoint, vs_path.getPrevWaypoints(), STOP_SEARCH_DISTANCE));
+      crosswalk.setDetectionWaypoint(crosswalk.findClosestCrosswalk(closest_waypoint, vs_path.getPrevWaypoints(), vs_info.getStopSearchIndex()));
 
     int obstacle_waypoint = -1;
     EControl detection_result = obstacleDetection(closest_waypoint, vs_path.getPrevWaypoints(), crosswalk, vs_info, detection_range_pub, obstacle_pub, &obstacle_waypoint);

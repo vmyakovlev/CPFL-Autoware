@@ -40,7 +40,10 @@ VelocitySetInfo::VelocitySetInfo()
     decel_(0.8),
     velocity_change_limit_(2.77),
     temporal_waypoints_size_(100),
-    set_pose_(false)
+    set_pose_(false),
+    loop_rate_(10),
+    deceleration_search_index_(30),
+    stop_search_index_(60)
 {
   ros::NodeHandle private_nh_("~");
   private_nh_.param<double>("remove_points_upto", remove_points_upto_, 2.3);
@@ -66,6 +69,9 @@ void VelocitySetInfo::configCallback(const autoware_msgs::ConfigVelocitySetConst
   velocity_change_limit_ = config->velocity_change_limit / 3.6; // kmph -> mps
   deceleration_range_ = config->deceleration_range;
   temporal_waypoints_size_ = config->temporal_waypoints_size;
+  loop_rate_ = config->loop_rate;
+  deceleration_search_index_ = config->deceleration_search_index;
+  stop_search_index_ = config->stop_search_index;
 }
 
 void VelocitySetInfo::pointsCallback(const sensor_msgs::PointCloud2ConstPtr &msg)

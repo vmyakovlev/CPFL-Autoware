@@ -1546,6 +1546,24 @@ params :
       min   : 0
       max   : 150
       v     : 100.0
+    - name  : loop_rate
+      desc  : loop_rate desc sample
+      label : Loop Rate
+      min   : 0
+      max   : 100
+      v     : 10
+    - name  : deceleration_search_index
+      desc  : deceleration_search_index desc sample
+      label : Deceleration Search Index
+      min   : 0
+      max   : 300
+      v     : 30
+    - name  : stop_search_index
+      desc  : stop_search_index desc sample
+      label : Stop Search Index
+      min   : 0
+      max   : 300
+      v     : 60
 
   - name  : lattice_velocity_set
     topic : /config/lattice_velocity_set

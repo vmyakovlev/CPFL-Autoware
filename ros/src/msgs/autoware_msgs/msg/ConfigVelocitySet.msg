@@ -8,3 +8,6 @@ float32 deceleration
 float32 velocity_change_limit
 float32 deceleration_range
 float32 temporal_waypoints_size
+int32 loop_rate
+int32 deceleration_search_index
+int32 stop_search_index

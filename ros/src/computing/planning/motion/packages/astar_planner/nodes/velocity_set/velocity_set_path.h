@@ -94,7 +94,7 @@ class VelocitySetPath
   int getPrevWaypointsSize() const
   {
     return prev_waypoints_.waypoints.size();
-  }  
+  }
 
   int getNewWaypointsSize() const
   {
