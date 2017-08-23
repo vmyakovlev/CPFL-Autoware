@@ -54,6 +54,7 @@ import syslog
 import rtmgr
 import rospy
 import std_msgs.msg
+import tf
 from std_msgs.msg import Bool
 from decimal import Decimal
 from autoware_msgs.msg import ConfigRcnn
@@ -86,6 +87,7 @@ from tablet_socket_msgs.msg import route_cmd
 from autoware_msgs.msg import ndt_stat
 from geometry_msgs.msg import TwistStamped
 from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import PoseStamped
 from autoware_msgs.msg import accel_cmd
 from autoware_msgs.msg import steer_cmd
 from autoware_msgs.msg import brake_cmd
@@ -125,6 +127,7 @@ class MyFrame(rtmgr.MyFrame):
 		rospy.init_node('runime_manager', anonymous=True)
 		rospy.Subscriber('to_rtmgr', std_msgs.msg.String, self.RosCb)
 		self.pub = rospy.Publisher('from_rtmgr', std_msgs.msg.String, queue_size=10)
+		rospy.Subscriber('/ndt_pose', PoseStamped, self.callback_ndt_pose)
 
 		#
 		# for Quick Start tab
@@ -488,6 +491,20 @@ class MyFrame(rtmgr.MyFrame):
 
 		wx.CallAfter( self.boot_booted_cmds )
 
+	def callback_ndt_pose(self, ndt_pose):
+		self.load_dic["ndt_matching"]["x"]=ndt_pose.pose.position.x
+		self.load_dic["ndt_matching"]["y"]=ndt_pose.pose.position.y
+		self.load_dic["ndt_matching"]["z"]=ndt_pose.pose.position.z
+		quaternion = (
+			ndt_pose.pose.orientation.x,
+			ndt_pose.pose.orientation.y,
+			ndt_pose.pose.orientation.z,
+			ndt_pose.pose.orientation.w)
+		euler = tf.transformations.euler_from_quaternion(quaternion)
+		self.load_dic["ndt_matching"]["roll"]=euler[0]
+		self.load_dic["ndt_matching"]["pitch"]=euler[1]
+		self.load_dic["ndt_matching"]["yaw"]=euler[2]
+
 	def __do_layout(self):
 		pass
 
@@ -572,6 +589,7 @@ class MyFrame(rtmgr.MyFrame):
 
 	def save_param_yaml(self):
 		save_dic = {}
+
 		for (name, pdic) in self.load_dic.items():
 			if pdic and pdic != {}:
 				prm = self.cfg_dic( {'name':name, 'pdic':pdic} ).get('param', {})
