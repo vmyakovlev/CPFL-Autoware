@@ -251,23 +251,29 @@ int detectStopObstacle(const pcl::PointCloud<pcl::PointXYZ>& points, const int c
     // waypoint seen by localizer
     geometry_msgs::Point waypoint = calcRelativeCoordinate(lane.waypoints[i].pose.pose.position, localizer_pose.pose);
     tf::Vector3 tf_waypoint = point2vector(waypoint);
-    tf_waypoint.setZ(0);
+    // tf_waypoint.setZ(0);
 
     int stop_point_count = 0;
     for (const auto& p : points)
     {
-      tf::Vector3 point_vector(p.x, p.y, 0);
+      double z_rel_min = 0.0;  // not use ground points
+      double z_rel_max = 3.0;
+      double z_diff = p.z - tf_waypoint.z();
+      if (z_rel_min < z_diff && z_diff < z_rel_max) {
+        tf::Vector3 point_vector(p.x, p.y, 0.);  // 2D distance
+        tf::Vector3 tf_waypoint_2d(tf_waypoint.x(), tf_waypoint.y(), 0.);
 
-      // 2D distance between waypoint and points (obstacle)
-      double dt = tf::tfDistance(point_vector, tf_waypoint);
-      if (dt < stop_range)
-      {
-        stop_point_count++;
-        geometry_msgs::Point point_temp;
-        point_temp.x = p.x;
-        point_temp.y = p.y;
-        point_temp.z = p.z;
-	obstacle_points->setStopPoint(calcAbsoluteCoordinate(point_temp, localizer_pose.pose));
+        // 2D distance between waypoint and points (obstacle)
+        double dt = tf::tfDistance(point_vector, tf_waypoint_2d);
+        if (dt < stop_range)
+        {
+          stop_point_count++;
+          geometry_msgs::Point point_temp;
+          point_temp.x = p.x;
+          point_temp.y = p.y;
+          point_temp.z = p.z;
+  	obstacle_points->setStopPoint(calcAbsoluteCoordinate(point_temp, localizer_pose.pose));
+        }
       }
     }
 

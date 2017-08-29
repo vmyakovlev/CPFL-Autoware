@@ -62,6 +62,7 @@ ros::Publisher green_pub;
 
 lane_planner::vmap::VectorMap all_vmap;
 lane_planner::vmap::VectorMap lane_vmap;
+int limitvel_max;
 double curve_radius_min;
 double crossroad_radius_min;
 double clothoid_radius_min;
@@ -292,7 +293,7 @@ bool is_fine_vmap(const lane_planner::vmap::VectorMap& fine_vmap, const autoware
 	return true;
 }
 
-double create_reduction(const lane_planner::vmap::VectorMap& fine_vmap, int index)
+static double create_reduction_one(const lane_planner::vmap::VectorMap& fine_vmap, int index)
 {
 	const vector_map::DTLane& dtlane = fine_vmap.dtlanes[index];
 
@@ -302,10 +303,10 @@ double create_reduction(const lane_planner::vmap::VectorMap& fine_vmap, int inde
 	if (lane_planner::vmap::is_curve_dtlane(dtlane)) {
 		if (lane_planner::vmap::is_crossroad_dtlane(dtlane))
 			return lane_planner::vmap::compute_reduction(dtlane, crossroad_radius_min * crossroad_weight);
-
+#if 0
 		if (lane_planner::vmap::is_connection_dtlane(fine_vmap, index))
 			return 1;
-
+#endif
 		return lane_planner::vmap::compute_reduction(dtlane, curve_radius_min * curve_weight);
 	}
 
@@ -313,6 +314,52 @@ double create_reduction(const lane_planner::vmap::VectorMap& fine_vmap, int inde
 		return lane_planner::vmap::compute_reduction(dtlane, clothoid_radius_min * clothoid_weight);
 
 	return 1;
+}
+
+static double compute_reduction_range(const lane_planner::vmap::VectorMap& fine_vmap, int index)
+{
+	int range_ahead = 30;
+	int range_behind = 4;
+	int cnt = 1;
+	double r_sum = create_reduction_one(fine_vmap, index);
+	range_ahead *= r_sum;
+	range_behind *= r_sum;
+
+	for (int i = index - 1; i >= 0 && i >= index - range_behind; i--,cnt++) {
+		r_sum += create_reduction_one(fine_vmap, i); // * fine_vmap.lanes[i].refvel/limitvel_max;
+	}
+	for (int i = index + 1; i < (int)fine_vmap.dtlanes.size() && i < index + range_ahead; i++,cnt++) {
+		r_sum += create_reduction_one(fine_vmap, i); // * fine_vmap.lanes[i].refvel/limitvel_max;
+	}
+
+	return r_sum / cnt;
+}
+
+double create_reduction(const lane_planner::vmap::VectorMap& fine_vmap, int index)
+{
+#if 0
+	const vector_map::DTLane& dtlane = fine_vmap.dtlanes[index];
+
+	if (lane_planner::vmap::is_straight_dtlane(dtlane))
+		return 1;
+
+	if (lane_planner::vmap::is_curve_dtlane(dtlane)) {
+		if (lane_planner::vmap::is_crossroad_dtlane(dtlane))
+			return lane_planner::vmap::compute_reduction(dtlane, crossroad_radius_min * crossroad_weight);
+#if 0
+		if (lane_planner::vmap::is_connection_dtlane(fine_vmap, index))
+			return 1;
+#endif
+		return lane_planner::vmap::compute_reduction(dtlane, curve_radius_min * curve_weight);
+	}
+
+	if (lane_planner::vmap::is_clothoid_dtlane(dtlane))
+		return lane_planner::vmap::compute_reduction(dtlane, clothoid_radius_min * clothoid_weight);
+
+	return 1;
+#else
+	return compute_reduction_range(fine_vmap, index);
+#endif
 }
 
 #ifdef DEBUG
@@ -471,6 +518,13 @@ void update_values()
 		} else if (lane_planner::vmap::is_clothoid_dtlane(d)) {
 			if (radius_min < clothoid_radius_min)
 				clothoid_radius_min = radius_min;
+		}
+	}
+
+	limitvel_max = 0;
+	for (const vector_map::Lane& l : lane_vmap.lanes) {
+		if (limitvel_max < l.limitvel) {
+			limitvel_max = l.limitvel;
 		}
 	}
 

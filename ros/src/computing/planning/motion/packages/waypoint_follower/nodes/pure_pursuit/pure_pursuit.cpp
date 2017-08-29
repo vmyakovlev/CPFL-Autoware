@@ -260,7 +260,12 @@ bool PurePursuit::canGetCurvature(double *output_kappa)
 
   // ROS_INFO("next_target : ( %lf , %lf , %lf)", next_target.x, next_target.y,next_target.z);
 
+  // if (is_first_area) {
+    // *output_kappa = 0.0;
+  ///
+
   *output_kappa = calcCurvature(next_target_position_);
+
   return true;
 }
 

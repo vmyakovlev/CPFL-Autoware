@@ -89,6 +89,8 @@ void PurePursuitNode::run()
 {
   ROS_INFO_STREAM("pure pursuit start");
   ros::Rate loop_rate(LOOP_RATE_);
+  bool is_init_area = true;
+  double minimum_lookahead_distance_init = -1.0;
   while (ros::ok())
   {
     ros::spinOnce();
@@ -100,6 +102,18 @@ void PurePursuitNode::run()
     }
 
     pp_.setLookaheadDistance(computeLookaheadDistance());
+
+    if (minimum_lookahead_distance_init < 0.0) {
+      minimum_lookahead_distance_init = minimum_lookahead_distance_;
+    }
+    if (current_linear_velocity_ > 10.0/3.6) {
+      is_init_area = false;
+    }
+    if (is_init_area) {
+      minimum_lookahead_distance_ = 2.0*(10.0/3.6-(current_linear_velocity_))+minimum_lookahead_distance_init; 
+    } else {
+      minimum_lookahead_distance_ = minimum_lookahead_distance_init;
+    }
 
     double kappa = 0;
     bool can_get_curvature = pp_.canGetCurvature(&kappa);

@@ -1963,14 +1963,14 @@ params :
     - name : x
       desc : x desc sample
       label: x
-      min  : -100
-      max  : 100
+      min  : -1000
+      max  : 1000
       v    : 0
     - name : y
       desc : y desc sample
       label: y
-      min  : -100
-      max  : 100
+      min  : -1000
+      max  : 1000
       v    : 0
     - name         : camera_id
       desc         : camera_id desc sample

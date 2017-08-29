@@ -41,11 +41,11 @@ enum daytime_Hue_threshold {
     DAYTIME_YELLOW_LOWER = 50,
     DAYTIME_YELLOW_UPPER = 70,
     DAYTIME_GREEN_LOWER  = 80,//120,//140,
-    DAYTIME_GREEN_UPPER  = 190,//180,
+    DAYTIME_GREEN_UPPER  = 240,//190,//180,
 };
 
 #define DAYTIME_S_SIGNAL_THRESHOLD ((double)0.37)//((double)0.27)
-#define DAYTIME_V_SIGNAL_THRESHOLD ((double)140/255) //((double)90/255) //((double)110/255)
+#define DAYTIME_V_SIGNAL_THRESHOLD ((double)90/255) //((double)90/255) //((double)110/255)
 
 #define NOISE_REDUCTION_TIME 1
 
