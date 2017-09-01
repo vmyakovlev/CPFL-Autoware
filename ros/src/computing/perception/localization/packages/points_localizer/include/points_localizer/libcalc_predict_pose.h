@@ -43,16 +43,16 @@ class LibCalcPredictPose
     LibCalcPredictPose();
     ~LibCalcPredictPose() {};
     void clear();
-    void addData(const double time_stamp, const Velocity& data);
+    void addData(const double time_stamp, const Pose& data);
     Pose predictNextPose(const double previous_time_sec, const double next_time_sec, const Pose& previous_pose);
   private:
     //first:  time_stamp_sec
     //second: data
-    std::deque< std::pair<double, Velocity> > queue_;
+    std::deque< std::pair<double, Pose> > queue_;
     const double DataKeepTimeSec_;
 };
 
-LibCalcPredictPose<T>::LibCalcPredictPose()
+LibCalcPredictPose::LibCalcPredictPose()
   :DataKeepTimeSec_(5.0)
 {
 }
@@ -63,7 +63,7 @@ void LibCalcPredictPose::clear()
 }
 
 
-void LibCalcPredictPose::addData(const double time_stamp_sec, const T& data)
+void LibCalcPredictPose::addData(const double time_stamp_sec, const Pose& data)
 {
   //This Code is not support when restarting with changing start time
   if(!queue_.empty() && queue_.front().first >= time_stamp_sec)
@@ -72,7 +72,7 @@ void LibCalcPredictPose::addData(const double time_stamp_sec, const T& data)
     queue_.clear();
   }
 
-  queue_.push_back( std::pair<double, T>(time_stamp_sec, data) );
+  queue_.push_back( std::pair<double, Pose>(time_stamp_sec, data) );
 
   while(queue_.back().first - queue_.front().first > DataKeepTimeSec_)
   {
@@ -95,23 +95,26 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
       continue;
 
     const double begin_time_sec = (it != std::begin(queue_) && it->first > previous_time_sec) ? it->first : previous_time_sec;
-    const double end_time_sec  = (it+1 != std::end(queue_) && it2->first < next_time_sec) ? it2->first : next_time_sec;
+    const double end_time_sec   = (it+1 != std::end(queue_) && it2->first < next_time_sec) ? it2->first : next_time_sec;
 
-    //std::cout << std::fmod(it->first, 100.0)
-    //   << " " << std::fmod(begin_time_sec, 100.0)
-    //   << " " << std::fmod(it2->first, 100.0)
-    //   << " " << std::fmod(end_time_sec, 100.0)
-    //   << std::endl;
+    std::cout << std::fmod(it->first, 100.0)
+      << " " << std::fmod(begin_time_sec, 100.0)
+      << " " << std::fmod(it2->first, 100.0)
+      << " " << std::fmod(end_time_sec, 100.0)
+      << std::endl;
 
-    const double diff_time_sec = begin_time_sec - end_time_sec;
+    if(it2->first - it->first == 0)
+        continue;
+    const double diff_time_ratio = (end_time_sec - begin_time_sec) / (it2->first - it->first);
+//    const double diff_time_ratio = 1;
 
-    next_pose.roll  += it2->second.angular.x * diff_time_sec;
-    next_pose.pitch += it2->second.angular.y * diff_time_sec;
-    next_pose.yaw   += it2->second.angular.z * diff_time_sec;
+    next_pose.roll  += it2->second.roll * diff_time_ratio;
+    next_pose.pitch += it2->second.pitch * diff_time_ratio;
+    next_pose.yaw   += it2->second.yaw * diff_time_ratio;
 
-    const double x = it2->second.linear.x * diff_time_sec;
-    const double y = it2->second.linear.y * diff_time_sec;
-    const double z = it2->second.linear.z * diff_time_sec;
+    const double x = it2->second.x * diff_time_ratio;
+    const double y = it2->second.y * diff_time_ratio;
+    const double z = it2->second.z * diff_time_ratio;
     const double dis = std::abs(x)+std::abs(y)+std::abs(z);
 
     next_pose.x += dis*cos(-next_pose.pitch)*cos(next_pose.yaw);

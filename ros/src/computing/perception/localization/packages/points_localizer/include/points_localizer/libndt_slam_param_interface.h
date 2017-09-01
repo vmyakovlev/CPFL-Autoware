@@ -28,18 +28,23 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <ros/ros.h>
+#ifndef LIBNDT_SLMA_PARAM_INTERFACE_H
+#define LIBNDT_SLMA_PARAM_INTERFACE_H
 
-#include "points_localizer/ndt_slam_pcl.h"
-
-int main(int argc, char** argv)
+class LibNdtSlamParamInterface
 {
-  ros::init(argc, argv, "ndt_slam_pcl");
-  ros::NodeHandle nh;
-  ros::NodeHandle private_nh("~");
+    public:
+        virtual ~LibNdtSlamParamInterface(){};
 
-  Localizer localizer(nh, private_nh);
+        virtual void setTransformationEpsilon(double trans_eps) = 0;
+        virtual void setStepSize(double step_size) = 0;
+        virtual void setResolution(float res) = 0;
+        virtual void setMaximumIterations(int max_iter) = 0;
 
-  ros::spin();
-  return 0;
-}
+        virtual double getTransformationEpsilon() = 0;
+        virtual double getStepSize() const = 0;
+        virtual float getResolution() const = 0;
+        virtual int getMaximumIterations() = 0;
+};
+
+#endif

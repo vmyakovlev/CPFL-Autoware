@@ -33,7 +33,9 @@
 #include <tf/tf.h>
 
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 
 #include "libdata_structs.h"
@@ -89,7 +91,7 @@ geometry_msgs::TwistStamped convertToROSMsg(const std_msgs::Header& header, cons
   return msg;
 }
 
-Pose convertFromROSMsg(const geometry_msgs::PoseStamped& msg)
+Pose convertFromROSMsg(const geometry_msgs::Pose& msg)
 {
   double roll, pitch, yaw;
   tf::Quaternion orientation;
@@ -105,6 +107,11 @@ Pose convertFromROSMsg(const geometry_msgs::PoseStamped& msg)
   pose.yaw = yaw;
 
   return pose;
+}
+
+Pose convertFromROSMsg(const geometry_msgs::PoseStamped& msg)
+{
+    return convertFromROSMsg(msg.pose);
 }
 
 Pose convertFromROSMsg(const geometry_msgs::PoseWithCovarianceStamped& msg)

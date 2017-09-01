@@ -69,7 +69,8 @@ DeadRekoner::DeadRekoner(ros::NodeHandle nh, ros::NodeHandle private_nh)
     dead_rekoner_.setUseImuFlag(use_imu);
 
     delta_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("delta_pose", 10);
-    velocity_sub_ = nh.subscribe("/current_velocity", 10, &DeadRekoner::velocityCallback, this);
+    //velocity_sub_ = nh.subscribe("/current_velocity", 10, &DeadRekoner::velocityCallback, this);
+    velocity_sub_ = nh.subscribe("/can_velocity", 10, &DeadRekoner::velocityCallback, this);
     imu_sub_ = nh.subscribe("/imu_raw", 10, &DeadRekoner::imuCallback, this);
 }
 

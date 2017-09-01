@@ -35,7 +35,9 @@
 
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 
 #include <pcl_conversions/pcl_conversions.h>
@@ -65,6 +67,17 @@ geometry_msgs::PoseStamped convertToROSMsg(const std_msgs::Header& header, const
 geometry_msgs::PoseStamped convertToROSMsg(const std_msgs::Header& header, const Pose& pose, const tf::Transform& local_transform);
 
 geometry_msgs::TwistStamped convertToROSMsg(const std_msgs::Header& header, const Velocity& velocity);
+
+
+template <class PointT>
+pcl::PointCloud<PointT> convertFromROSMsg(const sensor_msgs::PointCloud2 msg)
+{
+  pcl::PointCloud<PointT> point_cloud;
+  pcl::fromROSMsg(msg, point_cloud);
+  return point_cloud;
+}
+
+Pose convertFromROSMsg(const geometry_msgs::Pose& msg);
 
 Pose convertFromROSMsg(const geometry_msgs::PoseStamped& msg);
 

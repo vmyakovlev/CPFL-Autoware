@@ -9,7 +9,7 @@ execute_process(
 find_package(PCL REQUIRED)
 
 IF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
-SET(FAST_PCL_PACKAGES filters registration)
+SET(FAST_PCL_PACKAGES registration)
 ENDIF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
 
 find_package( OpenMP )
@@ -22,9 +22,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   pcl_ros
   sensor_msgs
+  geometry_msgs
   autoware_msgs
   pcl_conversions
-  velodyne_pointcloud
   ${FAST_PCL_PACKAGES}
 #  ndt_tku
 )
@@ -33,9 +33,9 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   pcl_ros
   sensor_msgs
+  geometry_msgs
   autoware_msgs
   pcl_conversions
-  velodyne_pointcloud
   ${FAST_PCL_PACKAGES}
 )
 endif()
@@ -47,7 +47,7 @@ if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ndt_pcl
-  CATKIN_DEPENDS std_msgs velodyne_pointcloud autoware_msgs ${FAST_PCL_PACKAGES}
+  CATKIN_DEPENDS std_msgs geometry_msgs autoware_msgs ${FAST_PCL_PACKAGES}
 #  DEPENDS ndt_tku
 #  DEPENDS system_lib
 )
@@ -55,7 +55,7 @@ elseif("${ROS_VERSION}" MATCHES "(kinetic)")
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES ndt_pcl
-  CATKIN_DEPENDS std_msgs velodyne_pointcloud autoware_msgs ${FAST_PCL_PACKAGES}
+  CATKIN_DEPENDS std_msgs geometry_msgs autoware_msgs ${FAST_PCL_PACKAGES}
 #  DEPENDS ndt_tku
 #  DEPENDS system_lib
 )
@@ -73,7 +73,7 @@ ELSE(PCL_VERSION VERSION_LESS "1.7.2")
 SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall -DUSE_FAST_PCL ${CMAKE_CXX_FLAGS}")
 ENDIF(PCL_VERSION VERSION_LESS "1.7.2")
 
-add_executable(ndt_slam_pcl nodes/ndt_slam_pcl/ndt_slam_pcl_node.cpp)
+add_executable(ndt_slam_pcl nodes/ndt_slam_pcl/ndt_slam_pcl_node.cpp include/points_localizer/libconvert_ros_msgs.cpp)
 #add_executable(icp_slam_pcl nodes/icp_slam_pcl/icp_slam_pcl_node.cpp)
 
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
@@ -81,7 +81,7 @@ if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 endif()
 
 target_link_libraries(ndt_slam_pcl ${catkin_LIBRARIES})
-target_link_libraries(ndt_icp_pcl ${catkin_LIBRARIES})
+#target_link_libraries(ndt_icp_pcl ${catkin_LIBRARIES})
 
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 #target_link_libraries(ndt_slam_tku ndt_tku ${catkin_LIBRARIES})

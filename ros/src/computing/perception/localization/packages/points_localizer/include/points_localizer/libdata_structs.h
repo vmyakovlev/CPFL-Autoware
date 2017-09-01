@@ -32,7 +32,6 @@
 #define LIBDATA_STRUCTS_H
 
 #include <iostream>
-//#include <Eigen/Geometry>
 
 struct Pose
 {
@@ -363,52 +362,5 @@ struct Imu
   Angular angular_velocity;
   Linear linear_accel;
 };
-
-// Pose convertPose(const Eigen::Matrix4f& m)
-// {
-//   Pose pose;
-//   pose.x = m(0, 3);
-//   pose.y = m(1, 3);
-//   pose.z = m(2, 3);
-//
-//   //this code is written reference to tf::getEulerYPR()
-//   if (std::fabs(m(2,0)) >= 1)
-//   {
-//     pose.yaw = 0;
-//     if (m(2,0) < 0)
-//     {
-//       pose.pitch = M_PI / 2.0;
-//       pose.roll = std::atan2(m(0,1),m(0,2));
-//     }
-//     else
-//     {
-//       pose.pitch = -M_PI / 2.0;
-//       pose.roll = std::atan2(-m(0,1),-m(0,2));
-//     }
-//   }
-//   else
-//   {
-//     pose.pitch = -std::asin(m(2,0));
-//     pose.roll  = std::atan2(m(2,1)/std::cos(pose.pitch),
-//                             m(2,2)/std::cos(pose.pitch));
-//     pose.yaw   = std::atan2(m(1,0)/std::cos(pose.pitch),
-//                             m(0,0)/std::cos(pose.pitch));
-//   }
-//
-//   return pose;
-// }
-//
-//
-// Pose transformPose(const Pose& pose, const Eigen::Matrix4f& m)
-// {
-//   Eigen::Translation3f eigen_xyz(pose.x, pose.y, pose.z);
-//   Eigen::AngleAxisf eigen_roll(pose.roll, Eigen::Vector3f::UnitX());
-//   Eigen::AngleAxisf eigen_pitch(pose.pitch, Eigen::Vector3f::UnitY());
-//   Eigen::AngleAxisf eigen_yaw(pose.yaw, Eigen::Vector3f::UnitZ());
-//   Eigen::Matrix4f trans_m = (eigen_xyz * eigen_yaw * eigen_pitch * eigen_roll) * m;
-//   Pose trans_pose = convertPose(trans_m);
-//
-//   return trans_pose;
-// }
 
 #endif
