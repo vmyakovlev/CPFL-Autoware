@@ -100,28 +100,28 @@ Pose transformToPose(const Pose& pose, const Eigen::Matrix4f& m)
   return trans_pose;
 }
 
-template <class PointT>
+template <class PointSource, class PointTarget>
 class LibLocalizer
 {
     public:
         LibLocalizer();
-        virtual ~LibLocalizer(){};
-        void updatePointsMap(const pcl::PointCloud<PointT>& pointcloud);
+        virtual ~LibLocalizer() = default;
+        void updatePointsMap(const pcl::PointCloud<PointTarget>& pointcloud);
         void updateManualPose(const Pose& pose);
         void updateStaticPose(const Pose& pose);
         void updateGnssPose(const Pose& pose);
         void updateDeltaPose(double current_data_time_sec, const Pose& pose);
-        void updatePointsRaw(const pcl::PointCloud<PointT>& pointcloud);
-        void updatePointsFused(const pcl::PointCloud<PointT>& pointcloud);
-        void updatePointsFiltered(const pcl::PointCloud<PointT>& pointcloud);
+        void updatePointsRaw(const pcl::PointCloud<PointSource>& pointcloud);
+        void updatePointsFused(const pcl::PointCloud<PointSource>& pointcloud);
+        void updatePointsFiltered(const pcl::PointCloud<PointSource>& pointcloud);
         void updateLocalizer(double current_scan_time_sec);
         Pose getLocalizerPose() const;
         Velocity getLocalizerVelocity() const;
 
     protected:
         virtual void align(const Pose& predict_pose) = 0;
-        virtual void setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointT> const>& map_ptr) = 0;
-        virtual void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointT> const>& scan_ptr) = 0;
+        virtual void setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr) = 0;
+        virtual void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& scan_ptr) = 0;
         virtual double getFitnessScore() = 0;
         virtual Pose getFinalPose() = 0;
 
@@ -131,33 +131,35 @@ class LibLocalizer
 
         LibCalcPredictPose calc_predict_pose_;
 
-        boost::shared_ptr< pcl::PointCloud<PointT> > scan_ptr_;
-        boost::shared_ptr< pcl::PointCloud<PointT> > map_ptr_;
+        boost::shared_ptr< pcl::PointCloud<PointTarget> > map_ptr_;
+        boost::shared_ptr< pcl::PointCloud<PointSource> > scan_ptr_;
         Eigen::Matrix4f tf_btol_;
         Eigen::Matrix4f tf_ltob_;
 
         bool is_initial_pose_set_;
+        double fitness_score_;
 };
 
-template <class PointT>
-LibLocalizer<PointT>::LibLocalizer()
+template <class PointSource, class PointTarget>
+LibLocalizer<PointSource, PointTarget>::LibLocalizer()
     :is_initial_pose_set_(false)
+    ,fitness_score_(0)
 {
     Pose tf_pose(1.2, 0, 2.0, 0, 0, 0);
     tf_btol_ = convertToEigenMatrix4f(tf_pose);
     tf_ltob_ = convertToEigenMatrix4f(tf_pose*(-1.0));
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updatePointsMap(const pcl::PointCloud<PointT>& pointcloud)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updatePointsMap(const pcl::PointCloud<PointTarget>& pointcloud)
 {
     std::cout << __func__ << std::endl;
-    map_ptr_ = boost::make_shared< pcl::PointCloud<PointT> >(pointcloud);
+    map_ptr_ = boost::make_shared< pcl::PointCloud<PointTarget> >(pointcloud);
     setInputTarget(map_ptr_);
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updateManualPose(const Pose& pose)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updateManualPose(const Pose& pose)
 {
     std::cout << __func__ << std::endl;
     localizer_pose_ = pose;
@@ -181,55 +183,55 @@ void LibLocalizer<PointT>::updateManualPose(const Pose& pose)
     is_initial_pose_set_ = true;
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updateStaticPose(const Pose& pose)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updateStaticPose(const Pose& pose)
 {
     std::cout << __func__ << std::endl;
     localizer_pose_ = pose;
     is_initial_pose_set_ = true;
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updateGnssPose(const Pose& pose)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updateGnssPose(const Pose& pose)
 {
-    std::cout << __func__ << std::endl;
-    if(is_initial_pose_set_ = false || getFitnessScore() >= 500.0)
+    std::cout << __func__ << "   " <<fitness_score_ <<std::endl;
+    if(is_initial_pose_set_ == false || fitness_score_ >= 500.0)
     {
         localizer_pose_ = pose;
         is_initial_pose_set_ = true;
     }
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updateDeltaPose(double current_data_time_sec, const Pose& pose)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updateDeltaPose(double current_data_time_sec, const Pose& pose)
 {
     //std::cout << __func__ << std::endl;
     calc_predict_pose_.addData(current_data_time_sec, pose);
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updatePointsRaw(const pcl::PointCloud<PointT>& pointcloud)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updatePointsRaw(const pcl::PointCloud<PointSource>& pointcloud)
 {
     //create map
     std::cout << __func__ << std::endl;
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updatePointsFused(const pcl::PointCloud<PointT>& pointcloud)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updatePointsFused(const pcl::PointCloud<PointSource>& pointcloud)
 {
     //create map
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updatePointsFiltered(const pcl::PointCloud<PointT>& pointcloud)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updatePointsFiltered(const pcl::PointCloud<PointSource>& pointcloud)
 {
     std::cout << __func__ << std::endl;
-    scan_ptr_ = boost::make_shared< pcl::PointCloud<PointT> >(pointcloud);
+    scan_ptr_ = boost::make_shared< pcl::PointCloud<PointSource> >(pointcloud);
     setInputSource(scan_ptr_);
 }
 
-template <class PointT>
-void LibLocalizer<PointT>::updateLocalizer(double current_scan_time_sec)
+template <class PointSource, class PointTarget>
+void LibLocalizer<PointSource, PointTarget>::updateLocalizer(double current_scan_time_sec)
 {
     std::cout << __func__ << std::endl;
     if(map_ptr_ == nullptr)
@@ -255,7 +257,7 @@ void LibLocalizer<PointT>::updateLocalizer(double current_scan_time_sec)
     const auto align_time = std::chrono::duration_cast<std::chrono::microseconds>(align_end - align_start).count() / 1000.0;
 
     const auto calc_fitness_score_start = std::chrono::system_clock::now();
-    const auto fitness_score = getFitnessScore();
+    fitness_score_ = getFitnessScore();
     const auto calc_fitness_score_end = std::chrono::system_clock::now();
     const auto calc_fitness_score_time = std::chrono::duration_cast<std::chrono::microseconds>(calc_fitness_score_end - calc_fitness_score_start).count() / 1000.0;
 
@@ -270,14 +272,14 @@ void LibLocalizer<PointT>::updateLocalizer(double current_scan_time_sec)
 
 }
 
-template <class PointT>
-Pose LibLocalizer<PointT>::getLocalizerPose() const
+template <class PointSource, class PointTarget>
+Pose LibLocalizer<PointSource, PointTarget>::getLocalizerPose() const
 {
     return localizer_pose_;
 }
 
-template <class PointT>
-Velocity LibLocalizer<PointT>::getLocalizerVelocity() const
+template <class PointSource, class PointTarget>
+Velocity LibLocalizer<PointSource, PointTarget>::getLocalizerVelocity() const
 {
     return localizer_velocity_;
 }

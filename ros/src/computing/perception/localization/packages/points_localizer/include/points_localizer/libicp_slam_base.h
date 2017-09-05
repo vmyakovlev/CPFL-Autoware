@@ -28,22 +28,27 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef LIBNDT_SLMA_PARAM_INTERFACE_H
-#define LIBNDT_SLMA_PARAM_INTERFACE_H
+#ifndef LIBICP_SLAM_BASE_H
+#define LIBICP_SLAM_BASE_H
 
-class LibNdtSlamParamInterface
+#include "liblocalizer.h"
+
+template <class PointSource, class PointTarget>
+class LibIcpSlamBase : public LibLocalizer <PointSource, PointTarget>
 {
     public:
-        virtual ~LibNdtSlamParamInterface(){};
+        virtual ~LibIcpSlamBase() = default;
 
-        virtual void setTransformationEpsilon(double trans_eps) = 0;
-        virtual void setStepSize(double step_size) = 0;
-        virtual void setResolution(float res) = 0;
-        virtual void setMaximumIterations(int max_iter) = 0;
+        virtual void setTransformationEpsilon(double epsilon) = 0;
+        virtual void setEuclideanFitnessEpsilon(double epsilon) = 0;
+        virtual void setMaxCorrespondenceDistance(double distance_threshold) = 0;
+        virtual void setRANSACOutlierRejectionThreshold(double inlier_threshold) = 0;
+        virtual void setMaximumIterations(int nr_iterations) = 0;
 
         virtual double getTransformationEpsilon() = 0;
-        virtual double getStepSize() const = 0;
-        virtual float getResolution() const = 0;
+        virtual double getEuclideanFitnessEpsilon() = 0;
+        virtual double getMaxCorrespondenceDistance() = 0;
+        virtual double getRANSACOutlierRejectionThreshold() = 0;
         virtual int getMaximumIterations() = 0;
 };
 

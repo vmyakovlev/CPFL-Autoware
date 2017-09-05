@@ -28,18 +28,26 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <ros/ros.h>
+#ifndef LIBNDT_SLAM_BASE_H
+#define LIBNDT_SLAM_BASE_H
 
-#include "points_localizer/ndt_slam_pcl.h"
+#include "liblocalizer.h"
 
-int main(int argc, char** argv)
+template <class PointSource, class PointTarget>
+class LibNdtSlamBase : public LibLocalizer<PointSource, PointTarget>
 {
-  ros::init(argc, argv, "ndt_slam_pcl");
-  ros::NodeHandle nh;
-  ros::NodeHandle private_nh("~");
+    public:
+        virtual ~LibNdtSlamBase() = default;
 
-  NdtSlam ndt_slam(nh, private_nh);
+        virtual void setTransformationEpsilon(double trans_eps) = 0;
+        virtual void setStepSize(double step_size) = 0;
+        virtual void setResolution(float res) = 0;
+        virtual void setMaximumIterations(int max_iter) = 0;
 
-  ros::spin();
-  return 0;
-}
+        virtual double getTransformationEpsilon() = 0;
+        virtual double getStepSize() const = 0;
+        virtual float getResolution() const = 0;
+        virtual int getMaximumIterations() = 0;
+};
+
+#endif

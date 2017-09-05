@@ -30,15 +30,15 @@
 
 #include <ros/ros.h>
 
-#include "points_localizer/ndt_slam_pcl.h"
+#include "points_localizer/icp_slam_pcl.h"
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "ndt_slam_pcl");
+  ros::init(argc, argv, "icp_slam_pcl");
   ros::NodeHandle nh;
   ros::NodeHandle private_nh("~");
 
-  NdtSlam ndt_slam(nh, private_nh);
+  IcpSlam icp_slam(nh, private_nh);
 
   ros::spin();
   return 0;

@@ -28,8 +28,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef LIBNDT_SLAM_PCL_H
-#define LIBNDT_SLAM_PCL_H
+#ifndef LIBNDT_SLAM_GPU_H
+#define LIBNDT_SLAM_GPU_H
 
 #include "libndt_slam_base.h"
 
@@ -39,12 +39,12 @@
 #include <pcl/registration/ndt.h>
 
 template <class PointSource, class PointTarget>
-class LibNdtSlamPCL
+class LibNdtSlamPCLGPU
     : public LibNdtSlamBase<PointSource, PointTarget>
 {
     public:
-        LibNdtSlamPCL();
-        ~LibNdtSlamPCL() = default;
+        LibNdtSlamPCLGPU();
+        ~LibNdtSlamPCLGPU() = default;
 
         void setTransformationEpsilon(double trans_eps) override;
         void setStepSize(double step_size) override;
@@ -64,64 +64,64 @@ class LibNdtSlamPCL
         Pose getFinalPose() override;
 
     private:
-        pcl::NormalDistributionsTransform<PointSource, PointTarget> ndt_;
+        gpu::GNormalDistributionsTransform ndt_;
 };
 
 template <class PointSource, class PointTarget>
-LibNdtSlamPCL<PointSource, PointTarget>::LibNdtSlamPCL()
+LibNdtSlamPCLGPU<PointSource, PointTarget>::LibNdtSlamPCLGPU()
 {
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setTransformationEpsilon(double trans_eps)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setTransformationEpsilon(double trans_eps)
 {
     ndt_.setTransformationEpsilon(trans_eps);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setStepSize(double step_size)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setStepSize(double step_size)
 {
     ndt_.setStepSize(step_size);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setResolution(float res)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setResolution(float res)
 {
     ndt_.setResolution(res);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setMaximumIterations(int max_iter)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setMaximumIterations(int max_iter)
 {
     ndt_.setMaximumIterations(max_iter);
 }
 
 template <class PointSource, class PointTarget>
-double LibNdtSlamPCL<PointSource, PointTarget>::getTransformationEpsilon()
+double LibNdtSlamPCLGPU<PointSource, PointTarget>::getTransformationEpsilon()
 {
     return ndt_.getTransformationEpsilon();
 }
 
 template <class PointSource, class PointTarget>
-double LibNdtSlamPCL<PointSource, PointTarget>::getStepSize() const
+double LibNdtSlamPCLGPU<PointSource, PointTarget>::getStepSize() const
 {
     return ndt_.getStepSize();
 }
 
 template <class PointSource, class PointTarget>
-float LibNdtSlamPCL<PointSource, PointTarget>::getResolution() const
+float LibNdtSlamPCLGPU<PointSource, PointTarget>::getResolution() const
 {
     return ndt_.getResolution();
 }
 
 template <class PointSource, class PointTarget>
-int LibNdtSlamPCL<PointSource, PointTarget>::getMaximumIterations()
+int LibNdtSlamPCLGPU<PointSource, PointTarget>::getMaximumIterations()
 {
     return ndt_.getMaximumIterations();
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::align(const Pose& predict_pose)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::align(const Pose& predict_pose)
 {
     const auto predict_matrix = convertToEigenMatrix4f(predict_pose);
     pcl::PointCloud<PointSource> output_cloud;
@@ -129,25 +129,25 @@ void LibNdtSlamPCL<PointSource, PointTarget>::align(const Pose& predict_pose)
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& map_ptr)
 {
     ndt_.setInputTarget(map_ptr);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCL<PointSource, PointTarget>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& scan_ptr)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& scan_ptr)
 {
     ndt_.setInputSource(scan_ptr);
 }
 
 template <class PointSource, class PointTarget>
-double LibNdtSlamPCL<PointSource, PointTarget>::getFitnessScore()
+double LibNdtSlamPCLGPU<PointSource, PointTarget>::getFitnessScore()
 {
     return ndt_.getFitnessScore();
 }
 
 template <class PointSource, class PointTarget>
-Pose LibNdtSlamPCL<PointSource, PointTarget>::getFinalPose()
+Pose LibNdtSlamPCLGPU<PointSource, PointTarget>::getFinalPose()
 {
     return convertToPose(ndt_.getFinalTransformation());
 }

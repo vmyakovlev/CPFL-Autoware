@@ -74,17 +74,18 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -O2 -g -Wall -DUSE_FAST_PCL ${CMAKE_CXX_FLAGS}")
 ENDIF(PCL_VERSION VERSION_LESS "1.7.2")
 
 add_executable(ndt_slam_pcl nodes/ndt_slam_pcl/ndt_slam_pcl_node.cpp include/points_localizer/libconvert_ros_msgs.cpp)
-#add_executable(icp_slam_pcl nodes/icp_slam_pcl/icp_slam_pcl_node.cpp)
+add_executable(icp_slam_pcl nodes/icp_slam_pcl/icp_slam_pcl_node.cpp include/points_localizer/libconvert_ros_msgs.cpp)
 
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 #add_executable(ndt_slam_tku nodes/ndt_slam_tku/ndt_slam_tku_node.cpp)
 endif()
 
 target_link_libraries(ndt_slam_pcl ${catkin_LIBRARIES})
-#target_link_libraries(ndt_icp_pcl ${catkin_LIBRARIES})
+target_link_libraries(icp_slam_pcl ${catkin_LIBRARIES})
 
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 #target_link_libraries(ndt_slam_tku ndt_tku ${catkin_LIBRARIES})
 endif()
 
 add_dependencies(ndt_slam_pcl autoware_msgs_generate_messages_cpp)
+add_dependencies(icp_slam_pcl autoware_msgs_generate_messages_cpp)

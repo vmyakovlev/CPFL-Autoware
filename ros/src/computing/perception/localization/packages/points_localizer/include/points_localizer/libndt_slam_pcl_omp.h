@@ -28,29 +28,23 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef LIBNDT_SLMA_PCL_OMP_H
-#define LIBNDT_SLMA_PCL_OMP_H
+#ifndef LIBNDT_SLAM_PCL_OMP_H
+#define LIBNDT_SLAM_PCL_OMP_H
 
-#include "liblocalizer.h"
-#include "libndt_slam_param_interface.h"
-
-#include <iostream>
-#include <string>
-#include <chrono>
+#include "libndt_slam_base.h"
 
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_omp/registration/ndt.h>
 
-template <class PointT>
+template <class PointSource, class PointTarget>
 class LibNdtSlamPCLOMP
-    : public LibLocalizer<PointT>
-    , public LibNdtSlamParamInterface
+    : public LibNdtSlamBase<PointSource, PointTarget>
 {
     public:
         LibNdtSlamPCLOMP();
-        ~LibNdtSlamPCLOMP(){};
+        ~LibNdtSlamPCLOMP() = default;
 
         void setTransformationEpsilon(double trans_eps) override;
         void setStepSize(double step_size) override;
@@ -65,95 +59,95 @@ class LibNdtSlamPCLOMP
     protected:
         void align(const Pose& predict_pose) override;
         double getFitnessScore() override;
-        void setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointT> const>& map_ptr) override;
-        void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointT> const>& scan_ptr) override;
+        void setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& map_ptr) override;
+        void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& scan_ptr) override;
         Pose getFinalPose() override;
 
     private:
-        pcl_omp::NormalDistributionsTransform<PointT, PointT> ndt_;
+        pcl_omp::NormalDistributionsTransform<PointSource, PointTarget> ndt_;
 };
 
-template <class PointT>
-LibNdtSlamPCLOMP<PointT>::LibNdtSlamPCLOMP()
+template <class PointSource, class PointTarget>
+LibNdtSlamPCLOMP<PointSource, PointTarget>::LibNdtSlamPCLOMP()
 {
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setTransformationEpsilon(double trans_eps)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setTransformationEpsilon(double trans_eps)
 {
     ndt_.setTransformationEpsilon(trans_eps);
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setStepSize(double step_size)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setStepSize(double step_size)
 {
     ndt_.setStepSize(step_size);
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setResolution(float res)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setResolution(float res)
 {
     ndt_.setResolution(res);
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setMaximumIterations(int max_iter)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setMaximumIterations(int max_iter)
 {
     ndt_.setMaximumIterations(max_iter);
 }
 
-template <class PointT>
-double LibNdtSlamPCLOMP<PointT>::getTransformationEpsilon()
+template <class PointSource, class PointTarget>
+double LibNdtSlamPCLOMP<PointSource, PointTarget>::getTransformationEpsilon()
 {
     return ndt_.getTransformationEpsilon();
 }
 
-template <class PointT>
-double LibNdtSlamPCLOMP<PointT>::getStepSize() const
+template <class PointSource, class PointTarget>
+double LibNdtSlamPCLOMP<PointSource, PointTarget>::getStepSize() const
 {
     return ndt_.getStepSize();
 
 }
-template <class PointT>
-float LibNdtSlamPCLOMP<PointT>::getResolution() const
+template <class PointSource, class PointTarget>
+float LibNdtSlamPCLOMP<PointSource, PointTarget>::getResolution() const
 {
     return ndt_.getResolution();
 }
 
-template <class PointT>
-int LibNdtSlamPCLOMP<PointT>::getMaximumIterations()
+template <class PointSource, class PointTarget>
+int LibNdtSlamPCLOMP<PointSource, PointTarget>::getMaximumIterations()
 {
     return ndt_.getMaximumIterations();
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::align(const Pose& predict_pose)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::align(const Pose& predict_pose)
 {
     const auto predict_matrix = convertToEigenMatrix4f(predict_pose);
-    pcl::PointCloud<PointT> output_cloud;
+    pcl::PointCloud<PointSource> output_cloud;
     ndt_.align(output_cloud, predict_matrix);
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointT> const>& map_ptr)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& map_ptr)
 {
     ndt_.setInputTarget(map_ptr);
 }
 
-template <class PointT>
-void LibNdtSlamPCLOMP<PointT>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointT> const>& scan_ptr)
+template <class PointSource, class PointTarget>
+void LibNdtSlamPCLOMP<PointSource, PointTarget>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& scan_ptr)
 {
     ndt_.setInputSource(scan_ptr);
 }
 
-template <class PointT>
-double LibNdtSlamPCLOMP<PointT>::getFitnessScore()
+template <class PointSource, class PointTarget>
+double LibNdtSlamPCLOMP<PointSource, PointTarget>::getFitnessScore()
 {
     return ndt_.getFitnessScore();
 }
 
-template <class PointT>
-Pose LibNdtSlamPCLOMP<PointT>::getFinalPose()
+template <class PointSource, class PointTarget>
+Pose LibNdtSlamPCLOMP<PointSource, PointTarget>::getFinalPose()
 {
     return convertToPose(ndt_.getFinalTransformation());
 }

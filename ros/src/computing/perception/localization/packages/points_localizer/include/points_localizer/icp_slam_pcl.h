@@ -28,8 +28,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef NDT_SLAM_PCL_H
-#define NDT_SLAM_PCL_H
+#ifndef ICP_SLAM_PCL_H
+#define ICP_SLAM_PCL_H
 
 #include <ros/ros.h>
 
@@ -43,19 +43,18 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 
-#include "libndt_slam_pcl.h"
-#include "libndt_slam_pcl_omp.h"
+#include "libicp_slam_pcl.h"
 #include "libdata_structs.h"
 #include "libconvert_ros_msgs.h"
 
 
-class NdtSlam
+class IcpSlam
 {
     using PointSource = pcl::PointXYZ;
     using PointTarget = pcl::PointXYZ;
 
     public:
-        NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh);
+        IcpSlam(ros::NodeHandle nh, ros::NodeHandle private_nh);
 
     private:
         void pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr);
@@ -87,11 +86,11 @@ class NdtSlam
 
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformListener tf_listener_;
-        LibNdtSlamPCL<PointSource, PointTarget> localizer_;
+        LibIcpSlamPCL<PointSource, PointTarget> localizer_;
 
 };
 
-NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
+IcpSlam::IcpSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     :nh_(nh)
     ,private_nh_(private_nh)
 {
@@ -101,68 +100,68 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     localizer_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped> ("localizer_pose",     10);
     localizer_velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("localizer_velocity", 10);
 
-    //points_map_updated_sub_ = nh_.subscribe("/points_map_updated", 10, &NdtSlam::pointsMapUpdatedCallback, this);
-    points_map_updated_sub_ = nh_.subscribe("/points_map", 10, &NdtSlam::pointsMapUpdatedCallback, this);
-    //manual_pose_sub_        = nh_.subscribe("/manual_pose",        10, &NdtSlam::manualPoseCallback, this);
-    manual_pose_sub_        = nh_.subscribe("/initialpose",        10, &NdtSlam::manualPoseCallback, this);
-    static_pose_sub_        = nh_.subscribe("/static_pose",        10, &NdtSlam::staticPoseCallback, this);
-    gnss_pose_sub_          = nh_.subscribe("/gnss_pose",          10, &NdtSlam::gnssPoseCallback, this);
-    delta_pose_sub_         = nh_.subscribe("/delta_pose",         10, &NdtSlam::deltaPoseCallback, this);
-    points_raw_sub_         = nh_.subscribe("/points_raw",         10, &NdtSlam::pointsRawCallback, this);
-    points_fused_sub_       = nh_.subscribe("/points_fused",       10, &NdtSlam::pointsFusedCallback, this);
-    //points_filtered_sub_    = nh_.subscribe("/points_filtered",    10, &NdtSlam::pointsFilteredCallback, this);
-    points_filtered_sub_    = nh_.subscribe("/filtered_points",    10, &NdtSlam::pointsFilteredCallback, this);
+    //points_map_updated_sub_ = nh_.subscribe("/points_map_updated", 10, &IcpSlam::pointsMapUpdatedCallback, this);
+    points_map_updated_sub_ = nh_.subscribe("/points_map", 10, &IcpSlam::pointsMapUpdatedCallback, this);
+    //manual_pose_sub_        = nh_.subscribe("/manual_pose",        10, &IcpSlam::manualPoseCallback, this);
+    manual_pose_sub_        = nh_.subscribe("/initialpose",        10, &IcpSlam::manualPoseCallback, this);
+    static_pose_sub_        = nh_.subscribe("/static_pose",        10, &IcpSlam::staticPoseCallback, this);
+    gnss_pose_sub_          = nh_.subscribe("/gnss_pose",          10, &IcpSlam::gnssPoseCallback, this);
+    delta_pose_sub_         = nh_.subscribe("/delta_pose",         10, &IcpSlam::deltaPoseCallback, this);
+    points_raw_sub_         = nh_.subscribe("/points_raw",         10, &IcpSlam::pointsRawCallback, this);
+    points_fused_sub_       = nh_.subscribe("/points_fused",       10, &IcpSlam::pointsFusedCallback, this);
+    //points_filtered_sub_    = nh_.subscribe("/points_filtered",    10, &IcpSlam::pointsFilteredCallback, this);
+    points_filtered_sub_    = nh_.subscribe("/filtered_points",    10, &IcpSlam::pointsFilteredCallback, this);
 
     localizer_.setTransformationEpsilon(0.01);
-    localizer_.setStepSize(0.1);
-    localizer_.setResolution(1.0);
-    localizer_.setMaximumIterations(30);
-
+    localizer_.setEuclideanFitnessEpsilon(0.1);
+    localizer_.setMaxCorrespondenceDistance(1.0);
+    localizer_.setRANSACOutlierRejectionThreshold(1.0);
+    localizer_.setMaximumIterations(100);
 }
 
-void NdtSlam::pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
+void IcpSlam::pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointTarget>(*pointcloud2_msg_ptr);
     localizer_.updatePointsMap(pointcloud);
 }
 
-void NdtSlam::manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg_ptr)
+void IcpSlam::manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
     localizer_.updateManualPose(pose);
 }
 
-void NdtSlam::staticPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
+void IcpSlam::staticPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
     localizer_.updateStaticPose(pose);
 }
 
-void NdtSlam::gnssPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
+void IcpSlam::gnssPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
     localizer_.updateGnssPose(pose);
 }
 
-void NdtSlam::deltaPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
+void IcpSlam::deltaPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
     localizer_.updateDeltaPose(pose_msg_ptr->header.stamp.toSec(), pose);
 }
 
-void NdtSlam::pointsRawCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
+void IcpSlam::pointsRawCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
     localizer_.updatePointsRaw(pointcloud);
 }
 
-void NdtSlam::pointsFusedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
+void IcpSlam::pointsFusedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
     localizer_.updatePointsFused(pointcloud);
 }
 
-void NdtSlam::pointsFilteredCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
+void IcpSlam::pointsFilteredCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
     localizer_.updatePointsFiltered(pointcloud);   // == setInputSource(pointcloud);
@@ -170,7 +169,7 @@ void NdtSlam::pointsFilteredCallback(const sensor_msgs::PointCloud2::ConstPtr& p
     publishTopics(pointcloud2_msg_ptr->header);
 }
 
-void NdtSlam::publishTopics(std_msgs::Header header)
+void IcpSlam::publishTopics(std_msgs::Header header)
 {
     std_msgs::Header common_header;
     common_header.frame_id = "map";
