@@ -140,6 +140,7 @@ static void *sendCommand(void *arg)
     std::perror("write");
     return nullptr;
   }
+  command_data.modeValue = -1;
   
   if(close(client_sock) == -1){
     std::perror("close");

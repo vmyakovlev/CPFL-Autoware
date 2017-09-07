@@ -181,8 +181,8 @@ void Update(void *p)
 
 void SetState(int mode, int gear, void* p) 
 {
-  // 0=manual, 1=str, 2=drv, 3=str+drv
-  if (mode >= 0 && mode != current_mode) {
+  // 0=manual, 1=str, 2=drv, 3=str+drv, -1=keep
+  if (mode >= 0) {
     current_mode = mode;
     pthread_create(&_modesetter, NULL, MainWindow::ModeSetterEntry, p);
   }
@@ -316,18 +316,25 @@ void *MainWindow::ModeSetterEntry(void *a)
   MainWindow* main = (MainWindow*)a;
 
   mode_is_setting = true; // loose critical section
-
-  main->ClearCntDiag();
-  // 0=manual, 1=str, 2=drv, 3=str+drv
-  sleep(1);
-  main->SetStrMode(((current_mode & CAN_MODE_STR) != 0) ? 1:0); // steering
-  sleep(1);
-  main->SetDrvMode(((current_mode & CAN_MODE_DRV) != 0) ? 1:0); // accel/brake
-  sleep(1);
-
+  main->ModeSet(current_mode);
   mode_is_setting = false; // loose critical section
 
   return NULL;
+}
+
+void MainWindow::ModeSet(int mode)
+{
+  ClearCntDiag();
+  // 0=manual, 1=str, 2=drv, 3=str+drv, -1=keep
+  if ((((mode & CAN_MODE_STR) != 0) ? 1:0) != (ZMP_STR_CONTROLLED() ? 1:0)) {
+    //sleep(1);
+    SetStrMode(((mode & CAN_MODE_STR) != 0) ? 1:0); // steering
+  }
+  if ((((mode & CAN_MODE_DRV) != 0) ? 1:0) != (ZMP_DRV_CONTROLLED() ? 1:0)) {
+    //sleep(1);
+    SetDrvMode(((mode & CAN_MODE_DRV) != 0) ? 1:0); // accel/brake
+  }
+  //sleep(1);
 }
 
 void *MainWindow::GearSetterEntry(void *a)

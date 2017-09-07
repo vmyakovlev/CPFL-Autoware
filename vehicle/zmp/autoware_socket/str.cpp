@@ -34,6 +34,8 @@
 static double steering_diff_sum = 0;
 queue<double> steering_diff_buffer;
 
+static int ignore_str_flag = 1;
+
 static void clear_diff()
 {
   int i;
@@ -54,6 +56,7 @@ void MainWindow::SetStrMode(int mode)
     break;
   case CMD_MODE_PROGRAM:
     cout << "Switching to PROGRAM (Steering)" << endl;
+    ignore_str_flag = 1;
     ZMP_SET_STR_PROGRAM();
     clear_diff();
     break;
@@ -178,13 +181,100 @@ void MainWindow::SteeringControl(double current_steering_angle, double cmd_steer
 
 #if 1
   //------------ ANGLE CONTROL --------------
-  cmd_steering_angle -= _STEERING_ANGLE_ERROR;
-  ZMP_SET_STR_ANGLE(cmd_steering_angle*10);
+  // set PID factors for ZMP control box
+  int kp, ki, kd;
+#if 1
+  if (vstate.velocity < _K_ANGLE_THRESHOLD_SLOW) {
+    kp = _K_ANGLE_CTRL_P_SLOW;
+    ki = _K_ANGLE_CTRL_I_SLOW;
+    kd = _K_ANGLE_CTRL_D_SLOW;
+  } else if (vstate.velocity < _K_ANGLE_THRESHOLD) {
+    kp = _K_ANGLE_CTRL_P_SLOW +
+      (_K_ANGLE_CTRL_P - _K_ANGLE_CTRL_P_SLOW) *
+      (vstate.velocity - _K_ANGLE_THRESHOLD_SLOW) /
+      (_K_ANGLE_THRESHOLD - _K_ANGLE_THRESHOLD_SLOW);
+    ki = _K_ANGLE_CTRL_I_SLOW +
+      (_K_ANGLE_CTRL_I - _K_ANGLE_CTRL_I_SLOW) *
+      (vstate.velocity - _K_ANGLE_THRESHOLD_SLOW) /
+      (_K_ANGLE_THRESHOLD - _K_ANGLE_THRESHOLD_SLOW);
+    kd = _K_ANGLE_CTRL_D_SLOW +
+      (_K_ANGLE_CTRL_D - _K_ANGLE_CTRL_D_SLOW) *
+      (vstate.velocity - _K_ANGLE_THRESHOLD_SLOW) /
+      (_K_ANGLE_THRESHOLD - _K_ANGLE_THRESHOLD_SLOW);
+  } else {
+    kp = _K_ANGLE_CTRL_P;
+    ki = _K_ANGLE_CTRL_I;
+    kd = _K_ANGLE_CTRL_D;
+  }
+#else
+  if (vstate.velocity > _K_ANGLE_THRESHOLD_SLOW) {
+    kp = _K_ANGLE_CTRL_P;
+    ki = _K_ANGLE_CTRL_I;
+    kd = _K_ANGLE_CTRL_D;
+  } else {
+    kp = _K_ANGLE_CTRL_P_SLOW;
+    ki = _K_ANGLE_CTRL_I_SLOW;
+    kd = _K_ANGLE_CTRL_D_SLOW;
+  }
+#endif
+    hev->SetControlGain(CONFIG_ANGLE_CTRL_KP, kp);
+    hev->SetControlGain(CONFIG_ANGLE_CTRL_KI, ki);
+    hev->SetControlGain(CONFIG_ANGLE_CTRL_KD, kd);
+#ifdef USE_ANGLE_DIFF_THRESHOLD
+  static double old_angle = cmd_steering_angle;
+  static double old_angle_diff = 0.0;
+  double angle_diff = cmd_steering_angle - old_angle;
+  if (angle_diff - old_angle_diff > _ANGLE_DIFF_THRESHOLD) {
+    cmd_steering_angle = _ANGLE_DIFF_THRESHOLD + old_angle + old_angle_diff;
+    angle_diff = cmd_steering_angle - old_angle;
+  } else if (angle_diff - old_angle_diff < -_ANGLE_DIFF_THRESHOLD) {
+    cmd_steering_angle = -_ANGLE_DIFF_THRESHOLD + old_angle + old_angle_diff;
+    angle_diff = cmd_steering_angle - old_angle;
+  }
+#endif /* USE_ANGLE_DIFF_THRESHOLD */
+  static int str_limit_cnt = 0;
+  static double old_angle = cmd_steering_angle;
+  if (vstate.velocity >= _K_ANGLE_THRESHOLD_VERY_SLOW || !ignore_str_flag) {
+    if (ignore_str_flag) {
+      str_limit_cnt = _STEERING_LIMIT_SEC * 1000/STEERING_INTERNAL_PERIOD;
+      old_angle = cmd_steering_angle;
+    }
+    ignore_str_flag = 0;
+  }
+  if (str_limit_cnt > 0) {
+    str_limit_cnt--;
+    if (cmd_steering_angle - old_angle > _STEERING_LIMIT_ANGLE) {
+      cmd_steering_angle = old_angle + _STEERING_LIMIT_ANGLE;
+    } else if (cmd_steering_angle - old_angle < -_STEERING_LIMIT_ANGLE) {
+      cmd_steering_angle = old_angle - _STEERING_LIMIT_ANGLE;
+    }
+    old_angle = cmd_steering_angle;
+  }
+  if (cmd_steering_angle < -STEERING_ANGLE_MAX) {
+    cmd_steering_angle = -STEERING_ANGLE_MAX;
+  } else if (cmd_steering_angle > STEERING_ANGLE_MAX) {
+    cmd_steering_angle = STEERING_ANGLE_MAX;
+  }
+  ZMP_SET_STR_ANGLE((cmd_steering_angle - _STEERING_ANGLE_ERROR)*10);
 #if 1 /* log */
   ofstream ofs("/tmp/angle.log", ios::app);
   ofs << cmd_steering_angle << " "
+      << current_steering_angle << " "
+      << kp << " "
+      << ki << " "
+      << kd << endl;
+#endif
+#ifdef USE_ANGLE_DIFF_THRESHOLD
+#if 1 /* log */
+  ofstream dofs("/tmp/anglediff.log", ios::app);
+  dofs << (angle_diff - old_angle_diff) << " "
+      << angle_diff << " "
+      << cmd_steering_angle << " "
       << current_steering_angle << endl;
 #endif
+  old_angle = cmd_steering_angle;
+  old_angle_diff = angle_diff;
+#endif /* USE_ANGLE_DIFF_THRESHOLD */
   return;
   //-----------------------------------------
 #endif

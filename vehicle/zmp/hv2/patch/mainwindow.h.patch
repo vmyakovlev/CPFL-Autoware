@@ -1,6 +1,6 @@
 --- a/mainwindow.h	2015-06-09 15:44:52.965202266 +0900
-+++ b/mainwindow.h	2015-07-17 10:59:42.092654461 +0900
-@@ -50,6 +50,35 @@ public:
++++ b/mainwindow.h	2017-09-07 14:33:35.261071585 +0900
+@@ -50,6 +50,36 @@ public:
      bool GameInit();
      bool GameStart();
  
@@ -16,6 +16,7 @@
 +
 +    // mode
 +    static void* ModeSetterEntry(void *a);
++    void ModeSet(int mode);
 +    void SetStrMode(int mode);
 +    void SetDrvMode(int mode);
 +
@@ -35,8 +36,17 @@
 +
  protected:
      void changeEvent(QEvent *);
+     void closeEvent(QCloseEvent *);
+@@ -207,7 +237,7 @@ private:
+     void viewErrCode();
+     void viewFirmVersion();
+     void updateTime();
+-    void writeLog();
++    //void writeLog();
  
-@@ -267,6 +296,10 @@ private:
+     void logThread();
+     static void* LogThreadEntry(void* arg);
+@@ -274,6 +304,10 @@ private:
  
      int _drvTargetVeloc;
      int _drvTargetStroke;
