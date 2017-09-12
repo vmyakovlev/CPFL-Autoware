@@ -47,6 +47,11 @@ include_directories(${catkin_INCLUDE_DIRS}
 		${GLEW_INCLUDE_DIRS}
 )
 
+find_package(CUDA)
+if (CUDA_FOUND)
+include_directories(${CUDA_INCLUDE_DIRS})
+endif(CUDA_FOUND)
+
 set(SIMUH_SRC
 		src/AlternativeVisualizer.cpp
 		src/CarState.cpp
@@ -62,9 +67,15 @@ set(SIMUH_SRC
 )
 
 ## Declare a cpp library
+if (CUDA_FOUND)
+cuda_add_library(${PROJECT_NAME}
+	    ${SIMUH_SRC}
+)
+else()
 add_library(${PROJECT_NAME}
 	    ${SIMUH_SRC}
 )
+endif(CUDA_FOUND)
 
 target_link_libraries(${PROJECT_NAME}
 		${catkin_LIBRARIES}
@@ -75,10 +86,17 @@ target_link_libraries(${PROJECT_NAME}
 		${X11_LIBRARIES}
 		${TinyXML_LIBRARIES}
 )
+if (CUDA_FOUND)
+cuda_add_executable(Simu
+	    ${SIMUH_SRC}
+	    main.cpp
+)
+else()
 add_executable(Simu
 	    ${SIMUH_SRC}
 	    main.cpp
 )
+endif(CUDA_FOUND)
 
 target_link_libraries(Simu
 		${catkin_LIBRARIES}

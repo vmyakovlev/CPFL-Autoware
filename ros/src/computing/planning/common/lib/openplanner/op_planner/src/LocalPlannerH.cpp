@@ -863,9 +863,15 @@ bool LocalPlannerH::CalculateObstacleCosts(PlannerHNS::RoadNetwork& map, const P
 
 	timespec costTimer;
 	UtilityH::GetTickCount(costTimer);
+#ifndef CUDA_FOUND
 	TrajectoryCost tc = m_TrajectoryCostsCalculatotor.DoOneStep(m_RollOuts, m_TotalPath, state,
 			m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory, m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeLane, *m_pCurrentBehaviorState->m_pParams,
 			m_CarInfo,vehicleState, obj_list);
+#else
+	TrajectoryCost tc = m_TrajectoryCostsCalculatotorOnGPU.DoOneStep(m_RollOuts, m_TotalPath, state,
+			m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory, m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeLane, *m_pCurrentBehaviorState->m_pParams,
+			m_CarInfo,vehicleState, obj_list);
+#endif
 	m_CostCalculationTime = UtilityH::GetTimeDiffNow(costTimer);
 
 

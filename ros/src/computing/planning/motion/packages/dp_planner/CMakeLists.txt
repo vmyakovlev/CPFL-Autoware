@@ -28,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES 
-  CATKIN_DEPENDS roscpp geometry_msgs runtime_manager cv_tracker_msgs waypoint_follower_msgs map_file op_utility op_planner op_simu
+  CATKIN_DEPENDS roscpp geometry_msgs runtime_manager cv_tracker_msgs waypoint_follower_msgs map_file op_utility op_planner op_simu lidar_tracker
 #  DEPENDS system_lib
 )
 
@@ -43,12 +43,21 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+find_package(CUDA)
+if(CUDA_FOUND)
+include_directories(${CUDA_INCLUDE_DIRS})
+endif()
+
 ## Declare a C++ library
 #add_library(libdp_planner lib/libdp_planner.cpp)
 
 link_directories(lib)
 
+if(CUDA_FOUND)
+cuda_add_executable(dp_planner nodes/dp_planner.cpp nodes/dp_planner_core.cpp nodes/RosHelpers.cpp nodes/PolygonGenerator.cpp)
+else()
 add_executable(dp_planner nodes/dp_planner.cpp nodes/dp_planner_core.cpp nodes/RosHelpers.cpp nodes/PolygonGenerator.cpp)
+endif(CUDA_FOUND)
 target_link_libraries(dp_planner ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 add_dependencies(dp_planner 
 ${catkin_EXPORTED_TARGETS}

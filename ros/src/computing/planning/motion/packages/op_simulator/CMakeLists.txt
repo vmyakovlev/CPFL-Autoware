@@ -41,11 +41,20 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+find_package(CUDA)
+if(CUDA_FOUND)
+include_directories(${CUDA_INCLUDE_DIRS})
+endif(CUDA_FOUND)
+
 ## Declare a C++ library
 #add_library(libplanner_x lib/libplanner_x.cpp)
 
 link_directories(lib)
+if(CUDA_FOUND)
+cuda_add_executable(op_simulator nodes/OpenPlannerSimulator.cpp nodes/OpenPlannerSimulator_core.cpp nodes/PolygonGenerator.cpp)
+else()
 add_executable(op_simulator nodes/OpenPlannerSimulator.cpp nodes/OpenPlannerSimulator_core.cpp nodes/PolygonGenerator.cpp)
+endif(CUDA_FOUND)
 target_link_libraries(op_simulator ${catkin_LIBRARIES})
 
 add_dependencies(op_simulator

@@ -8,6 +8,9 @@
 #include "TrajectoryCosts.h"
 #include "MatrixOperations.h"
 
+#include <chrono>
+#include <iostream>
+
 namespace PlannerHNS
 {
 
@@ -27,6 +30,7 @@ TrajectoryCost TrajectoryCosts::DoOneStep(const vector<vector<vector<WayPoint> >
 		const PlanningParams& params, const CAR_BASIC_INFO& carInfo, const VehicleState& vehicleState,
 		const std::vector<PlannerHNS::DetectedObject>& obj_list)
 {
+        auto start  = std::chrono::system_clock::now();
 	TrajectoryCost bestTrajectory;
 	bestTrajectory.bBlocked = true;
 	bestTrajectory.closest_obj_distance = params.horizonDistance;
@@ -114,6 +118,10 @@ TrajectoryCost TrajectoryCosts::DoOneStep(const vector<vector<vector<WayPoint> >
 //			<< endl;
 
 	m_PrevCostIndex = smallestIndex;
+
+        auto end = std::chrono::system_clock::now();
+        double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        //std::cerr << "Do one step: " << elapsed << "[ms]" << std::endl;
 
 	return bestTrajectory;
 }

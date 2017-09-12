@@ -12,6 +12,9 @@
 #include "PlannerCommonDef.h"
 #include "RoadNetwork.h"
 #include "TrajectoryCosts.h"
+#ifdef CUDA_FOUND
+#include "TrajectoryCostsOnGPU.h"
+#endif
 
 namespace PlannerHNS
 {
@@ -54,6 +57,9 @@ public:
 	StopSignWaitState* 			m_pStopSignWaitState;
 
 	TrajectoryCosts m_TrajectoryCostsCalculatotor;
+#ifdef CUDA_FOUND
+	TrajectoryCostsOnGPU m_TrajectoryCostsCalculatotorOnGPU;
+#endif
 
 
 

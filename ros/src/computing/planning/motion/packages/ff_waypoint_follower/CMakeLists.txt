@@ -37,11 +37,20 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+find_package(CUDA)
+if (CUDA_FOUND)
+include_directories(${CUDA_INCLUDE_DIRS})
+endif(CUDA_FOUND)
+
 ## Declare a C++ library
 #add_library(libplanner_x lib/libplanner_x.cpp)
 
 link_directories(lib)
+if(CUDA_FOUND)
+cuda_add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp)
+else()
 add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp)
+endif(CUDA_FOUND)
 target_link_libraries(ff_waypoint_follower  ${catkin_LIBRARIES})
 
 #link_directories(/usr/local/lib/zmp/minivan)
