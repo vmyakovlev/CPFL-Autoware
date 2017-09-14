@@ -75,40 +75,61 @@ public:
 		voxel_grid_ = other.voxel_grid_;
 	}
 
-	inline void setStepSize(double step_size)
-	{
-		step_size_ = step_size;
-	}
+	// inline void setStepSize(double step_size)
+	// {
+	// 	step_size_ = step_size;
+	// }
+	//
+	// inline void setResolution(float resolution)
+	// {
+	// 	resolution_ = resolution;
+	// }
+	//
+	// inline void setOutlierRatio(double olr)
+	// {
+	// 	outlier_ratio_ = olr;
+	// }
+	//
+	// inline double getStepSize() const
+	// {
+	// 	return step_size_;
+	// }
+	//
+	// inline float getResolution() const
+	// {
+	// 	return resolution_;
+	// }
+	//
+	// inline double getOutlierRatio() const
+	// {
+	// 	return outlier_ratio_;
+	// }
+	//
+	// inline double getTransformationProbability() const
+	// {
+	// 	return trans_probability_;
+	// }
+	//
+	// inline int getRealIterations()
+	// {
+	// 	 return real_iterations_;
+	// }
 
-	inline void setResolution(float resolution)
-	{
-		resolution_ = resolution;
-	}
+	void setStepSize(double step_size);
 
-	inline void setOutlierRatio(double olr)
-	{
-		outlier_ratio_ = olr;
-	}
+	void setResolution(float resolution);
 
-	inline double getStepSize()
-	{
-		return step_size_;
-	}
+	void setOutlierRatio(double olr);
 
-	inline float getResolution()
-	{
-		return resolution_;
-	}
+	double getStepSize() const;
 
-	inline double getOutlierRatio()
-	{
-		return outlier_ratio_;
-	}
+	float getResolution() const;
 
-	inline double getTransformationProbability()
-	{
-		return trans_probability_;
-	}
+	double getOutlierRatio() const;
+
+	double getTransformationProbability() const;
+
+	int getRealIterations();
 
 	/* Set the input map points */
 	void setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input);
@@ -117,27 +138,30 @@ public:
 	/* Compute and get fitness score */
 	double getFitnessScore(double max_range = DBL_MAX);
 
-	inline int getRealIterations() { return real_iterations_; }
 
 	~GNormalDistributionsTransform();
 protected:
-	void computeTransformation(Eigen::Matrix<float, 4, 4> &guess);
+	void computeTransformation(const Eigen::Matrix<float, 4, 4> &guess);
 	double computeDerivatives(Eigen::Matrix<double, 6, 1> &score_gradient, Eigen::Matrix<double, 6, 6> &hessian,
 								float *trans_x, float *trans_y, float *trans_z,
 								int points_num, Eigen::Matrix<double, 6, 1> pose, bool compute_hessian = true);
 
 private:
 	//Copied from ndt.h
-    inline double auxilaryFunction_PsiMT (double a, double f_a, double f_0, double g_0, double mu = 1.e-4)
-    {
-      return (f_a - f_0 - mu * g_0 * a);
-    }
+    double auxilaryFunction_PsiMT (double a, double f_a, double f_0, double g_0, double mu = 1.e-4);
 
     //Copied from ndt.h
-    inline double auxilaryFunction_dPsiMT (double g_a, double g_0, double mu = 1.e-4)
-    {
-      return (g_a - mu * g_0);
-    }
+    double auxilaryFunction_dPsiMT (double g_a, double g_0, double mu = 1.e-4);
+
+	// inline double auxilaryFunction_PsiMT(double a, double f_a, double f_0, double g_0, double mu = 1.e-4)
+	// {
+	//   return (f_a - f_0 - mu * g_0 * a);
+	// }
+	//
+	// inline double auxilaryFunction_dPsiMT(double g_a, double g_0, double mu = 1.e-4)
+	// {
+	//   return (g_a - mu * g_0);
+	// }
 
     double updateIntervalMT (double &a_l, double &f_l, double &g_l,
 								double &a_u, double &f_u, double &g_u,

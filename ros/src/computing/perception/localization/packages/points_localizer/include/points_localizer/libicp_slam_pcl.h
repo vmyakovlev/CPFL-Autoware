@@ -112,7 +112,7 @@ double LibIcpSlamPCL<PointSource, PointTarget>::getTransformationEpsilon()
 template <class PointSource, class PointTarget>
 double LibIcpSlamPCL<PointSource, PointTarget>::getEuclideanFitnessEpsilon()
 {
-    return icp_.getEuclideanFitnessEpsilon
+    return icp_.getEuclideanFitnessEpsilon();
 }
 
 template <class PointSource, class PointTarget>
@@ -138,7 +138,7 @@ template <class PointSource, class PointTarget>
 void LibIcpSlamPCL<PointSource, PointTarget>::align(const Pose& predict_pose)
 {
     const auto predict_matrix = convertToEigenMatrix4f(predict_pose);
-    pcl::PointCloud<PointT> output_cloud;
+    pcl::PointCloud<PointSource> output_cloud;
     icp_.align(output_cloud, predict_matrix);
 }
 

@@ -45,6 +45,7 @@
 
 #include "libndt_slam_pcl.h"
 #include "libndt_slam_pcl_omp.h"
+#include "libndt_slam_pcl_gpu.h"
 #include "libdata_structs.h"
 #include "libconvert_ros_msgs.h"
 
@@ -87,7 +88,7 @@ class NdtSlam
 
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformListener tf_listener_;
-        LibNdtSlamPCL<PointSource, PointTarget> localizer_;
+        LibNdtSlamPCLGPU<PointSource, PointTarget> localizer_;
 
 };
 
@@ -115,7 +116,7 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
 
     localizer_.setTransformationEpsilon(0.01);
     localizer_.setStepSize(0.1);
-    localizer_.setResolution(1.0);
+    localizer_.setResolution(3.0);
     localizer_.setMaximumIterations(30);
 
 }

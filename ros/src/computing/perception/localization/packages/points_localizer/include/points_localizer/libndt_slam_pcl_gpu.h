@@ -36,7 +36,7 @@
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-#include <pcl/registration/ndt.h>
+#include <fast_pcl/ndt_gpu/NormalDistributionsTransform.h>
 
 template <class PointSource, class PointTarget>
 class LibNdtSlamPCLGPU
@@ -124,20 +124,21 @@ template <class PointSource, class PointTarget>
 void LibNdtSlamPCLGPU<PointSource, PointTarget>::align(const Pose& predict_pose)
 {
     const auto predict_matrix = convertToEigenMatrix4f(predict_pose);
-    pcl::PointCloud<PointSource> output_cloud;
-    ndt_.align(output_cloud, predict_matrix);
+    ndt_.align(predict_matrix);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& map_ptr)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputTarget(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr)
 {
-    ndt_.setInputTarget(map_ptr);
+    boost::shared_ptr< pcl::PointCloud<PointTarget> > non_const_map_ptr(new pcl::PointCloud<PointTarget>(*map_ptr));
+    ndt_.setInputTarget(non_const_map_ptr);
 }
 
 template <class PointSource, class PointTarget>
-void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& scan_ptr)
+void LibNdtSlamPCLGPU<PointSource, PointTarget>::setInputSource(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& scan_ptr)
 {
-    ndt_.setInputSource(scan_ptr);
+    boost::shared_ptr< pcl::PointCloud<PointSource> > non_const_scan_ptr(new pcl::PointCloud<PointSource>(*scan_ptr));
+    ndt_.setInputSource(non_const_scan_ptr);
 }
 
 template <class PointSource, class PointTarget>

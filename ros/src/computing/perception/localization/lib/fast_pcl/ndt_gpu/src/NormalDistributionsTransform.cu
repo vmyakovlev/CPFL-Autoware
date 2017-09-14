@@ -10,7 +10,7 @@ namespace gpu {
 
 GNormalDistributionsTransform::GNormalDistributionsTransform()
 {
-	GRegistration::GRegistration();
+	//GRegistration::GRegistration();
 
 	gauss_d1_ = gauss_d2_ = 0;
 	outlier_ratio_ = 0.55;
@@ -85,6 +85,7 @@ GNormalDistributionsTransform::GNormalDistributionsTransform()
 
 GNormalDistributionsTransform::~GNormalDistributionsTransform()
 {
+	std::cout << __func__ << std::endl;
 	dj_ang_a_.memFree();
 	dj_ang_b_.memFree();
 	dj_ang_c_.memFree();
@@ -110,9 +111,59 @@ GNormalDistributionsTransform::~GNormalDistributionsTransform()
 	dh_ang_f2_.memFree();
 	dh_ang_f3_.memFree();
 
-	voxel_grid_.~GVoxelGrid();
+	//voxel_grid_.~GVoxelGrid();
+	std::cout << __func__ << std::endl;
 }
 
+void GNormalDistributionsTransform::setStepSize(double step_size)
+{
+	step_size_ = step_size;
+}
+
+void GNormalDistributionsTransform::setResolution(float resolution)
+{
+	resolution_ = resolution;
+}
+
+void GNormalDistributionsTransform::setOutlierRatio(double olr)
+{
+	outlier_ratio_ = olr;
+}
+
+double GNormalDistributionsTransform::getStepSize() const
+{
+	return step_size_;
+}
+
+float GNormalDistributionsTransform::getResolution() const
+{
+	return resolution_;
+}
+
+double GNormalDistributionsTransform::getOutlierRatio() const
+{
+	return outlier_ratio_;
+}
+
+double GNormalDistributionsTransform::getTransformationProbability() const
+{
+	return trans_probability_;
+}
+
+int GNormalDistributionsTransform::getRealIterations()
+{
+	 return real_iterations_;
+}
+
+double GNormalDistributionsTransform::auxilaryFunction_PsiMT(double a, double f_a, double f_0, double g_0, double mu)
+{
+  return (f_a - f_0 - mu * g_0 * a);
+}
+
+double GNormalDistributionsTransform::auxilaryFunction_dPsiMT(double g_a, double g_0, double mu)
+{
+  return (g_a - mu * g_0);
+}
 
 void GNormalDistributionsTransform::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 {
@@ -138,7 +189,7 @@ void GNormalDistributionsTransform::setInputTarget(pcl::PointCloud<pcl::PointXYZ
 	}
 }
 
-void GNormalDistributionsTransform::computeTransformation(Eigen::Matrix<float, 4, 4> &guess)
+void GNormalDistributionsTransform::computeTransformation(const Eigen::Matrix<float, 4, 4> &guess)
 {
 	struct timeval start, end;
 
@@ -155,7 +206,7 @@ void GNormalDistributionsTransform::computeTransformation(Eigen::Matrix<float, 4
 
 	if (guess != Eigen::Matrix4f::Identity()) {
 		final_transformation_ = guess;
-		
+
 		transformPointCloud(x_, y_, z_, trans_x_, trans_y_, trans_z_, points_number_, guess);
 	}
 
@@ -1794,7 +1845,9 @@ __global__ void gpuSum(T *input, int size, int half_size)
 	int stride = blockDim.x * gridDim.x;
 
 	for (int i = idx; i < half_size; i += stride) {
-		input[i] += (half_size < size) ? input[i + half_size] : 0;
+		if (i + half_size < size) {
+			input[i] += (half_size < size) ? input[i + half_size] : 0;
+		}
 	}
 }
 

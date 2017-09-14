@@ -97,11 +97,11 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
     const double begin_time_sec = (it != std::begin(queue_) && it->first > previous_time_sec) ? it->first : previous_time_sec;
     const double end_time_sec   = (it+1 != std::end(queue_) && it2->first < next_time_sec) ? it2->first : next_time_sec;
 
-    std::cout << std::fmod(it->first, 100.0)
-      << " " << std::fmod(begin_time_sec, 100.0)
-      << " " << std::fmod(it2->first, 100.0)
-      << " " << std::fmod(end_time_sec, 100.0)
-      << std::endl;
+    // std::cout << std::fmod(it->first, 100.0)
+    //   << " " << std::fmod(begin_time_sec, 100.0)
+    //   << " " << std::fmod(it2->first, 100.0)
+    //   << " " << std::fmod(end_time_sec, 100.0)
+    //   << std::endl;
 
     if(it2->first - it->first == 0)
         continue;

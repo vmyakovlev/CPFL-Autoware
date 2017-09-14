@@ -179,7 +179,7 @@ void LibLocalizer<PointSource, PointTarget>::updateManualPose(const Pose& pose)
       }
       localizer_pose_.z = nearest_z;
     }
-
+    std::cout << localizer_pose_ << std::endl;
     is_initial_pose_set_ = true;
 }
 
@@ -194,7 +194,7 @@ void LibLocalizer<PointSource, PointTarget>::updateStaticPose(const Pose& pose)
 template <class PointSource, class PointTarget>
 void LibLocalizer<PointSource, PointTarget>::updateGnssPose(const Pose& pose)
 {
-    std::cout << __func__ << "   " <<fitness_score_ <<std::endl;
+    std::cout << __func__ << "   " << fitness_score_ <<std::endl;
     if(is_initial_pose_set_ == false || fitness_score_ >= 500.0)
     {
         localizer_pose_ = pose;
@@ -248,8 +248,8 @@ void LibLocalizer<PointSource, PointTarget>::updateLocalizer(double current_scan
     static double previous_scan_time_sec = current_scan_time_sec;
 
     auto predict_pose = calc_predict_pose_.predictNextPose(previous_scan_time_sec, current_scan_time_sec, localizer_pose_);
-    std::cout << localizer_pose_ << std::endl;
-    std::cout << predict_pose << std::endl;
+    //std::cout << localizer_pose_ << std::endl;
+    //std::cout << predict_pose << std::endl;
     predict_pose = transformToPose(predict_pose, tf_btol_);
     const auto align_start = std::chrono::system_clock::now();
     align(predict_pose);

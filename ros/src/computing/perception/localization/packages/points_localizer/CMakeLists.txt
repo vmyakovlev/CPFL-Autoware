@@ -9,22 +9,30 @@ execute_process(
 find_package(PCL REQUIRED)
 
 IF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
-SET(FAST_PCL_PACKAGES registration)
+SET(FAST_PCL_PACKAGES registration ndt_gpu)
 ENDIF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
 
 find_package( OpenMP )
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    add_definitions(-DOMP_FOUND)
 endif()
+
+find_package(CUDA)
+if(CUDA_FOUND)
+   add_definitions(-DCUDA_FOUND)
+endif()
+
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   pcl_ros
+  pcl_conversions
+  velodyne_pointcloud
   sensor_msgs
   geometry_msgs
   autoware_msgs
-  pcl_conversions
   ${FAST_PCL_PACKAGES}
 #  ndt_tku
 )
@@ -32,10 +40,11 @@ elseif("${ROS_VERSION}" MATCHES "(kinetic)")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   pcl_ros
+  pcl_conversions
+  velodyne_pointcloud
   sensor_msgs
   geometry_msgs
   autoware_msgs
-  pcl_conversions
   ${FAST_PCL_PACKAGES}
 )
 endif()
@@ -75,6 +84,11 @@ ENDIF(PCL_VERSION VERSION_LESS "1.7.2")
 
 add_executable(ndt_slam_pcl nodes/ndt_slam_pcl/ndt_slam_pcl_node.cpp include/points_localizer/libconvert_ros_msgs.cpp)
 add_executable(icp_slam_pcl nodes/icp_slam_pcl/icp_slam_pcl_node.cpp include/points_localizer/libconvert_ros_msgs.cpp)
+
+if(CUDA_FOUND)
+target_include_directories(ndt_slam_pcl PRIVATE ${CUDA_INCLUDE_DIRS})
+target_include_directories(icp_slam_pcl PRIVATE ${CUDA_INCLUDE_DIRS})
+endif()
 
 if ("${ROS_VERSION}" MATCHES "(indigo|jade)")
 #add_executable(ndt_slam_tku nodes/ndt_slam_tku/ndt_slam_tku_node.cpp)
