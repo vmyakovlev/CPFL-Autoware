@@ -14,7 +14,7 @@ class MobileyeDriver(object):
     def __init__(self):
         self.sub = rospy.Subscriber("/mobileye/object_markers", Marker, self.subcb)
         self.pub = rospy.Publisher("/obj_pose", BoundingBoxArray, queue_size=1)
-        self.timer = rospy.Timer(rospy.Duration(0.1), self.timercb)
+        self.timer = rospy.Timer(rospy.Duration(1/40.), self.timercb) # 40 [Hz]
         self.obj_bbs, self.obj_txts = {}, {}
         self.label_names = ("Unknown", "Vehicle", "Truck", )
         self.labels = self.coloring(self.label_names)
@@ -28,6 +28,8 @@ class MobileyeDriver(object):
         return labels
 
     def timercb(self, msg):
+        # check size
+        if len(self.obj_bbs) == 0: return
         # merge CUBE and TEXT
         for idx in self.obj_bbs.keys():
             if idx in self.obj_txts:
@@ -44,6 +46,8 @@ class MobileyeDriver(object):
         bbarr.header = boxes[-1].header
         bbarr.boxes = boxes
         self.pub.publish(bbarr)
+        self.obj_bbs.clear()
+        self.obj_txts.clear()
 
     def subcb(self, msg):
         # CUBE -> header, pose, dimentions
