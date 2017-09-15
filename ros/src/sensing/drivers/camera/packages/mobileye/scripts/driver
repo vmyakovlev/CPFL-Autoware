@@ -16,16 +16,9 @@ class MobileyeDriver(object):
         self.pub = rospy.Publisher("/obj_pose", BoundingBoxArray, queue_size=1)
         self.timer = rospy.Timer(rospy.Duration(1/40.), self.timercb) # 40 [Hz]
         self.obj_bbs, self.obj_txts = {}, {}
-        self.label_names = ("Unknown", "Vehicle", "Truck", )
-        self.labels = self.coloring(self.label_names)
-
-    # label names -> generate colors
-    def coloring(self, names):
-        maxval = 10000000000.0
-        cstep = maxval / len(names)
-        labels = {}
-        for i, n in enumerate(names): labels[n] = i * cstep
-        return labels
+        self.labels = ("Unknown", "Vehicle", "Truck", )
+        print "Labels = ( {} )".format(
+            ", ".join([ "{}: {}".format(l, i) for i, l in enumerate(self.labels) ]))
 
     def timercb(self, msg):
         # check size
@@ -33,19 +26,20 @@ class MobileyeDriver(object):
         # merge CUBE and TEXT
         for idx in self.obj_bbs.keys():
             if idx in self.obj_txts:
-                if self.obj_txts[idx] in self.labels.keys():
+                if self.obj_txts[idx] in self.labels:
                     name = self.obj_txts[idx]
                 else:
                     name = labal[0]    # Unknown
-                # add label and value
-                self.obj_bbs[idx].label = idx   # object id
-                self.obj_bbs[idx].value = self.labels[name] # label color
+                # set label and value
+                self.obj_bbs[idx].label = self.labels.index(name)
+                self.obj_bbs[idx].value = 0.0   # not use
         # publish
         bbarr = BoundingBoxArray()
         boxes = self.obj_bbs.values()
         bbarr.header = boxes[-1].header
         bbarr.boxes = boxes
         self.pub.publish(bbarr)
+        # clear
         self.obj_bbs.clear()
         self.obj_txts.clear()
 
@@ -57,7 +51,7 @@ class MobileyeDriver(object):
             bb.pose = msg.pose
             bb.dimensions = msg.scale
             self.obj_bbs[msg.id] = bb
-        # TEXT -> value
+        # TEXT -> label
         elif msg.ns == "me_obstacles_text" and msg.type == Marker.TEXT_VIEW_FACING:
             txt = msg.text.split("\n")[0]   # extract type name
             self.obj_txts[msg.id] = txt
