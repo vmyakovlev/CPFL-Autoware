@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Author : Akihito OHSATO (akihito.ohsato@tier4.jp)
+#
+
+import rospy
+from jsk_recognition_msgs.msg import BoundingBox
+from jsk_recognition_msgs.msg import BoundingBoxArray
+from visualization_msgs.msg import Marker
+
+class MobileyeDriver(object):
+
+    def __init__(self):
+        self.sub = rospy.Subscriber("/mobileye/object_markers", Marker, self.subcb)
+        self.pub = rospy.Publisher("/obj_pose", BoundingBoxArray, queue_size=1)
+        self.timer = rospy.Timer(rospy.Duration(0.1), self.timercb)
+        self.obj_bbs, self.obj_txts = {}, {}
+        self.label_names = ("Unknown", "Vehicle", "Truck", )
+        self.labels = self.coloring(self.label_names)
+
+    # label names -> generate colors
+    def coloring(self, names):
+        maxval = 10000000000.0
+        cstep = maxval / len(names)
+        labels = {}
+        for i, n in enumerate(names): labels[n] = i * cstep
+        return labels
+
+    def timercb(self, msg):
+        # merge CUBE and TEXT
+        for idx in self.obj_bbs.keys():
+            if idx in self.obj_txts:
+                if self.obj_txts[idx] in self.labels.keys():
+                    name = self.obj_txts[idx]
+                else:
+                    name = labal[0]    # Unknown
+                # add label and value
+                self.obj_bbs[idx].label = idx   # object id
+                self.obj_bbs[idx].value = self.labels[name] # label color
+        # publish
+        bbarr = BoundingBoxArray()
+        boxes = self.obj_bbs.values()
+        bbarr.header = boxes[-1].header
+        bbarr.boxes = boxes
+        self.pub.publish(bbarr)
+
+    def subcb(self, msg):
+        # CUBE -> header, pose, dimentions
+        if msg.ns == "me_obstacles" and msg.type == Marker.CUBE:
+            bb = BoundingBox()
+            bb.header = msg.header
+            bb.pose = msg.pose
+            bb.dimensions = msg.scale
+            self.obj_bbs[msg.id] = bb
+        # TEXT -> value
+        elif msg.ns == "me_obstacles_text" and msg.type == Marker.TEXT_VIEW_FACING:
+            txt = msg.text.split("\n")[0]   # extract type name
+            self.obj_txts[msg.id] = txt
+        else:
+            print "unknown marker, ns = {}".format(msg.ns)
+
+if __name__ == "__main__":
+    rospy.init_node("mobileye_driver", anonymous=True)
+    md = MobileyeDriver()
+    rospy.spin()
