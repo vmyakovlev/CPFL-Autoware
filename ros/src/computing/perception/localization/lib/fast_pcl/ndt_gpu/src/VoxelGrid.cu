@@ -20,6 +20,42 @@
 
 namespace gpu {
 
+GVoxelGrid::GVoxelGrid():
+	x_(NULL),
+	y_(NULL),
+	z_(NULL),
+	points_num_(0),
+	centroid_(NULL),
+	covariance_(NULL),
+	inverse_covariance_(NULL),
+	points_per_voxel_(NULL),
+	voxel_num_(0),
+	max_x_(FLT_MAX),
+	max_y_(FLT_MAX),
+	max_z_(FLT_MAX),
+	min_x_(FLT_MIN),
+	min_y_(FLT_MIN),
+	min_z_(FLT_MIN),
+	voxel_x_(0),
+	voxel_y_(0),
+	voxel_z_(0),
+	max_b_x_(0),
+	max_b_y_(0),
+	max_b_z_(0),
+	min_b_x_(0),
+	min_b_y_(0),
+	min_b_z_(0),
+	vgrid_x_(0),
+	vgrid_y_(0),
+	vgrid_z_(0),
+	min_points_per_voxel_(6),
+	starting_point_ids_(NULL),
+	point_ids_(NULL),
+	is_copied_(false)
+{
+
+};
+
 GVoxelGrid::GVoxelGrid(const GVoxelGrid &other)
 {
 	x_ = other.x_;
@@ -167,6 +203,123 @@ void GVoxelGrid::initialize()
 	checkCudaErrors(cudaMemset(inverse_covariance_, 0, sizeof(double) * 9 * voxel_num_));
 	checkCudaErrors(cudaMemset(points_per_voxel_, 0, sizeof(int) * voxel_num_));
 	checkCudaErrors(cudaDeviceSynchronize());
+}
+
+int GVoxelGrid::getVoxelNum() const
+{
+	return voxel_num_;
+}
+
+
+float GVoxelGrid::getMaxX() const
+{
+	return max_x_;
+}
+float GVoxelGrid::getMaxY() const
+{
+	return max_y_;
+}
+float GVoxelGrid::getMaxZ() const
+{
+	return max_z_;
+}
+
+
+float GVoxelGrid::getMinX() const
+{
+	return min_x_;
+}
+float GVoxelGrid::getMinY() const
+{
+	return min_y_;
+}
+float GVoxelGrid::getMinZ() const
+{
+	return min_z_;
+}
+
+
+float GVoxelGrid::getVoxelX() const
+{
+	return voxel_x_;
+}
+float GVoxelGrid::getVoxelY() const
+{
+	return voxel_y_;
+}
+float GVoxelGrid::getVoxelZ() const
+{
+	return voxel_z_;
+}
+
+
+int GVoxelGrid::getMaxBX() const
+{
+	return max_b_x_;
+}
+int GVoxelGrid::getMaxBY() const
+{
+	return max_b_y_;
+}
+int GVoxelGrid::getMaxBZ() const
+{
+	return max_b_z_;
+}
+
+
+int GVoxelGrid::getMinBX() const
+{
+	return min_b_x_;
+}
+int GVoxelGrid::getMinBY() const
+{
+	return min_b_y_;
+}
+int GVoxelGrid::getMinBZ() const
+{
+	return min_b_z_;
+}
+
+
+int GVoxelGrid::getVgridX() const
+{
+	return vgrid_x_;
+}
+int GVoxelGrid::getVgridY() const
+{
+	return vgrid_y_;
+}
+int GVoxelGrid::getVgridZ() const
+{
+	return vgrid_z_;
+}
+
+
+void GVoxelGrid::setLeafSize(float voxel_x, float voxel_y, float voxel_z)
+{
+	voxel_x_ = voxel_x;
+	voxel_y_ = voxel_y;
+	voxel_z_ = voxel_z;
+}
+
+double* GVoxelGrid::getCentroidList() const
+{
+	return centroid_;
+}
+
+double* GVoxelGrid::getCovarianceList() const
+{
+	return covariance_;
+}
+
+double* GVoxelGrid::getInverseCovarianceList() const
+{
+	return inverse_covariance_;
+}
+
+int* GVoxelGrid::getPointsPerVoxelList() const
+{
+	return points_per_voxel_;
 }
 
 

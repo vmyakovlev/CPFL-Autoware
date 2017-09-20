@@ -91,42 +91,30 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
       break;
 
     const auto it2 = (it != std::begin(queue_) && it+1 != std::end(queue_)) ? it+1 : it;
-    if(it+1 != std::end(queue_) && it2->first < previous_time_sec)
+    if(it+1 != std::end(queue_) && it2->first <= previous_time_sec)
       continue;
 
     const double begin_time_sec = (it != std::begin(queue_) && it->first > previous_time_sec) ? it->first : previous_time_sec;
     const double end_time_sec   = (it+1 != std::end(queue_) && it2->first < next_time_sec) ? it2->first : next_time_sec;
 
-    // std::cout << std::fmod(it->first, 100.0)
-    //   << " " << std::fmod(begin_time_sec, 100.0)
-    //   << " " << std::fmod(it2->first, 100.0)
-    //   << " " << std::fmod(end_time_sec, 100.0)
-    //   << std::endl;
+    std::cout << std::fmod(it->first, 100.0)
+      << " " << std::fmod(begin_time_sec, 100.0)
+      << " " << std::fmod(it2->first, 100.0)
+      << " " << std::fmod(end_time_sec, 100.0)
+      << std::endl;
 
-    if(it2->first - it->first == 0)
-        continue;
-    const double diff_time_ratio = (end_time_sec - begin_time_sec) / (it2->first - it->first);
-//    const double diff_time_ratio = 1;
+    //linear interpolation
+    const double diff_time_ratio = (it->first != it2->first) ? (end_time_sec - begin_time_sec) / (it2->first - it->first) : 1.0;
+    //const double diff_time_ratio = 1.0;
+
+    next_pose.x += it2->second.x * diff_time_ratio;
+    next_pose.y += it2->second.y * diff_time_ratio;
+    next_pose.z += it2->second.z * diff_time_ratio;
 
     next_pose.roll  += it2->second.roll * diff_time_ratio;
     next_pose.pitch += it2->second.pitch * diff_time_ratio;
     next_pose.yaw   += it2->second.yaw * diff_time_ratio;
 
-    const double x = it2->second.x * diff_time_ratio;
-    const double y = it2->second.y * diff_time_ratio;
-    const double z = it2->second.z * diff_time_ratio;
-    const double dis = std::abs(x)+std::abs(y)+std::abs(z);
-
-    next_pose.x += dis*cos(-next_pose.pitch)*cos(next_pose.yaw);
-    next_pose.y += dis*cos(-next_pose.pitch)*sin(next_pose.yaw);
-    next_pose.z += dis*sin(-next_pose.pitch);
-
-    //const double r = next_pose.roll;
-    //const double p = next_pose.pitch;
-    //const double a = next_pose.yaw;
-    //next_pose.x += x*cos(r)*cos(p) + y*cos(r)*sin(p)*sin(a) - y*sin(r)*cos(a) + z*cos(r)*sin(p)*cos(a) + z*sin(r)*sin(a);
-    //next_pose.y += x*sin(r)*cos(p) + y*sin(r)*sin(p)*sin(a) + y*cos(r)*cos(a) + z*sin(r)*sin(p)*cos(a) - z*cos(r)*sin(a);
-    //next_pose.z += -x*sin(r) + y*cos(p)*sin(a) + z*cos(p)*cos(a);
 
   }
 

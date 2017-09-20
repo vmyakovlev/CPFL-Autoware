@@ -82,9 +82,15 @@ geometry_msgs::TwistStamped convertToROSMsg(const std_msgs::Header& header, cons
 {
   geometry_msgs::TwistStamped msg;
   msg.header = header;
-  msg.twist.linear.x = sqrt(velocity.linear.x*velocity.linear.x + velocity.linear.y*velocity.linear.y + velocity.linear.z*velocity.linear.z);
-  msg.twist.linear.y = 0.0;
-  msg.twist.linear.z = 0.0;
+  // msg.twist.linear.x = std::sqrt(velocity.linear.x*velocity.linear.x + velocity.linear.y*velocity.linear.y + velocity.linear.z*velocity.linear.z);
+  // msg.twist.linear.y = 0.0;
+  // msg.twist.linear.z = 0.0;
+  // msg.twist.angular.x = 0.0;
+  // msg.twist.angular.y = 0.0;
+  // msg.twist.angular.z = velocity.angular.z;
+  msg.twist.linear.x = velocity.linear.x;
+  msg.twist.linear.y = velocity.linear.y;
+  msg.twist.linear.z = velocity.linear.z;
   msg.twist.angular.x = 0.0;
   msg.twist.angular.y = 0.0;
   msg.twist.angular.z = velocity.angular.z;

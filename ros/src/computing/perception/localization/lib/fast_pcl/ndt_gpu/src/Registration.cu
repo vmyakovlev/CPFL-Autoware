@@ -22,8 +22,6 @@ GRegistration::GRegistration()
 	target_x_ = target_y_ = target_z_ = NULL;
 	is_copied_ = false;
 
-	//printf("GRegistration %p\n", &final_transformation_);
-
 }
 
 GRegistration::GRegistration(const GRegistration &other)
@@ -113,11 +111,41 @@ GRegistration::~GRegistration()
 
 }
 
-Eigen::Matrix<float, 4, 4> GRegistration::getFinalTransformation()
+void GRegistration::setTransformationEpsilon(double trans_eps)
 {
-	printf("not inline %p\n", &final_transformation_);
+	transformation_epsilon_ = trans_eps;
+}
+
+double GRegistration::getTransformationEpsilon() const
+{
+	return transformation_epsilon_;
+}
+
+void GRegistration::setMaximumIterations(int max_itr)
+{
+	max_iterations_ = max_itr;
+}
+
+int GRegistration::getMaximumIterations() const
+{
+	return max_iterations_;
+}
+
+Eigen::Matrix<float, 4, 4> GRegistration::getFinalTransformation() const
+{
 	return final_transformation_;
 }
+
+int GRegistration::getFinalNumIteration() const
+{
+	return nr_iterations_;
+}
+
+bool GRegistration::hasConverged() const
+{
+	return converged_;
+}
+
 
 template <typename T>
 __global__ void convertInput(T *input, float *out_x, float *out_y, float *out_z, int point_num)
@@ -381,6 +409,10 @@ void GRegistration::align(const Eigen::Matrix<float, 4, 4> &guess)
 	final_transformation_ = transformation_ = previous_transformation_ = Eigen::Matrix<float, 4, 4>::Identity();
 
 	computeTransformation(guess);
+}
+
+void GRegistration::computeTransformation(const Eigen::Matrix<float, 4, 4> &guess) {
+	printf("Unsupported by Registration\n");
 }
 
 }

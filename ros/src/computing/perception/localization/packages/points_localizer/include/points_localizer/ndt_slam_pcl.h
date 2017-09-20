@@ -31,6 +31,8 @@
 #ifndef NDT_SLAM_PCL_H
 #define NDT_SLAM_PCL_H
 
+#include <memory>
+
 #include <ros/ros.h>
 
 #include <tf/tf.h>
@@ -60,7 +62,7 @@ class NdtSlam
 
     private:
         void pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr);
-        void manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg_ptr);
+        void manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_conv_msg_ptr);
         void staticPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr);
         void gnssPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr);
         void deltaPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr);
@@ -88,16 +90,19 @@ class NdtSlam
 
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformListener tf_listener_;
-        LibNdtSlamPCLGPU<PointSource, PointTarget> localizer_;
+        std::unique_ptr< LibNdtSlamBase<PointSource, PointTarget> > localizer_ptr_;
+
+
+        Eigen::Matrix4f tf_ltob_;
+        bool is_with_mapping_;
 
 };
 
 NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     :nh_(nh)
     ,private_nh_(private_nh)
+    ,is_with_mapping_(false)
 {
-//    private_nh_.getParam("use_imu", use_imu);
-
     points_map_region_pub_  = nh_.advertise<sensor_msgs::PointCloud2>   ("points_map_region",  10);
     localizer_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped> ("localizer_pose",     10);
     localizer_velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("localizer_velocity", 10);
@@ -114,60 +119,120 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     //points_filtered_sub_    = nh_.subscribe("/points_filtered",    10, &NdtSlam::pointsFilteredCallback, this);
     points_filtered_sub_    = nh_.subscribe("/filtered_points",    10, &NdtSlam::pointsFilteredCallback, this);
 
-    localizer_.setTransformationEpsilon(0.01);
-    localizer_.setStepSize(0.1);
-    localizer_.setResolution(3.0);
-    localizer_.setMaximumIterations(30);
+    bool use_omp = false;
+    private_nh_.getParam("use_omp", use_omp);
+    bool use_gpu = false;
+    private_nh_.getParam("use_gpu", use_gpu);
+
+    if(use_omp && use_gpu)
+    {
+        ROS_ERROR("cannot set both OMP and GPU. please check rosparam 'use_omp' and 'use_gpu'.");
+        exit(1);
+    }
+    else if(use_omp && !use_gpu)
+    {
+        ROS_INFO("use NDT SLAM PCL OMP version");
+        localizer_ptr_.reset(new LibNdtSlamPCLOMP<PointSource, PointTarget>);
+    }
+    else if(!use_omp && use_gpu)
+    {
+        ROS_INFO("use NDT SLAM PCL GPU version");
+        localizer_ptr_.reset(new LibNdtSlamPCLGPU<PointSource, PointTarget>);
+    }
+    else
+    {
+        ROS_INFO("use NDT SLAM PCL version");
+        localizer_ptr_.reset(new LibNdtSlamPCL<PointSource, PointTarget>);
+    }
+
+    localizer_ptr_->setTransformationEpsilon(0.01);
+    localizer_ptr_->setStepSize(0.1);
+    localizer_ptr_->setResolution(1.0);
+    localizer_ptr_->setMaximumIterations(30);
+
+    private_nh_.getParam("is_with_mapping", is_with_mapping_);
+    ROS_INFO("is_with_mapping_: %d", is_with_mapping_);
+
+    Pose tf_pose(1.2, 0, 2.0, 0, 0, 0);
+    nh.getParam("tf_x", tf_pose.x);
+    nh.getParam("tf_y", tf_pose.y);
+    nh.getParam("tf_z", tf_pose.z);
+    nh.getParam("tf_roll", tf_pose.roll);
+    nh.getParam("tf_pitch", tf_pose.pitch);
+    nh.getParam("tf_yaw", tf_pose.yaw);
+    ROS_INFO("tf(x, y, z, roll, pitch, yaw): %lf, %lf, %lf, %lf, %lf, %lf", tf_pose.x, tf_pose.y, tf_pose.z, tf_pose.roll, tf_pose.pitch, tf_pose.yaw);
+
+    tf_ltob_ = convertToEigenMatrix4f(tf_pose*(-1.0));
 
 }
 
 void NdtSlam::pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointTarget>(*pointcloud2_msg_ptr);
-    localizer_.updatePointsMap(pointcloud);
+    localizer_ptr_->updatePointsMap(pointcloud);
 }
 
-void NdtSlam::manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg_ptr)
+void NdtSlam::manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_conv_msg_ptr)
 {
-    const auto pose = convertFromROSMsg(*pose_msg_ptr);
-    localizer_.updateManualPose(pose);
+    geometry_msgs::PoseStamped pose_msg;
+    pose_msg.header = pose_conv_msg_ptr->header;
+    pose_msg.pose = pose_conv_msg_ptr->pose.pose;
+
+    //TODO: if use_gpu==ture, bug occurs
+    geometry_msgs::PoseStamped transformed_pose_msg;
+    try
+    {
+        ros::Time now = ros::Time(0);
+        tf_listener_.waitForTransform("/map", pose_msg.header.frame_id, now, ros::Duration(10.0));
+        tf_listener_.transformPose("/map", now, pose_msg, pose_msg.header.frame_id, transformed_pose_msg);
+    }
+    catch (tf::TransformException& ex)
+    {
+        ROS_ERROR("%s", ex.what());
+    }
+    const auto pose = convertFromROSMsg(transformed_pose_msg);
+//    const auto pose = convertFromROSMsg(pose_msg);
+
+    localizer_ptr_->updateManualPose(pose);
 }
 
 void NdtSlam::staticPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
-    localizer_.updateStaticPose(pose);
+    localizer_ptr_->updateStaticPose(pose);
 }
 
 void NdtSlam::gnssPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
-    localizer_.updateGnssPose(pose);
+    localizer_ptr_->updateGnssPose(pose);
 }
 
 void NdtSlam::deltaPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& pose_msg_ptr)
 {
     const auto pose = convertFromROSMsg(*pose_msg_ptr);
-    localizer_.updateDeltaPose(pose_msg_ptr->header.stamp.toSec(), pose);
+    localizer_ptr_->updateDeltaPose(pose_msg_ptr->header.stamp.toSec(), pose);
 }
 
 void NdtSlam::pointsRawCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
-    localizer_.updatePointsRaw(pointcloud);
+    localizer_ptr_->updatePointsRaw(pointcloud);
 }
 
 void NdtSlam::pointsFusedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
-    localizer_.updatePointsFused(pointcloud);
+    localizer_ptr_->updatePointsFused(pointcloud);
 }
 
 void NdtSlam::pointsFilteredCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
 {
     const auto pointcloud = convertFromROSMsg<PointSource>(*pointcloud2_msg_ptr);
-    localizer_.updatePointsFiltered(pointcloud);   // == setInputSource(pointcloud);
-    localizer_.updateLocalizer(pointcloud2_msg_ptr->header.stamp.toSec());
+    localizer_ptr_->updatePointsFiltered(pointcloud);   // == setInputSource(pointcloud);
+    localizer_ptr_->updateLocalizer(pointcloud2_msg_ptr->header.stamp.toSec());
+    if(is_with_mapping_)
+        localizer_ptr_->updateMap();  //TODO: this code should be called after pointsRawCallback
     publishTopics(pointcloud2_msg_ptr->header);
 }
 
@@ -178,19 +243,27 @@ void NdtSlam::publishTopics(std_msgs::Header header)
     common_header.seq = header.seq;
     common_header.stamp = header.stamp;
 
-    const auto localizer_pose = localizer_.getLocalizerPose();
-    const auto localizer_pose_msg = convertToROSMsg(common_header ,localizer_pose);
-    localizer_pose_pub_.publish(localizer_pose_msg);
+    const auto localizer_pose = localizer_ptr_->getLocalizerPose();
+    const auto base_link_pose = transformToPose(localizer_pose, tf_ltob_);
+    const auto base_link_pose_msg = convertToROSMsg(common_header, base_link_pose);
+    localizer_pose_pub_.publish(base_link_pose_msg);  //TODO: rename publisher?
 
-    const auto localizer_velocity = localizer_.getLocalizerVelocity();
-    const auto localizer_velocity_msg = convertToROSMsg(common_header ,localizer_velocity);
+    const auto localizer_velocity = localizer_ptr_->getLocalizerVelocity();
+    const auto localizer_velocity_msg = convertToROSMsg(common_header, localizer_velocity);
     localizer_velocity_pub_.publish(localizer_velocity_msg);
 
-    tf::Quaternion localizer_q;
-    localizer_q.setRPY(localizer_pose.roll, localizer_pose.pitch, localizer_pose.yaw);
+    if(is_with_mapping_)
+    {
+        const auto map = localizer_ptr_->getMap();
+        const auto map_msg = convertToROSMsg(common_header, map);
+        points_map_region_pub_.publish(map_msg);
+    }
+
+    tf::Quaternion base_link_q;
+    base_link_q.setRPY(base_link_pose.roll, base_link_pose.pitch, base_link_pose.yaw);
     tf::Transform transform;
-    transform.setOrigin(tf::Vector3(localizer_pose.x, localizer_pose.y, localizer_pose.z));
-    transform.setRotation(localizer_q);
+    transform.setOrigin(tf::Vector3(base_link_pose.x, base_link_pose.y, base_link_pose.z));
+    transform.setRotation(base_link_q);
     tf_broadcaster_.sendTransform(tf::StampedTransform(transform, common_header.stamp, "/map", "/base_link"));
 
 }
