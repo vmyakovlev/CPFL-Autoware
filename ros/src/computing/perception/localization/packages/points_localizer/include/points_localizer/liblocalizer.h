@@ -302,8 +302,8 @@ void LibLocalizer<PointSource, PointTarget>::updateLocalizer(double current_scan
     static double previous_scan_time_sec = current_scan_time_sec;
 
     auto predict_pose = calc_predict_pose_.predictNextPose(previous_scan_time_sec, current_scan_time_sec, localizer_pose_);
-    //std::cout << localizer_pose_ << std::endl;
-    //std::cout << predict_pose << std::endl;
+    std::cout << localizer_pose_ << std::endl;
+    std::cout << predict_pose << std::endl;
 
     const auto align_start = std::chrono::system_clock::now();
     align(predict_pose);

@@ -103,21 +103,6 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     ,private_nh_(private_nh)
     ,is_with_mapping_(false)
 {
-    points_map_region_pub_  = nh_.advertise<sensor_msgs::PointCloud2>   ("points_map_region",  10);
-    localizer_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped> ("localizer_pose",     10);
-    localizer_velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("localizer_velocity", 10);
-
-    //points_map_updated_sub_ = nh_.subscribe("/points_map_updated", 10, &NdtSlam::pointsMapUpdatedCallback, this);
-    points_map_updated_sub_ = nh_.subscribe("/points_map", 10, &NdtSlam::pointsMapUpdatedCallback, this);
-    //manual_pose_sub_        = nh_.subscribe("/manual_pose",        10, &NdtSlam::manualPoseCallback, this);
-    manual_pose_sub_        = nh_.subscribe("/initialpose",        10, &NdtSlam::manualPoseCallback, this);
-    static_pose_sub_        = nh_.subscribe("/static_pose",        10, &NdtSlam::staticPoseCallback, this);
-    gnss_pose_sub_          = nh_.subscribe("/gnss_pose",          10, &NdtSlam::gnssPoseCallback, this);
-    delta_pose_sub_         = nh_.subscribe("/delta_pose",         10, &NdtSlam::deltaPoseCallback, this);
-    points_raw_sub_         = nh_.subscribe("/points_raw",         10, &NdtSlam::pointsRawCallback, this);
-    points_fused_sub_       = nh_.subscribe("/points_fused",       10, &NdtSlam::pointsFusedCallback, this);
-    //points_filtered_sub_    = nh_.subscribe("/points_filtered",    10, &NdtSlam::pointsFilteredCallback, this);
-    points_filtered_sub_    = nh_.subscribe("/filtered_points",    10, &NdtSlam::pointsFilteredCallback, this);
 
     bool use_omp = false;
     private_nh_.getParam("use_omp", use_omp);
@@ -164,6 +149,24 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
 
     tf_ltob_ = convertToEigenMatrix4f(tf_pose*(-1.0));
 
+    const int points_buffer = is_with_mapping_ ? 1000 : 10;
+
+    points_map_region_pub_  = nh_.advertise<sensor_msgs::PointCloud2>   ("points_map_region",  10);
+    localizer_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped> ("localizer_pose",     10);
+    localizer_velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("localizer_velocity", 10);
+
+    //points_map_updated_sub_ = nh_.subscribe("/points_map_updated", 10, &NdtSlam::pointsMapUpdatedCallback, this);
+    points_map_updated_sub_ = nh_.subscribe("/points_map", 10, &NdtSlam::pointsMapUpdatedCallback, this);
+    //manual_pose_sub_        = nh_.subscribe("/manual_pose",        10, &NdtSlam::manualPoseCallback, this);
+    manual_pose_sub_        = nh_.subscribe("/initialpose",        10, &NdtSlam::manualPoseCallback, this);
+    static_pose_sub_        = nh_.subscribe("/static_pose",        10, &NdtSlam::staticPoseCallback, this);
+    gnss_pose_sub_          = nh_.subscribe("/gnss_pose",          10, &NdtSlam::gnssPoseCallback, this);
+    delta_pose_sub_         = nh_.subscribe("/delta_pose",         points_buffer*10, &NdtSlam::deltaPoseCallback, this);
+    points_raw_sub_         = nh_.subscribe("/points_raw",         points_buffer, &NdtSlam::pointsRawCallback, this);
+    points_fused_sub_       = nh_.subscribe("/points_fused",       points_buffer, &NdtSlam::pointsFusedCallback, this);
+    //points_filtered_sub_    = nh_.subscribe("/points_filtered",    points_buffer, &NdtSlam::pointsFilteredCallback, this);
+    points_filtered_sub_    = nh_.subscribe("/filtered_points",    points_buffer, &NdtSlam::pointsFilteredCallback, this);
+
 }
 
 void NdtSlam::pointsMapUpdatedCallback(const sensor_msgs::PointCloud2::ConstPtr& pointcloud2_msg_ptr)
@@ -178,7 +181,7 @@ void NdtSlam::manualPoseCallback(const geometry_msgs::PoseWithCovarianceStamped:
     pose_msg.header = pose_conv_msg_ptr->header;
     pose_msg.pose = pose_conv_msg_ptr->pose.pose;
 
-    //TODO: if use_gpu==ture, bug occurs
+    //TODO: if use_gpu==ture, bug occurs ← fixed?
     geometry_msgs::PoseStamped transformed_pose_msg;
     try
     {
@@ -248,8 +251,16 @@ void NdtSlam::publishTopics(std_msgs::Header header)
     const auto base_link_pose_msg = convertToROSMsg(common_header, base_link_pose);
     localizer_pose_pub_.publish(base_link_pose_msg);  //TODO: rename publisher?
 
-    const auto localizer_velocity = localizer_ptr_->getLocalizerVelocity();
-    const auto localizer_velocity_msg = convertToROSMsg(common_header, localizer_velocity);
+    auto localizer_velocity = localizer_ptr_->getLocalizerVelocity();
+    localizer_velocity.linear.x = std::sqrt(std::pow(localizer_velocity.linear.x, 2.0) + std::pow(localizer_velocity.linear.y, 2.0) + std::pow(localizer_velocity.linear.z, 2.0));
+    localizer_velocity.linear.y = 0;
+    localizer_velocity.linear.z = 0;
+    localizer_velocity.angular.x = 0;
+    localizer_velocity.angular.y = 0;
+    localizer_velocity.angular.z = localizer_velocity.angular.z;
+    std_msgs::Header velocity_header = common_header;
+    velocity_header.frame_id = "base_link";
+    const auto localizer_velocity_msg = convertToROSMsg(velocity_header, localizer_velocity);
     localizer_velocity_pub_.publish(localizer_velocity_msg);
 
     if(is_with_mapping_)

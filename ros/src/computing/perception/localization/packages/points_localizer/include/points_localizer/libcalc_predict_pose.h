@@ -107,15 +107,18 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
     const double diff_time_ratio = (it->first != it2->first) ? (end_time_sec - begin_time_sec) / (it2->first - it->first) : 1.0;
     //const double diff_time_ratio = 1.0;
 
-    next_pose.x += it2->second.x * diff_time_ratio;
-    next_pose.y += it2->second.y * diff_time_ratio;
-    next_pose.z += it2->second.z * diff_time_ratio;
-
     next_pose.roll  += it2->second.roll * diff_time_ratio;
     next_pose.pitch += it2->second.pitch * diff_time_ratio;
     next_pose.yaw   += it2->second.yaw * diff_time_ratio;
 
+    const double x = it2->second.x * diff_time_ratio;
+    const double y = it2->second.y * diff_time_ratio;
+    const double z = it2->second.z * diff_time_ratio;
+    const double dis = std::sqrt(x*x + y*y+ z*z);
 
+    next_pose.x += dis*cos(-next_pose.pitch)*cos(next_pose.yaw);
+    next_pose.y += dis*cos(-next_pose.pitch)*sin(next_pose.yaw);
+    next_pose.z += dis*sin(-next_pose.pitch);
   }
 
   return next_pose;
