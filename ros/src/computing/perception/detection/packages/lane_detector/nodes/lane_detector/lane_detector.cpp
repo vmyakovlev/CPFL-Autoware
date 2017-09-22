@@ -410,17 +410,32 @@ static void process_image_common(IplImage *frame)
 	cvLine(original_croped, right_line_avg.first, right_line_avg.second, CV_RGB(250, 100, 111), 5);
 	cvLine(original_croped, left_line_avg.first, left_line_avg.second, CV_RGB(250, 100, 111), 5);
 
+	autoware_msgs::ImageLaneObjects lanes;
+	lanes.lane_l_x1  = right_line_avg.first.x;
+	lanes.lane_l_x2  = right_line_avg.second.x;
+
+	lanes.lane_l_y1  = right_line_avg.first.y +  frame->height - frame_size.height ;
+	lanes.lane_l_y2  = right_line_avg.second.y+  frame->height - frame_size.height ;
+
+	lanes.lane_l_x1  = left_line_avg.first.x;
+	lanes.lane_l_x2  = left_line_avg.second.x;
+
+	lanes.lane_l_y1  = left_line_avg.first.y+  frame->height - frame_size.height ;
+	lanes.lane_l_y2  = left_line_avg.second.y+  frame->height - frame_size.height ;
+
+	image_lane_objects.publish(lanes);
+
 //	cvLine(original_croped, right_line_avg.first, left_line_avg.first, CV_RGB(0, 0, 255), 3);
 //	cvLine(original_croped, right_center, left_center, CV_RGB(0, 0, 255), 3);
 //	cvLine(original_croped, right_line_avg.second, left_line_avg.second, CV_RGB(0, 0, 255), 3);
 
-	cvShowImage("Gray", gray);
-	cvShowImage("Edges", edges);
-	cvShowImage("Color", original_croped);
-
-	cvMoveWindow("Gray", 0, 0);
-	cvMoveWindow("Edges", 0, frame_size.height+25);
-	cvMoveWindow("Color", 0, 2*(frame_size.height+25));
+//	cvShowImage("Gray", gray);
+//	cvShowImage("Edges", edges);
+//	cvShowImage("Color", original_croped);
+//
+//	cvMoveWindow("Gray", 0, 0);
+//	cvMoveWindow("Edges", 0, frame_size.height+25);
+//	cvMoveWindow("Color", 0, 2*(frame_size.height+25));
 
 	cvReleaseMemStorage(&houghStorage);
 	cvReleaseImage(&gray);
