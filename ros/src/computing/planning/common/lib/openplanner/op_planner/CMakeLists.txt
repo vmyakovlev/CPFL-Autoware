@@ -29,10 +29,6 @@ catkin_package(
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -fPIC ${CMAKE_CXX_FLAGS}")
 
-# include_directories(${catkin_INCLUDE_DIRS}
-# 		include
-# )
-
 set(PLANNERH_SRC
 		src/BehaviorStateMachine.cpp
 		src/MappingHelpers.cpp
@@ -74,112 +70,8 @@ else()
   set(CUDA_ARCH "sm_52")
 endif()
 
-# ## Set compiler option
-# # list(APPEND CUDA_NVCC_FLAGS "-std=c++11" "-arch=${CUDA_ARCH}" "--compiler-options -fPIC" "-rdc=true" "--shared" ${CUDA_NVCC_FLAGS})
-# # set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}; -std=c++11; -arch=${CUDA_ARCH}; -rdc=true;)
-# # Debug用
-# # list(APPEND CUDA_NVCC_FLAGS "-std=c++11" "-arch=${CUDA_ARCH}" "--compiler-options -fPIC" "-rdc=true" "--shared" "-DTHRUST_DEBUG" ${CUDA_NVCC_FLAGS})
-# set(CUDA_SEPARABLE_COMPILATION ON) # これの位置はここでいいっぽい気がする
-# # set(BUILD_SHARED_LIBS OFF)
-# # set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF)
-# # set(CUDA_PROPAGATE_HOST_FLAG OFF)
 
-# ## Source file list containing CUDA code
-# file(GLOB OP_PLANNER_SRC "src/*.cpp")
-# file(GLOB OP_PLANNER_HEADER "include/*.h")
-# file(GLOB OP_PLANNER_CUDA_SRC "src/*.cu")
-
-# ## Declare a library using CUDA
-# include_directories(
-# 		include
-# 		${CUDA_INCLUDE_DIRS}
-# 		${catkin_INCLUDE_DIRS}
-# )
-
-# # cuda_include_directories(
-# # 		include
-# # 		${CUDA_INCLUDE_DIRS}
-# # 		${catkin_INCLUDE_DIRS}
-# # )
-
-
-# # Create object files for each .cu files and link them
-# ## Note: "cuda_add_library" is not used here because the function generate "unknown error"
-# # set(CUDA_COMPILE_OPTIONS "-arch=${CUDA_ARCH} -rdc=true --compiler-options -fPIC -std=c++11")
-# set(CUDA_COMPILE_OPTIONS "-arch=${CUDA_ARCH} -dc --compiler-options -fPIC -std=c++11")
-
-# # cuda_compile(DEVICE_OBJECTS
-# #   ${OP_PLANNER_CUDA_SRC}
-# #   ${OP_PLANNER_CUDA_HEADER}
-# #   ${OP_PLANNER_SRC}
-# #   OPTIONS ${CUDA_COMPILE_OPTIONS}
-# #   )
-# CUDA_WRAP_SRCS(${PROJECT_NAME}
-#   OBJ
-#   DEVICE_OBJECTS
-#   ${OP_PLANNER_CUDA_SRC} ${OP_PLANNER_CUDA_HEADER}
-#   OPTIONS ${CUDA_COMPILE_OPTIONS}
-#   )
-
-# cuda_compute_separable_compilation_object_file_name(LINK_OBJECTS
-#   ${PROJECT_NAME}
-#   ${DEVICE_OBJECTS}
-#   )
-
-# cuda_link_separable_compilation_objects(${LINK_OBJECTS}
-#   ${PROJECT_NAME}
-#   ${COMPLE_OPTIONS}
-#   ${DEVICE_OBJECTS}
-#   )
-
-# ########################################
-# ########################################
-# # 元々のコードではSHARED（.so）が生成される
-# ########################################
-# ########################################
-# add_library(${PROJECT_NAME} SHARED
-#   ${DEVCIE_OBJECTS}
-#   ${LINK_OBJECTS}
-#   ${OP_PLANNER_SRC}
-#   # ${OP_PLANNER_CUDA_SRC}		#これがないと各.cuに対して.oファイルが生成されない→-fPICつけて再コンパイルしろってエラーが出る
-#   )
-
-# ##############################################################################33
-# # これらをつけたところで、fPICをつけろってのは変わらない。謎
-# ##############################################################################33
-# # set_target_properties(${PROJECT_NAME}
-# #   PROPERTIES COMPILE_FLAGS "-fPIC"
-# #   )
-
-# # set_property(TARGET ${PROJECT_NAME} PROPERTY POSITION_INDEPENDENT_CODE ON)
-# ##############################################################################33
-# ##############################################################################33
-
-# # cuda_add_library(${PROJECT_NAME}
-# # 	${OP_PLANNER_SRC}
-# # 	${OP_PLANNER_HEADER}
-# # 	${OP_PLANNER_CUDA_SRC}
-# # 	# SHARED
-# # 	OPTIONS --compiler-options -fPIC
-# # )
-
-# find_library(CUDA_DEVICE_RUNTIME_LIBRARY cudadevrt ${CUDA_TOOLKIT_ROOT_DIR}/lib64)
-# # set(MYLIB -Wl,--whole-archive ${CUDA_DEVICE_RUNTIME_LIBRARY} -Wl,--no-whole-archive)
-
-# target_link_libraries(${PROJECT_NAME}
-# 		${catkin_LIBRARIES}
-# 		${OpenCV_LIBS}
-# 		${CUDA_LIBRARIES}
-# 		${CUDA_DEVICE_RUNTIME_LIBRARY}
-# 		# ${MYLIB}
-# )
-
-# set_target_properties(${PROJECT_NAME}
-#   PROPERTIES
-#   LINKER_LANGUAGE ${CUDA_C_OR_CXX}
-#   )
-
-function(add_cuda_exe_lib name files libraries is_lib)
+function(add_cuda_lib name files cpp_files libraries)
   # Generate object files for each .cu files
   set(obj_list)
   foreach(file ${files})
@@ -191,7 +83,7 @@ function(add_cuda_exe_lib name files libraries is_lib)
 	  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o
 	  DEPENDS ${file}
 	  COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --blue "Building NVCC Device object ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
-	  COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -dc "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o"
+	  COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -dc --compiler-options '-fPIC' "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o"
 	  COMMENT "Building ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
 	  VERBATIM
 	  )
@@ -204,31 +96,50 @@ function(add_cuda_exe_lib name files libraries is_lib)
   # Collect required libraries
   set(lib_list)
   LIST(APPEND lib_list "-lcudadevrt") # "-lcudadevrt" is required for dynamic parallelism
+  LIST(APPEND lib_list "-lcudart")
+  LIST(APPEND lib_list "-lcuda")
   foreach(library_name ${libraries})
-	LIST(APPEND lib_list "${library_name}")
+	LIST(APPEND lib_list "-l${library_name}")
   endforeach()
 
-  # Set compile flags and target name according to "is_lib" flag
-  set(flags ${CUDA_NVCC_FLAGS})
-  if (is_lib)
-	LIST(APPEND flags "-dlink")
-	set(obj_name "${CMAKE_CURRENT_BINARY_DIR}/${name}.so")
-  else()
-	set(obj_name "${CMAKE_CURRENT_BINARY_DIR}/${name}")
-  endif()
+  # Set compile flags and target name
+  set(flags "-shared;-Xcompiler;-fPIC;-dlink")
+  set(obj_name "${CMAKE_CURRENT_BINARY_DIR}/libcuda_compiled_library.so")
 
-  # Generate target
-  add_custom_target(${name} ALL
-  # add_custom_target(cuda_compiled_library ALL
-	COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "Linking CXX executable ${name}"
-	COMMAND ${CUDA_NVCC_EXECUTABLE} ${flags} ${obj_list} ${lib_list} -o ${obj_name}
+  # Get full path for cpp sources
+  set(cpp_path)
+  foreach(file ${cpp_files})
+	LIST(APPEND cpp_path "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
+  endforeach()
+
+  # Link cuda object files into one
+  add_custom_target(cuda_linked_object ALL
+	COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -dlink -Xcompiler -fPIC ${obj_list} -o cuda_linked_object.o -lcudadevrt
 	DEPENDS ${obj_list}
-	COMMENT "Linking ${name}"
 	)
 
-  # add_dependencies(${PROJECT_NAME}
-  # 	cuda_compiled_library
-  # 	)
+  # Link cpp files and cuda object files and generate shared library
+  add_custom_target(linked_library ALL
+	COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "Linking CXX executable ${name}"
+	COMMAND ${CUDA_NVCC_EXECUTABLE} -I${catkin_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -DCUDA_FOUND -std=c++11 -Xcompiler -fPIC -shared -o ${obj_name} cuda_linked_object.o ${obj_list} ${cpp_path}
+	DEPENDS ${obj_list}
+	)
+
+  add_dependencies(linked_library cuda_linked_object)
+  add_library(${name} SHARED IMPORTED GLOBAL)
+
+  add_custom_target(
+	copy_library ALL
+	COMMAND cmake -E copy ${obj_name} ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.so
+	)
+
+  add_dependencies(copy_library linked_library)
+  add_dependencies(${name} copy_library)
+
+  set_target_properties(${name}
+	PROPERTIES
+	IMPORTED_LOCATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.so
+	)
 
 endfunction()
 
@@ -240,7 +151,7 @@ set(OP_PLANNER_CUDA_SRC
   src/TrajectoryCostsOnGPU_Kernel.cu
   )
 
-add_cuda_exe_lib(${PROJECT_NAME} "${OP_PLANNER_CUDA_SRC}" "${catkin_LIBRARIES}" ON)
+add_cuda_lib(${PROJECT_NAME} "${OP_PLANNER_CUDA_SRC}" "${PLANNERH_SRC}" "${catkin_LIBRARIES}")
 
 
 else()

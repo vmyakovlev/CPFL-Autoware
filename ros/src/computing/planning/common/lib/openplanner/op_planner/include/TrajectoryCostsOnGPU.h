@@ -7,6 +7,7 @@
 #define TRAJECTORYCOSTSONGPU_H_
 
 #include <cuda.h>
+#include <cuda_runtime.h>
 #include <thrust/device_vector.h>
 
 #include "RoadNetwork.h"

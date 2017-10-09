@@ -6,6 +6,7 @@
 #define TRAJECTORYCOSTSONGPU_KERNEL_H_
 
 #include <cuda.h>
+#include <cuda_runtime.h>
 #include <thrust/device_vector.h>
 
 #include <thrust/fill.h>

@@ -1,6 +1,8 @@
 #ifndef GPUCALCULATIONHELPERS_H_
 #define GPUCALCULATIONHELPERS_H_
 
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <math.h>
 #include <algorithm>
 
