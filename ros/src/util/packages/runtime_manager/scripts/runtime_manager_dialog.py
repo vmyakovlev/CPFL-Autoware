@@ -577,8 +577,14 @@ class MyFrame(rtmgr.MyFrame):
 				if '/' in name:
 					(title, name) = name.split('/')
 					if title:
+						lb = ''
+						if '|has_label|' in title:
+							(title, _, lb) = title.split('|')
 						is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
-						win = next( ( w for w in self.GetChildren() if is_title(w) ), self )
+						has_lb = ( lambda w: ( hasattr(w, 'GetLabel') and w.GetLabel() == lb ) or
+							any( map( has_lb, w.GetChildren() ) ) )
+						wchk = lambda w: is_title(w) and ( not lb or has_lb(w) )
+						win = next( ( w for w in self.GetChildren() if wchk(w) ), self )
 				obj = getattr(win, name, None)
 				if not obj and '|app' in name:
 					(name, _) = name.split('|')
