@@ -516,18 +516,17 @@ class MyFrame(rtmgr.MyFrame):
 		blst = [ ( lambda (name, obj): ( name, obj, True, 0.0 ) )( lst[i] ) for i in sels ]
 
 		gui_evt = booted_cmds.get('gui_evt', [])
-		lst = [ ( k, getattr(self, k, None), d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
-		lst = filter( lambda (name, obj, v, when): obj, lst ) # cut no obj
+		lst = [ ( k, d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
 
 		while lst:
 			pend = []
-			for (name, obj, v, when) in lst:
+			for (name, v, when) in lst:
 				bz = zip(*blst)
 				b_nms = bz[0] if bz else ()
 				b_tms = bz[3] if bz else ()
 				wnm = when.get('name')
 				if not wnm or wnm not in b_nms + zip(*lst)[0] or wnm == name:
-					blst.append( (name, obj, v, 0.0) )
+					blst.append( (name, None, v, 0.0) )
 				elif wnm in b_nms:
 					i = b_nms.index(wnm)
 					sec = - when.get( 'before', - when.get('after', 0) )
@@ -536,21 +535,30 @@ class MyFrame(rtmgr.MyFrame):
 					if sec != 0:
 						n = len(b_tms)
 						ins = next( ( i for i in range(n) if tm < b_tms[i] ), n )
-					blst.insert( ins, (name, obj, v, tm) )
+					blst.insert( ins, (name, None, v, tm) )
 				else:
-					pend.append( (name, obj, v, when) )
+					pend.append( (name, v, when) )
 			lst = pend
 
-		lst = map( lambda (name, obj, v, tm): (obj, v, tm - blst[0][3]), blst )
+		lst = map( lambda (name, obj, v, tm): (name, obj, v, tm - blst[0][3]), blst )
 		self.all_th_infs.append( th_start( self.boot_gui_evt, { 'lst': lst } ) )
 
 	def boot_gui_evt(self, ev, lst):
 		tm_sta = time.time()
-		for (obj, v, tm) in lst:
+		for (name, obj, v, tm) in lst:
 			w = tm - ( time.time() - tm_sta )
 			if w > 0:
 				time.sleep(w)
-			wx.CallAfter( post_evt_toggle_obj, self, obj, v )
+			win = self
+			if not obj:
+				if '/' in name:
+					(title, name) = name.split('/')
+					if title:
+						is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
+						win = next( ( w for w in self.GetChildren() if is_title(w) ), self )
+				obj = getattr(win, name, None)
+			if obj:
+				wx.CallAfter( post_evt_toggle_obj, win, obj, v )
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
