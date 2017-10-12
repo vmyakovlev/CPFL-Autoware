@@ -500,6 +500,7 @@ class MyFrame(rtmgr.MyFrame):
 		booted_cmds = self.load_dic.get('booted_cmds', {})
 		if not booted_cmds.get('enable', False):
 			return
+		gui_evt = booted_cmds.get('gui_evt', {})
 		names = booted_cmds.get('names', [])
 		lst = [ ( name, self.cfg_dic( { 'name': name } ).get('obj') ) for name in names ]
 
@@ -520,10 +521,11 @@ class MyFrame(rtmgr.MyFrame):
 				dlg.SetSelections( range( len(names) ) )
 				r = dlg.ShowModal()
 				sels = dlg.GetSelections() if r == wx.ID_OK else []
+				if r != wx.ID_OK:
+					gui_evt = {}
 
 		blst = [ ( lambda (name, obj): ( name, obj, True, 0.0 ) )( lst[i] ) for i in sels ]
 
-		gui_evt = booted_cmds.get('gui_evt', {})
 		lst = [ ( k, d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
 
 		while lst:
