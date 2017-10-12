@@ -500,101 +500,135 @@ class MyFrame(rtmgr.MyFrame):
 		booted_cmds = self.load_dic.get('booted_cmds', {})
 		if not booted_cmds.get('enable', False):
 			return
-		gui_evt = booted_cmds.get('gui_evt', {})
 		names = booted_cmds.get('names', [])
-		lst = [ ( name, self.cfg_dic( { 'name': name } ).get('obj') ) for name in names ]
+		names = map( lambda e: [ e, {} ] if type(e) == str else e.items()[0] , names )
+		(nms, infs) = zip(*names)
 
-		for k in [ '|pause|', '|sleep|' ]:
-			lst = map( lambda (name, obj): ( name[:len(k)], name[len(k):] ) if name.startswith(k) else (name, obj), lst )
+		def find_win(title, label=None):
+			is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
+			has_label = ( lambda w: ( hasattr(w, 'GetLabel') and w.GetLabel() == label ) or
+				any( map( has_label, w.GetChildren() ) ) )
+			win_chk = lambda w: is_title(w) and ( not label or has_label(w) )
+			return next( ( w for w in self.GetChildren() if win_chk(w) ), None )
 
-		lst = filter( lambda (name, obj): obj != None, lst )
-
-		sels = range( len(lst) )
-		if lst:
-			if not booted_cmds.get('forced', False):
-				tmp = [ obj.GetLabel() if hasattr(obj, 'GetLabel') else name for (name, obj) in lst ]
-				chk_dup = lambda s: len( filter( lambda t: t == s, tmp) ) > 1
-				foot = lambda s, name: ' (' + name + ')' if chk_dup(s) else ''
-				choices = map( lambda (s, name): s + foot(s, name), zip( tmp, zip(*lst)[0] ) )
-
-				dlg = wx.MultiChoiceDialog(self, 'boot command ?', '', choices)
-				dlg.SetSelections( range( len(names) ) )
-				r = dlg.ShowModal()
-				sels = dlg.GetSelections() if r == wx.ID_OK else []
-				if r != wx.ID_OK:
-					gui_evt = {}
-
-		lst = [ ( lambda (name, obj): ( name, obj ) )( lst[i] ) for i in sels ]
-		blst = []
-		tm = 0.0
-		for (name, obj) in lst:
-			if name == '|sleep|':
-				tm += float(obj)
+		def get_win(name, d):
+			win = None
+			if d.get('title'):
+				win = find_win( d.get('title'), d.get('lable') )
 			else:
-				blst.append( ( name, obj, True, tm ) )
+				win = self
+			if win:
+				d['win'] = win
 
-		lst = [ ( k, d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
-
-		while lst:
-			pend = []
-			for (name, v, when) in lst:
-				bz = zip(*blst)
-				b_nms = bz[0] if bz else ()
-				b_tms = bz[3] if bz else ()
-				wnm = when.get('name')
-				if not wnm or wnm not in b_nms + zip(*lst)[0] or wnm == name:
-					blst.append( (name, None, v, 0.0) )
-				elif wnm in b_nms:
-					i = b_nms.index(wnm)
-					sec = - when.get( 'before', - when.get('after', 0) )
-					tm = b_tms[i] + sec
-					ins = i if 'before' in when else i + 1
-					if sec != 0:
-						n = len(b_tms)
-						ins = next( ( i for i in range(n) if tm < b_tms[i] ), n )
-					blst.insert( ins, (name, None, v, tm) )
-				else:
-					pend.append( (name, v, when) )
-			lst = pend
-
-		lst = map( lambda (name, obj, v, tm): (name, obj, v, tm - blst[0][3]), blst )
-		self.all_th_infs.append( th_start( self.boot_gui_evt, { 'lst': lst } ) )
-
-	def boot_gui_evt(self, ev, lst):
-		tm_sta = time.time()
-		for (name, obj, v, tm) in lst:
-			w = tm - ( time.time() - tm_sta )
-			if w > 0:
-				time.sleep(w)
-			if name == '|pause|':
-				sta = time.time()
-				wx.CallAfter( self.boot_gui_evt_pause, obj, ev )
-				ev.wait()
-				tm_sta += time.time() - sta
-				continue
-			win = self
-			if not obj:
-				if '/' in name:
-					(title, name) = name.split('/')
-					if title:
-						lb = ''
-						if '|has_label|' in title:
-							(title, _, lb) = title.split('|')
-						is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
-						has_lb = ( lambda w: ( hasattr(w, 'GetLabel') and w.GetLabel() == lb ) or
-							any( map( has_lb, w.GetChildren() ) ) )
-						wchk = lambda w: is_title(w) and ( not lb or has_lb(w) )
-						win = next( ( w for w in self.GetChildren() if wchk(w) ), self )
-				obj = getattr(win, name, None)
-				if not obj and '|app' in name:
-					(name, _) = name.split('|')
-					(obj, _) = self.cfg_obj_dic( { 'name': name } )
+		def get_obj(name, d):
+			obj = None
+			if d.get('win'):
+				if d.get('win') == self:
+					obj = self.cfg_dic( { 'name': name } ).get('obj')
+					if obj and d.get('app'):
+						(obj, _) = self.cfg_obj_dic( { 'name': name } )
+				if not obj:
+					obj = getattr( d.get('win'), name, None )
 			if obj:
-				wx.CallAfter( post_evt_toggle_obj, win, obj, v )
+				d['obj'] = obj
 
-	def boot_gui_evt_pause(self, msg, ev):
-		wx.MessageBox(msg, 'pause');
-		ev.set()
+		for (name, d) in names:
+			get_win(name, d)
+			get_obj(name, d)
+
+		no_win_obj = lambda d: dict( filter( lambda (k, v): k not in ['win', 'obj'], d.items() ) )
+
+		sels = range( len(names) )
+		if names and not booted_cmds.get('forced', False):
+			objs = map( lambda d: d.get('obj'), infs )
+			menu_lbs = map( lambda (name, obj): obj.GetLabel() if obj and hasattr(obj, 'GetLabel') else name, zip(nms, objs) )
+
+			ck_dup = lambda lb: len( filter( lambda lb_: lb_ == lb, menu_lbs ) ) > 1
+			get_add = lambda lb, name, d: name if lb != name else yaml.dump(d).strip()
+			add_lb = lambda lb, name, d: ' ({})'.format( get_add( lb, name, no_win_obj(d) ) ) if ck_dup(lb) else ''
+			menu_lbs = map( lambda (lb, name, d): lb + add_lb(lb, name, d), zip(menu_lbs, nms, infs) )
+
+			dlg = wx.MultiChoiceDialog( self, 'boot command ?', '', menu_lbs )
+			dlg.SetSelections(sels)
+			r = dlg.ShowModal()
+			sels = dlg.GetSelections() if r == wx.ID_OK else []
+
+		names = map( lambda i: names[i], sels )
+
+		boot_obj = lambda name: self.cfg_dic( { 'name': name } ).get('obj')
+		booted = lambda name: self.obj_to_cmd_dic_cmd_proc( boot_obj(name) )[2]
+		has_proc = boot_obj
+
+		shown = lambda d: ( lambda win: win and win.IsShown() )( find_win( d.get('title'), d.get('label') ) )
+
+		def cond_chk(d):
+			(k, v) = d.items()[0]
+			if k == 'booted':
+				return booted(v)
+			elif k == 'shown':
+				return shown(v)
+			elif k == 'hidden':
+				return not shown(v)
+			return True
+
+		def wait(d):
+			if 'pause' in d:
+				msg = d.pop('pause')
+				ev = threading.Event()
+				f = lambda : ( wx.MessageBox( msg, 'pause' ), ev.set() )
+				wx.CallAfter(f)
+				ev.wait()
+			if 'sleep' in d:
+				time.sleep( d.pop('sleep') )
+			if 'cmd' in d:
+				subprocess.call( d.pop('cmd'), shell=True )
+
+			lst = []
+			if 'or' in d:
+				lst = d.pop('or')
+			lst += map( lambda (k, v): dict( [ (k, v) ] ), no_win_obj(d).items() )
+
+			while lst and not any( map( cond_chk, lst ) ):
+				time.sleep(0.2) # ...
+
+		def wait_targ(name, d, interval=0.2):
+			sec = 10 #
+			st = time.time()
+			over = lambda : time.time() - st > sec
+
+			while not d.get('win') and not over():
+				time.sleep(interval)
+				get_win(name, d)
+			if not d.get('win'):
+				return False
+
+			while not d.get('obj') and not over():
+				time.sleep(interval)
+				get_obj(name, d)
+			if not d.get('obj'):
+				return False
+
+			return True
+
+		def boot( (name, d) ):
+			if name == 'wait':
+				wait(d)
+				return
+
+			if 'if' in d and not cond_chk( d.get('if') ):
+				return
+
+			if not wait_targ(name, d):
+				return #
+
+			wx.CallAfter( post_evt_toggle_obj, d.get('win'), d.get('obj'), d.get('v', True) )
+
+			k = 'wait_boot'
+			wait_boot = d.get(k) if k in d else name if has_proc(name) else None
+			if wait_boot:
+				wait( { 'booted': wait_boot } )
+
+		self.all_th_infs.append( th_start( lambda ev: map( boot, names ) ) )
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
