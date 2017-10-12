@@ -502,7 +502,11 @@ class MyFrame(rtmgr.MyFrame):
 			return
 		names = booted_cmds.get('names', [])
 		lst = [ ( name, self.cfg_dic( { 'name': name } ).get('obj') ) for name in names ]
-		lst = [ (name, obj) for (name, obj) in lst if obj ]
+
+		k = '|pause|' # for pause enque
+		lst = map( lambda (name, obj): ( name[:len(k)], name[len(k):] ) if name.startswith(k) else (name, obj), lst )
+
+		lst = [ (name, obj) for (name, obj) in lst if obj != None]
 
 		sels = range( len(lst) )
 		if lst:
@@ -549,6 +553,12 @@ class MyFrame(rtmgr.MyFrame):
 			w = tm - ( time.time() - tm_sta )
 			if w > 0:
 				time.sleep(w)
+			if name == '|pause|':
+				sta = time.time()
+				wx.CallAfter( self.boot_gui_evt_pause, obj, ev )
+				ev.wait()
+				tm_sta += time.time() - sta
+				continue
 			win = self
 			if not obj:
 				if '/' in name:
@@ -559,6 +569,10 @@ class MyFrame(rtmgr.MyFrame):
 				obj = getattr(win, name, None)
 			if obj:
 				wx.CallAfter( post_evt_toggle_obj, win, obj, v )
+
+	def boot_gui_evt_pause(self, msg, ev):
+		wx.MessageBox(msg, 'pause');
+		ev.set()
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
