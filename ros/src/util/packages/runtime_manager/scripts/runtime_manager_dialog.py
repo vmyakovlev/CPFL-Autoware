@@ -1831,10 +1831,22 @@ class MyFrame(rtmgr.MyFrame):
 		self.OnLaunchKill_obj(event.GetEventObject())
 
 	def OnLaunchKill_obj(self, obj):
+
+		def backup(obj):
+			(pdic, _, prm) = self.obj_to_pdic_gdic_prm(obj)
+			ck = obj.GetValue() and pdic and 'no_pub_boot' in pdic.get('flags', []) and 'pub' in prm
+			bak = prm.pop('pub') if ck else None
+			def f():
+				if bak:
+					prm['pub'] = bak
+			return f
+
 		self.alias_sync(obj)
 		obj = self.alias_grp_top_obj(obj)
 		v = obj.GetValue()
+		restore = backup(obj)
 		add_args = self.obj_to_add_args(obj, msg_box=v) # no open dialog at kill
+		restore()
 		if add_args is False:
 			set_val(obj, not v)
 			return
