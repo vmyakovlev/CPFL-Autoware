@@ -522,11 +522,12 @@ class MyFrame(rtmgr.MyFrame):
 		while lst:
 			pend = []
 			for (name, obj, v, when) in lst:
-				b_nms = zip(*blst)[0]
-				b_tms = zip(*blst)[3]
+				bz = zip(*blst)
+				b_nms = bz[0] if bz else ()
+				b_tms = bz[3] if bz else ()
 				wnm = when.get('name')
 				if not wnm or wnm not in b_nms + zip(*lst)[0] or wnm == name:
-					blst.append(name, obj, v, 0.0)
+					blst.append( (name, obj, v, 0.0) )
 				elif wnm in b_nms:
 					i = b_nms.index(wnm)
 					sec = - when.get( 'before', - when.get('after', 0) )
@@ -549,7 +550,7 @@ class MyFrame(rtmgr.MyFrame):
 			w = tm - ( time.time() - tm_sta )
 			if w > 0:
 				time.sleep(w)
-			wx.CallAfter( post_evt_toggle_obj, self, obj, v, )
+			wx.CallAfter( post_evt_toggle_obj, self, obj, v )
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
