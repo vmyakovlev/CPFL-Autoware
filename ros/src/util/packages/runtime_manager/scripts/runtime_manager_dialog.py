@@ -508,7 +508,7 @@ class MyFrame(rtmgr.MyFrame):
 			is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
 			has_label = ( lambda w: ( hasattr(w, 'GetLabel') and w.GetLabel() == label ) or
 				any( map( has_label, w.GetChildren() ) ) )
-			win_chk = lambda w: is_title(w) and ( not label or has_label(w) )
+			win_chk = lambda w: is_title(w) and w.IsShown() and ( not label or has_label(w) )
 			return next( ( w for w in self.GetChildren() if win_chk(w) ), None )
 
 		def get_win(name, d):
@@ -559,7 +559,7 @@ class MyFrame(rtmgr.MyFrame):
 		booted = lambda name: self.obj_to_cmd_dic_cmd_proc( boot_obj(name) )[2]
 		has_proc = boot_obj
 
-		shown = lambda d: ( lambda win: win and win.IsShown() )( find_win( d.get('title'), d.get('label') ) )
+		shown = lambda d: find_win( d.get('title'), d.get('label') )
 
 		def cond_chk(d):
 			(k, v) = d.items()[0]
