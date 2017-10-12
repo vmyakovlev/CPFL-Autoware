@@ -497,33 +497,35 @@ class MyFrame(rtmgr.MyFrame):
 		pass
 
 	def boot_booted_cmds(self):
-		if not self.load_dic.get('booted_cmds', {}).get('enable', False):
+		booted_cmds = self.load_dic.get('booted_cmds', {})
+		if not booted_cmds.get('enable', False):
 			return
-		names = self.load_dic.get('booted_cmds', {}).get('names', [])
+		names = booted_cmds.get('names', [])
 		lst = [ ( name, self.cfg_dic( { 'name': name } ).get('obj') ) for name in names ]
 		lst = [ (name, obj) for (name, obj) in lst if obj ]
-		if not lst:
-			return
 
-		choices = [ obj.GetLabel() if hasattr(obj, 'GetLabel') else name for (name, obj) in lst ]
-		dlg = wx.MultiChoiceDialog(self, 'boot command ?', '', choices)
-		dlg.SetSelections( range( len(names) ) )
-		if dlg.ShowModal() != wx.ID_OK:
-			return
-
-		for i in dlg.GetSelections():
+		sels = range( len(lst) )
+		if lst:
+			if not booted_cmds.get('forced', False):
+				choices = [ obj.GetLabel() if hasattr(obj, 'GetLabel') else name for (name, obj) in lst ]
+				dlg = wx.MultiChoiceDialog(self, 'boot command ?', '', choices)
+				dlg.SetSelections( range( len(names) ) )
+				r = dlg.ShowModal()
+				sels = dlg.GetSelections() if r == wx.ID_OK else []
+		for i in sels:
 			(_, obj) = lst[i]
-                        post_evt_toggle_obj(self, obj, True)
+			post_evt_toggle_obj(self, obj, True)
 
-		self.all_th_infs.append( th_start( self.boot_gui_evt ) )
+		gui_evt = booted_cmds.get('gui_evt', [])
+		self.all_th_infs.append( th_start( self.boot_gui_evt, { 'gui_evt': gui_evt } ) )
 
-	def boot_gui_evt(self, ev):
-		for d in self.load_dic.get('booted_cmds', {}).get('gui_evt', []):
+	def boot_gui_evt(self, ev, gui_evt):
+		for d in gui_evt:
 			obj = getattr( self, d.get('obj', ''), None )
 			if obj:
-                        	time.sleep( d.get('pre_sleep', 0.0) )
+				time.sleep( d.get('pre_sleep', 0.0) )
 				wx.CallAfter( post_evt_toggle_obj, self, obj, d.get('v', True) )
-                        	time.sleep( d.get('sleep', 0.0) )
+				time.sleep( d.get('sleep', 0.0) )
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
