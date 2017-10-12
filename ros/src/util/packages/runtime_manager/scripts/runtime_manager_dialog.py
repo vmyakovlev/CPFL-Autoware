@@ -567,6 +567,9 @@ class MyFrame(rtmgr.MyFrame):
 						is_title = lambda w: hasattr(w, 'GetTitle') and w.GetTitle() == title
 						win = next( ( w for w in self.GetChildren() if is_title(w) ), self )
 				obj = getattr(win, name, None)
+				if not obj and '|app' in name:
+					(name, _) = name.split('|')
+					(obj, _) = self.cfg_obj_dic( { 'name': name } )
 			if obj:
 				wx.CallAfter( post_evt_toggle_obj, win, obj, v )
 
@@ -3036,6 +3039,7 @@ def post_evt_toggle_obj(win, obj, v):
 		wx.ToggleButton : wx.EVT_TOGGLEBUTTON.typeId,
 		wx.Button : wx.EVT_BUTTON.typeId,
 		wx.RadioBox : wx.EVT_RADIOBOX.typeId,
+		wx.HyperlinkCtrl : wx.EVT_HYPERLINK.typeId,
 	}.get( type(obj) )
 
 	if evt_id == CT.wxEVT_TREE_ITEM_CHECKED:
