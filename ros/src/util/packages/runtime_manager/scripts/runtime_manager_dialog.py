@@ -504,8 +504,8 @@ class MyFrame(rtmgr.MyFrame):
 		names = booted_cmds.get('names', [])
 		lst = [ ( name, self.cfg_dic( { 'name': name } ).get('obj') ) for name in names ]
 
-		k = '|pause|' # for pause enque
-		lst = map( lambda (name, obj): ( name[:len(k)], name[len(k):] ) if name.startswith(k) else (name, obj), lst )
+		for k in [ '|pause|', '|sleep|' ]:
+			lst = map( lambda (name, obj): ( name[:len(k)], name[len(k):] ) if name.startswith(k) else (name, obj), lst )
 
 		lst = filter( lambda (name, obj): obj != None, lst )
 
@@ -524,7 +524,14 @@ class MyFrame(rtmgr.MyFrame):
 				if r != wx.ID_OK:
 					gui_evt = {}
 
-		blst = [ ( lambda (name, obj): ( name, obj, True, 0.0 ) )( lst[i] ) for i in sels ]
+		lst = [ ( lambda (name, obj): ( name, obj ) )( lst[i] ) for i in sels ]
+		blst = []
+		tm = 0.0
+		for (name, obj) in lst:
+			if name == '|sleep|':
+				tm += float(obj)
+			else:
+				blst.append( ( name, obj, True, tm ) )
 
 		lst = [ ( k, d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
 
