@@ -519,7 +519,7 @@ class MyFrame(rtmgr.MyFrame):
 
 		blst = [ ( lambda (name, obj): ( name, obj, True, 0.0 ) )( lst[i] ) for i in sels ]
 
-		gui_evt = booted_cmds.get('gui_evt', [])
+		gui_evt = booted_cmds.get('gui_evt', {})
 		lst = [ ( k, d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
 
 		while lst:
