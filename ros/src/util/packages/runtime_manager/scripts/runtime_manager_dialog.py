@@ -515,6 +515,16 @@ class MyFrame(rtmgr.MyFrame):
 			(_, obj) = lst[i]
                         post_evt_toggle_obj(self, obj, True)
 
+		self.all_th_infs.append( th_start( self.boot_gui_evt ) )
+
+	def boot_gui_evt(self, ev):
+		for d in self.load_dic.get('booted_cmds', {}).get('gui_evt', []):
+			obj = getattr( self, d.get('obj', ''), None )
+			if obj:
+                        	time.sleep( d.get('pre_sleep', 0.0) )
+				wx.CallAfter( post_evt_toggle_obj, self, obj, d.get('v', True) )
+                        	time.sleep( d.get('sleep', 0.0) )
+
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
 			return
@@ -2976,6 +2986,7 @@ def post_evt_toggle_obj(win, obj, v):
 		wx.CheckBox : wx.EVT_CHECKBOX.typeId,
 		wx.ToggleButton : wx.EVT_TOGGLEBUTTON.typeId,
 		wx.Button : wx.EVT_BUTTON.typeId,
+		wx.RadioBox : wx.EVT_RADIOBOX.typeId,
 	}.get( type(obj) )
 
 	if evt_id == CT.wxEVT_TREE_ITEM_CHECKED:
@@ -3192,7 +3203,11 @@ def set_path(tc, v):
 	tc.SetInsertionPointEnd()
 
 def set_val(obj, v):
-	func = getattr(obj, 'SetValue', getattr(obj, 'Check', None))
+	d = {
+		CT.GenericTreeItem: 'Check',
+		wx.RadioBox: 'SetSelection',
+	}
+	func = getattr( obj, d.get( type(obj), 'SetValue' ), None )
 	if func:
 		func(v)
 		obj_refresh(obj)
