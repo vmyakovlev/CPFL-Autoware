@@ -506,12 +506,16 @@ class MyFrame(rtmgr.MyFrame):
 		k = '|pause|' # for pause enque
 		lst = map( lambda (name, obj): ( name[:len(k)], name[len(k):] ) if name.startswith(k) else (name, obj), lst )
 
-		lst = [ (name, obj) for (name, obj) in lst if obj != None]
+		lst = filter( lambda (name, obj): obj != None, lst )
 
 		sels = range( len(lst) )
 		if lst:
 			if not booted_cmds.get('forced', False):
-				choices = [ obj.GetLabel() if hasattr(obj, 'GetLabel') else name for (name, obj) in lst ]
+				tmp = [ obj.GetLabel() if hasattr(obj, 'GetLabel') else name for (name, obj) in lst ]
+				chk_dup = lambda s: len( filter( lambda t: t == s, tmp) ) > 1
+				foot = lambda s, name: ' (' + name + ')' if chk_dup(s) else ''
+				choices = map( lambda (s, name): s + foot(s, name), zip( tmp, zip(*lst)[0] ) )
+
 				dlg = wx.MultiChoiceDialog(self, 'boot command ?', '', choices)
 				dlg.SetSelections( range( len(names) ) )
 				r = dlg.ShowModal()
