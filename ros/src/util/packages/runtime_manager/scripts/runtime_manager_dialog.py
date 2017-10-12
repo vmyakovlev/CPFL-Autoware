@@ -512,20 +512,44 @@ class MyFrame(rtmgr.MyFrame):
 				dlg.SetSelections( range( len(names) ) )
 				r = dlg.ShowModal()
 				sels = dlg.GetSelections() if r == wx.ID_OK else []
-		for i in sels:
-			(_, obj) = lst[i]
-			post_evt_toggle_obj(self, obj, True)
+
+		blst = [ ( lambda (name, obj): ( name, obj, True, 0.0 ) )( lst[i] ) for i in sels ]
 
 		gui_evt = booted_cmds.get('gui_evt', [])
-		self.all_th_infs.append( th_start( self.boot_gui_evt, { 'gui_evt': gui_evt } ) )
+		lst = [ ( k, getattr(self, k, None), d.get('v', True), d.get('when', {}) ) for (k, d) in gui_evt.items() ]
+		lst = filter( lambda (name, obj, v, when): obj, lst ) # cut no obj
 
-	def boot_gui_evt(self, ev, gui_evt):
-		for d in gui_evt:
-			obj = getattr( self, d.get('obj', ''), None )
-			if obj:
-				time.sleep( d.get('pre_sleep', 0.0) )
-				wx.CallAfter( post_evt_toggle_obj, self, obj, d.get('v', True) )
-				time.sleep( d.get('sleep', 0.0) )
+		while lst:
+			pend = []
+			for (name, obj, v, when) in lst:
+				b_nms = zip(*blst)[0]
+				b_tms = zip(*blst)[3]
+				wnm = when.get('name')
+				if not wnm or wnm not in b_nms + zip(*lst)[0] or wnm == name:
+					blst.append(name, obj, v, 0.0)
+				elif wnm in b_nms:
+					i = b_nms.index(wnm)
+					sec = - when.get( 'before', - when.get('after', 0) )
+					tm = b_tms[i] + sec
+					ins = i if 'before' in when else i + 1
+					if sec != 0:
+						n = len(b_tms)
+						ins = next( ( i for i in range(n) if tm < b_tms[i] ), n )
+					blst.insert( ins, (name, obj, v, tm) )
+				else:
+					pend.append( (name, obj, v, when) )
+			lst = pend
+
+		lst = map( lambda (name, obj, v, tm): (obj, v, tm - blst[0][3]), blst )
+		self.all_th_infs.append( th_start( self.boot_gui_evt, { 'lst': lst } ) )
+
+	def boot_gui_evt(self, ev, lst):
+		tm_sta = time.time()
+		for (obj, v, tm) in lst:
+			w = tm - ( time.time() - tm_sta )
+			if w > 0:
+				time.sleep(w)
+			wx.CallAfter( post_evt_toggle_obj, self, obj, v, )
 
 	def OnClose(self, event):
 		if self.quit_select() != 'quit':
