@@ -58,26 +58,12 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 		}
 	}
 
-	std::cerr << "****************************************** test before" << std::endl;
-	// int num_of_gpu = 0;
-	// auto response = cudaGetDeviceCount(&num_of_gpu); // << no error
-	// std::cerr << "**************** response : " << cudaGetErrorString(response) << " device count: " << num_of_gpu << std::endl;
-	// response = cudaDeviceReset(); // << no error
-	// std::cerr << "**************** response : " << cudaGetErrorString(response) << std::endl;
-	int *tmp = NULL;
-	auto res = cudaMalloc((void**)&tmp, 1*sizeof(int));
-	std::cerr << "**************** return : " << cudaGetErrorString(res) << std::endl;
-
-	thrust::device_vector<int> test;
-	test.resize(1);
-	std::cerr << "****************************************** test after" << std::endl;
-
 	// (Re)Allocate and copy arrays used to calculate costs on GPU
 	InitDevVectors(m_TrajectoryCosts, m_TrajectoryCostsDevVectors);
 
 	// Calcurate transition cost
 	CalculateTransitionCosts(m_TrajectoryCosts, currIndex, params);
-	CalculateTransitionCostsOnGPU(m_TrajectoryCostsDevVectors, currIndex, params);
+	CalculateTransitionCostsOnGPU(m_TrajectoryCostsDevVectors, currIndex, params); // この計算あってること確認済
 
 	vector<WayPoint> contourPoints;
 	WayPoint p;
@@ -91,11 +77,27 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 		}
 	}
 
+#if 0
+	for (int i=0; i<m_TrajectoryCosts.size(); i++) {
+	    auto cpu = m_TrajectoryCosts.at(i);
+	    std::cerr << "-------------------" << std::endl
+		      << "index: " << i << std::endl
+		      << "bBlocked: " << cpu.bBlocked << ", " << m_TrajectoryCostsDevVectors.bBlocked_dev_vector[i] << std::endl
+		      << "lateral_cost: " << cpu.lateral_cost << ", " << m_TrajectoryCostsDevVectors.lateral_cost_dev_vector[i] << std::endl
+		      << "longitudinal_cost: " << cpu.longitudinal_cost << ", " << m_TrajectoryCostsDevVectors.longitudinal_cost_dev_vector[i] << std::endl
+		      << "closest_obj_distance: " << cpu.closest_obj_distance << ", " << m_TrajectoryCostsDevVectors.closest_obj_distance_dev_vector[i] << std::endl
+		      << "closest_obj_velocity: " << cpu.closest_obj_velocity << ", " << m_TrajectoryCostsDevVectors.closest_obj_velocity_dev_vector[i] << std::endl
+		      << "-------------------" << std::endl;
+	}
+#else
+	//std::cerr << "params.horizonDistance: " << params.horizonDistance << std::endl;
+#endif
+
 	CalculateLateralAndLongitudinalCosts(m_TrajectoryCosts, rollOuts, totalPaths, currState, contourPoints, params, carInfo, vehicleState);
 	CalculateLateralAndLongitudinalCostsOnGPU(m_TrajectoryCostsDevVectors, rollOuts, totalPaths, currState, contourPoints, params, carInfo, vehicleState);
 
 
-#if 1
+#if 0
 	for (int i=0; i<m_TrajectoryCosts.size(); i++) {
 	    auto cpu = m_TrajectoryCosts.at(i);
 	    std::cerr << "-------------------" << std::endl
@@ -110,6 +112,23 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 #endif
 
 	NormalizeCosts(m_TrajectoryCosts);
+	NormalizeCostsOnGPU(m_TrajectoryCostsDevVectors);
+
+#if 0
+	std::cerr << "m_TrajectoryCosts.size(): " << m_TrajectoryCosts.size() << std::endl;
+	for (int i=0; i<m_TrajectoryCosts.size(); i++) {
+	    auto cpu = m_TrajectoryCosts.at(i);
+	    std::cerr << "-------------------" << std::endl
+		      << "index: " << i << std::endl
+		      << "priority_cost: " << cpu.priority_cost << ", " << m_TrajectoryCostsDevVectors.priority_cost_dev_vector[i] << std::endl
+		      << "transition_cost: " << cpu.transition_cost << ", " << m_TrajectoryCostsDevVectors.transition_cost_dev_vector[i] << std::endl
+		      << "lane_change_cost: " << cpu.lane_change_cost << ", " << m_TrajectoryCostsDevVectors.lane_change_cost_dev_vector[i] << std::endl
+		      << "lateral_cost: " << cpu.lateral_cost << ", " << m_TrajectoryCostsDevVectors.lateral_cost_dev_vector[i] << std::endl
+		      << "longitudinal_cost: " << cpu.longitudinal_cost << ", " << m_TrajectoryCostsDevVectors.longitudinal_cost_dev_vector[i] << std::endl
+		      << "cost: " << cpu.cost << ", " << m_TrajectoryCostsDevVectors.cost_dev_vector[i] << std::endl
+		      << "-------------------" << std::endl;
+	}
+#endif
 
 	int smallestIndex = -1;
 	double smallestCost = 9999999999;
@@ -120,16 +139,21 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 	for(unsigned int ic = 0; ic < m_TrajectoryCosts.size(); ic++)
 	{
 //		cout << m_TrajectoryCosts.at(ic).ToString();
-		if(!m_TrajectoryCosts.at(ic).bBlocked && m_TrajectoryCosts.at(ic).cost < smallestCost)
+	    //if(!m_TrajectoryCosts.at(ic).bBlocked && m_TrajectoryCosts.at(ic).cost < smallestCost)
+	    if(!m_TrajectoryCostsDevVectors.bBlocked_dev_vector[ic] && m_TrajectoryCostsDevVectors.cost_dev_vector[ic] < smallestCost)
 		{
-			smallestCost = m_TrajectoryCosts.at(ic).cost;
-			smallestIndex = ic;
+		    //smallestCost = m_TrajectoryCosts.at(ic).cost;
+		    smallestCost = m_TrajectoryCostsDevVectors.cost_dev_vector[ic];
+		    smallestIndex = ic;
 		}
 
-		if(m_TrajectoryCosts.at(ic).closest_obj_distance < smallestDistance)
+	    //if(m_TrajectoryCosts.at(ic).closest_obj_distance < smallestDistance)
+	    if(m_TrajectoryCostsDevVectors.closest_obj_distance_dev_vector[ic] < smallestDistance)
 		{
-			smallestDistance = m_TrajectoryCosts.at(ic).closest_obj_distance;
-			velo_of_next = m_TrajectoryCosts.at(ic).closest_obj_velocity;
+		    //smallestDistance = m_TrajectoryCosts.at(ic).closest_obj_distance;
+		    smallestDistance = m_TrajectoryCostsDevVectors.closest_obj_distance_dev_vector[ic];
+		    //velo_of_next = m_TrajectoryCosts.at(ic).closest_obj_velocity;
+		    velo_of_next = m_TrajectoryCostsDevVectors.closest_obj_velocity_dev_vector[ic];
 		}
 	}
 
@@ -147,8 +171,22 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 	}
 	else if(smallestIndex >= 0)
 	{
-		bestTrajectory = m_TrajectoryCosts.at(smallestIndex);
-		//bestTrajectory.index = smallestIndex;
+	    bestTrajectory = m_TrajectoryCosts.at(smallestIndex);
+	    bestTrajectory.index = smallestIndex;
+	    bestTrajectory.relative_index = m_TrajectoryCostsDevVectors.relative_index_dev_vector[smallestIndex];
+	    bestTrajectory.closest_obj_velocity = m_TrajectoryCostsDevVectors.closest_obj_velocity_dev_vector[smallestIndex];
+	    bestTrajectory.distance_from_center = m_TrajectoryCostsDevVectors.distance_from_center_dev_vector[smallestIndex];
+	    bestTrajectory.priority_cost = m_TrajectoryCostsDevVectors.priority_cost_dev_vector[smallestIndex];
+	    bestTrajectory.transition_cost = m_TrajectoryCostsDevVectors.transition_cost_dev_vector[smallestIndex];
+	    bestTrajectory.closest_obj_cost = m_TrajectoryCostsDevVectors.closest_obj_cost_dev_vector[smallestIndex];
+	    bestTrajectory.cost = m_TrajectoryCostsDevVectors.cost_dev_vector[smallestIndex];
+	    bestTrajectory.closest_obj_distance = m_TrajectoryCostsDevVectors.closest_obj_distance_dev_vector[smallestIndex];
+	    bestTrajectory.lane_index = m_TrajectoryCostsDevVectors.lane_index_dev_vector[smallestIndex];
+	    bestTrajectory.lane_change_cost = m_TrajectoryCostsDevVectors.lane_change_cost_dev_vector[smallestIndex];
+	    bestTrajectory.lateral_cost = m_TrajectoryCostsDevVectors.lateral_cost_dev_vector[smallestIndex];
+	    bestTrajectory.longitudinal_cost = m_TrajectoryCostsDevVectors.longitudinal_cost_dev_vector[smallestIndex];
+	    bestTrajectory.bBlocked = m_TrajectoryCostsDevVectors.bBlocked_dev_vector[smallestIndex];
+	    //bestTrajectory.index = smallestIndex;
 	}
 
 //	cout << "smallestI: " <<  smallestIndex << ", C_Size: " << m_TrajectoryCosts.size()
@@ -156,6 +194,11 @@ TrajectoryCost TrajectoryCostsOnGPU::DoOneStep(const vector<vector<vector<WayPoi
 //			<< ", prevSmalI: " << m_PrevCostIndex << ", distance: " << bestTrajectory.closest_obj_distance
 //			<< ", Blocked: " << bestTrajectory.bBlocked
 //			<< endl;
+	std::cerr << "smallestI: " <<  smallestIndex << ", C_Size: " << m_TrajectoryCosts.size()
+		  << ", LaneI: " << bestTrajectory.lane_index << "TrajI: " << bestTrajectory.index
+		  << ", prevSmalI: " << m_PrevCostIndex << ", distance: " << bestTrajectory.closest_obj_distance
+		  << ", Blocked: " << bestTrajectory.bBlocked
+		  << endl;
 
 	m_PrevCostIndex = smallestIndex;
 
@@ -240,6 +283,7 @@ void TrajectoryCostsOnGPU::CalculateLateralAndLongitudinalCosts(vector<Trajector
 					RelativeInfo obj_info;
 					PlanningHelpers::GetRelativeInfo(totalPaths.at(il), contourPoints.at(icon), obj_info);
 					double longitudinalDist = PlanningHelpers::GetExactDistanceOnTrajectory(totalPaths.at(il), car_info, obj_info);
+					std::cerr << "longitudinalDist: " << longitudinalDist << std::endl;
 					if(obj_info.iFront == 0 && longitudinalDist > 0)
 						longitudinalDist = -longitudinalDist;
 
@@ -294,15 +338,6 @@ void TrajectoryCostsOnGPU::CalculateLateralAndLongitudinalCostsOnGPU(struct Traj
 		const WayPoint& currState, const vector<WayPoint>& contourPoints, const PlanningParams& params,
 		const CAR_BASIC_INFO& carInfo, const VehicleState& vehicleState)
 {
-    std::cerr << "****** CaclulateLateralAndLongitudinalCostsOnGPU" << std::endl;
-
-    // rollOuts: サイズだけ必要(vectorのvectorのvectorなので、中身の大きさまで必要)
-    // totalPaths: 中身を使用
-    // currState: GetrelativeInfoでそのまま使用
-    // contourPoints: ループ内で使用
-    // params: ループないでは、minFollowingDistanceのみ使用
-    // carInfo: ループ内では、carInfo.lengthのみが使用
-    // vehicleState: ループ内不使用
     	double critical_lateral_distance =  carInfo.width/2.0 + params.horizontalSafetyDistancel;
 	double critical_long_front_distance =  carInfo.wheel_base/2.0 + carInfo.length/2.0 + params.verticalSafetyDistance;
 	double critical_long_back_distance =  carInfo.length/2.0 + params.verticalSafetyDistance - carInfo.wheel_base/2.0;
@@ -423,22 +458,6 @@ void TrajectoryCostsOnGPU::CalculateLateralAndLongitudinalCostsOnGPU(struct Traj
 	thrust::device_vector<double> lateral_cost_tmp_buffer(num_of_buffer_element);
 	thrust::device_vector<double> longitudinal_cost_tmp_buffer(num_of_buffer_element);
 	thrust::device_vector<double> closest_obj_distance_tmp_buffer(num_of_buffer_element);
-
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// 並列化方針が全然ダメ
-	// 今のままだと、たかだかrollout数分の並列度しか無いから、
-	// 並列に計算されるのが高々数十程度
-	// 一回それぞれの計算結果をバッファか何かに突っ込んで終わったらそれを集計する的な方法にしないと、
-	// 全く速くならないし、そもそも計算結果が合わない
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
-	// ********************************************************************************************
 
 	// Launch GPU kernel
 	CalculateLateralAndLongitudinalCosts_kernel <<<grid_dim, block_dim>>> ((bool*)thrust::raw_pointer_cast(trajectoryCostsDev.bBlocked_dev_vector.data()),
@@ -606,6 +625,98 @@ void TrajectoryCostsOnGPU::NormalizeCosts(vector<TrajectoryCost>& trajectoryCost
 	}
 }
 
+
+void TrajectoryCostsOnGPU::NormalizeCostsOnGPU(struct TrajectoryCostsDevVectors& trajectoryCostsDev)
+{
+	//Normalize costs
+	double totalPriorities = 0;
+	double totalChange = 0;
+	double totalLateralCosts = 0;
+	double totalLongitudinalCosts = 0;
+	double transitionCosts = 0;
+
+	// for(unsigned int ic = 0; ic< trajectoryCosts.size(); ic++)
+	// {
+	// 	totalPriorities += trajectoryCosts.at(ic).priority_cost;
+	// 	transitionCosts += trajectoryCosts.at(ic).transition_cost;
+	// }
+	totalPriorities = thrust::reduce(trajectoryCostsDev.priority_cost_dev_vector.begin(),
+					 trajectoryCostsDev.priority_cost_dev_vector.end());
+
+	transitionCosts = thrust::reduce(trajectoryCostsDev.transition_cost_dev_vector.begin(),
+					 trajectoryCostsDev.transition_cost_dev_vector.end());
+
+	// for(unsigned int ic = 0; ic< trajectoryCosts.size(); ic++)
+	// {
+	// 	totalChange += trajectoryCosts.at(ic).lane_change_cost;
+	// 	totalLateralCosts += trajectoryCosts.at(ic).lateral_cost;
+	// 	totalLongitudinalCosts += trajectoryCosts.at(ic).longitudinal_cost;
+	// }
+	totalChange = thrust::reduce(trajectoryCostsDev.lane_change_cost_dev_vector.begin(),
+				     trajectoryCostsDev.lane_change_cost_dev_vector.end());
+
+	totalLateralCosts = thrust::reduce(trajectoryCostsDev.lateral_cost_dev_vector.begin(),
+					   trajectoryCostsDev.lateral_cost_dev_vector.end());
+
+	totalLongitudinalCosts = thrust::reduce(trajectoryCostsDev.longitudinal_cost_dev_vector.begin(),
+						trajectoryCostsDev.longitudinal_cost_dev_vector.end());
+
+
+	// for(unsigned int ic = 0; ic< trajectoryCosts.size(); ic++)
+	// {
+	// 	if(totalPriorities != 0)
+	// 		trajectoryCosts.at(ic).priority_cost = trajectoryCosts.at(ic).priority_cost / totalPriorities;
+	// 	else
+	// 		trajectoryCosts.at(ic).priority_cost = 0;
+
+	// 	if(transitionCosts != 0)
+	// 		trajectoryCosts.at(ic).transition_cost = trajectoryCosts.at(ic).transition_cost / transitionCosts;
+	// 	else
+	// 		trajectoryCosts.at(ic).transition_cost = 0;
+
+	// 	if(totalChange != 0)
+	// 		trajectoryCosts.at(ic).lane_change_cost = trajectoryCosts.at(ic).lane_change_cost / totalChange;
+	// 	else
+	// 		trajectoryCosts.at(ic).lane_change_cost = 0;
+
+	// 	if(totalLateralCosts != 0)
+	// 		trajectoryCosts.at(ic).lateral_cost = trajectoryCosts.at(ic).lateral_cost / totalLateralCosts;
+	// 	else
+	// 		trajectoryCosts.at(ic).lateral_cost = 0;
+
+	// 	if(totalLongitudinalCosts != 0)
+	// 		trajectoryCosts.at(ic).longitudinal_cost = trajectoryCosts.at(ic).longitudinal_cost / totalLongitudinalCosts;
+	// 	else
+	// 		trajectoryCosts.at(ic).longitudinal_cost = 0;
+
+	// 	trajectoryCosts.at(ic).cost = (
+	// 			trajectoryCosts.at(ic).priority_cost +
+	// 			trajectoryCosts.at(ic).lane_change_cost +
+	// 			trajectoryCosts.at(ic).lateral_cost +
+	// 			trajectoryCosts.at(ic).longitudinal_cost +
+	// 			1.5*trajectoryCosts.at(ic).transition_cost) / 5.0;
+	// }
+	thrust::for_each(thrust::make_zip_iterator(thrust::make_tuple(trajectoryCostsDev.priority_cost_dev_vector.begin(),
+								      trajectoryCostsDev.transition_cost_dev_vector.begin(),
+								      trajectoryCostsDev.lane_change_cost_dev_vector.begin(),
+								      trajectoryCostsDev.lateral_cost_dev_vector.begin(),
+								      trajectoryCostsDev.longitudinal_cost_dev_vector.begin(),
+								      trajectoryCostsDev.cost_dev_vector.begin()
+								      )),
+			 thrust::make_zip_iterator(thrust::make_tuple(trajectoryCostsDev.priority_cost_dev_vector.end(),
+								      trajectoryCostsDev.transition_cost_dev_vector.end(),
+								      trajectoryCostsDev.lane_change_cost_dev_vector.end(),
+								      trajectoryCostsDev.lateral_cost_dev_vector.end(),
+								      trajectoryCostsDev.longitudinal_cost_dev_vector.end(),
+								      trajectoryCostsDev.cost_dev_vector.end()
+								      )),
+			 NormalizeCostsFunctor(totalPriorities,
+					       totalChange,
+					       totalLateralCosts,
+					       totalLongitudinalCosts,
+					       transitionCosts));
+}
+
 vector<TrajectoryCost> TrajectoryCostsOnGPU::CalculatePriorityAndLaneChangeCosts(const vector<vector<WayPoint> >& laneRollOuts,
 		const int& lane_index, const PlanningParams& params)
 {
@@ -677,11 +788,6 @@ bool TrajectoryCostsOnGPU::ValidateRollOutsInput(const vector<vector<vector<WayP
 
 void TrajectoryCostsOnGPU::InitDevVectors(const vector<TrajectoryCost>& trajectoryCosts, struct TrajectoryCostsDevVectors& devVectors)
 {
-    //thrust::device_vector<int> test(1);  // これだとこの場所で落ちる
-    thrust::device_vector<int> test;
-    test.resize(trajectoryCosts.size());  // size 0 の場合はresizeした瞬間落ちる→動的な確保をしようとすると落ちてません？
-    std::cerr << "****************************** resized" << std::endl;
-
     // Re-allocate device vectors
     int new_size = trajectoryCosts.size();
     devVectors.relative_index_dev_vector.resize(new_size);
@@ -717,53 +823,5 @@ void TrajectoryCostsOnGPU::InitDevVectors(const vector<TrajectoryCost>& trajecto
 	devVectors.bBlocked_dev_vector[index] = cost.bBlocked;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 }

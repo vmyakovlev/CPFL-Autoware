@@ -39,6 +39,53 @@ namespace PlannerHNS
     };
 
     /*
+     * A Functor to normalize costs
+     */
+    struct NormalizeCostsFunctor
+    {
+	double totalPriorities_;
+	double totalChange_;
+	double totalLateralCosts_;
+	double totalLongitudinalCosts_;
+	double transitionCosts_;
+
+	NormalizeCostsFunctor(double totalPriorities,
+			      double totalChange,
+			      double totalLateralCosts,
+			      double totalLongitudinalCosts,
+			      double transitionCosts):
+	    totalPriorities_(totalPriorities),
+	    totalChange_(totalChange),
+	    totalLateralCosts_(totalLateralCosts),
+	    totalLongitudinalCosts_(totalLongitudinalCosts),
+	    transitionCosts_(transitionCosts) {}
+
+	template <typename Tuple>
+	__device__
+	double operator()(Tuple t)
+	{
+	    auto &priority_cost = thrust::get<0>(t);
+	    auto &transition_cost = thrust::get<1>(t);
+	    auto &lane_change_cost = thrust::get<2>(t);
+	    auto &lateral_cost = thrust::get<3>(t);
+	    auto &longitudinal_cost = thrust::get<4>(t);
+	    auto &cost = thrust::get<5>(t);
+
+	    priority_cost = (totalPriorities_ != 0)*(priority_cost / totalPriorities_);
+	    transition_cost = (transitionCosts_ != 0)*(transition_cost / transitionCosts_);
+	    lane_change_cost = (totalChange_ != 0)*(lane_change_cost / totalChange_);
+	    lateral_cost = (totalLateralCosts_ != 0)*(lateral_cost / totalLateralCosts_);
+	    longitudinal_cost = (totalLongitudinalCosts_ != 0)*(longitudinal_cost / totalLongitudinalCosts_);
+
+	    cost = (priority_cost +
+		    lane_change_cost +
+		    lateral_cost +
+		    longitudinal_cost +
+		    1.5 * transition_cost) / 5.0;
+	}
+    };
+
+    /*
      * A kernel to calculate lateral and longitudinal cost on GPU
      */
     __global__

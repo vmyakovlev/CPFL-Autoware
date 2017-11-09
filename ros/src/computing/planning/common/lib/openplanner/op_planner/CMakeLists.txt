@@ -118,10 +118,15 @@ function(add_cuda_lib name files cpp_files libraries)
 	DEPENDS ${obj_list}
 	)
 
+  # Create flag to make cuda enable
+  set(CUDA_ENABLE_FLAGS
+	"-DCUDA_FOUND"
+	)
+
   # Link cpp files and cuda object files and generate shared library
   add_custom_target(linked_library ALL
 	COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "Linking CXX executable ${name}"
-	COMMAND ${CUDA_NVCC_EXECUTABLE} -I${catkin_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -DCUDA_FOUND -std=c++11 -Xcompiler -fPIC -shared -o ${obj_name} cuda_linked_object.o ${obj_list} ${cpp_path}
+	COMMAND ${CUDA_NVCC_EXECUTABLE} -I${catkin_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include ${CUDA_ENABLE_FLAGS} -std=c++11 -Xcompiler -fPIC -shared -o ${obj_name} cuda_linked_object.o ${obj_list} ${cpp_path}
 	DEPENDS ${obj_list}
 	)
 

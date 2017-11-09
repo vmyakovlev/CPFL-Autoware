@@ -62,6 +62,7 @@ private:
 	bool ValidateRollOutsInput(const vector<vector<vector<WayPoint> > >& rollOuts);
 	vector<TrajectoryCost> CalculatePriorityAndLaneChangeCosts(const vector<vector<WayPoint> >& laneRollOuts, const int& lane_index, const PlanningParams& params);
 	void NormalizeCosts(vector<TrajectoryCost>& trajectoryCosts);
+	void NormalizeCostsOnGPU(struct TrajectoryCostsDevVectors& trajectoryCostsDev);
 	void CalculateLateralAndLongitudinalCosts(vector<TrajectoryCost>& trajectoryCosts, const vector<vector<vector<WayPoint> > >& rollOuts, const vector<vector<WayPoint> >& totalPaths, const WayPoint& currState, const vector<WayPoint>& contourPoints, const PlanningParams& params, const CAR_BASIC_INFO& carInfo, const VehicleState& vehicleState);
 	void CalculateLateralAndLongitudinalCostsOnGPU(struct TrajectoryCostsDevVectors& trajectoryCostsDev, const vector<vector<vector<WayPoint> > >& rollOuts, const vector<vector<WayPoint> >& totalPaths, const WayPoint& currState, const vector<WayPoint>& contourPoints, const PlanningParams& params, const CAR_BASIC_INFO& carInfo, const VehicleState& vehicleState);
 	void CalculateTransitionCosts(vector<TrajectoryCost>& trajectoryCosts, const int& currTrajectoryIndex, const PlanningParams& params);

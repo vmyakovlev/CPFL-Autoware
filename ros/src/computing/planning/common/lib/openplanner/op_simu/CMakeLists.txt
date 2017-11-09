@@ -50,6 +50,10 @@ include_directories(${catkin_INCLUDE_DIRS}
 find_package(CUDA)
 if (CUDA_FOUND)
 include_directories(${CUDA_INCLUDE_DIRS})
+# Create flag to make cuda enable
+set(CUDA_ENABLE_FLAGS
+  "-DCUDA_FOUND"
+  )
 endif(CUDA_FOUND)
 
 set(SIMUH_SRC

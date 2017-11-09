@@ -332,9 +332,9 @@ namespace PlannerHNS {
                 for (i=1;i<=N;i++) {
                     p2 = polygon[i % N];
 
-                    if (p.y > min(p1.y,p2.y)) {
-                        if (p.y <= max(p1.y,p2.y)) {
-                            if (p.x <= max(p1.x,p2.x)) {
+                    if (p.y > MIN(p1.y,p2.y)) {
+                        if (p.y <= MAX(p1.y,p2.y)) {
+                            if (p.x <= MAX(p1.x,p2.x)) {
                             if (p1.y != p2.y) {
                                 xinters = (p.y-p1.y)*(p2.x-p1.x)/(p2.y-p1.y)+p1.x;
                                 if (p1.x == p2.x || p.x <= xinters)

@@ -46,6 +46,10 @@ include_directories(
 find_package(CUDA)
 if(CUDA_FOUND)
 include_directories(${CUDA_INCLUDE_DIRS})
+# Create flag to make cuda enable
+set(CUDA_ENABLE_FLAGS
+  "-DCUDA_FOUND"
+  )
 endif()
 
 ## Declare a C++ library
