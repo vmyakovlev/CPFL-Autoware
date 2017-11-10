@@ -513,7 +513,8 @@ bool CalibrateCameraChessboardROS::grabCalibData()
     switch(boardtype)
     {
     case BoxGrid:
-        found=cv::findChessboardCorners(calibimage,patternnum,grid2dpoint);
+        found=cv::findChessboardCorners(calibimage,patternnum,grid2dpoint,
+          CV_CALIB_CB_ADAPTIVE_THRESH + CV_CALIB_CB_NORMALIZE_IMAGE + CV_CALIB_CB_FAST_CHECK);
         break;
     case CircleGrid:
         found=cv::findCirclesGrid(calibimage,patternnum,grid2dpoint);
@@ -524,7 +525,10 @@ bool CalibrateCameraChessboardROS::grabCalibData()
         camerasub->startReceiveSlot();
         return 0;
     }
-    cv::cornerSubPix(calibimage,grid2dpoint,cv::Size(11, 11), cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+    cv::Mat calibimagegray;
+    cv::cvtColor(calibimage, calibimagegray, CV_BGR2GRAY);
+    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(10, 10),
+      cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
     calibimages.push_back(calibimage.clone());
     grid3dpoints.push_back(grid3dpoint);
     grid2dpoints.push_back(grid2dpoint);
@@ -1182,7 +1186,8 @@ bool CalibrateCameraVelodyneChessboardROS::grabCalibData()
     switch(boardtype)
     {
     case BoxGrid:
-        found=cv::findChessboardCorners(calibimage,patternnum,grid2dpoint);
+        found=cv::findChessboardCorners(calibimage,patternnum,grid2dpoint,
+          CV_CALIB_CB_ADAPTIVE_THRESH+CV_CALIB_CB_NORMALIZE_IMAGE+CV_CALIB_CB_FAST_CHECK);
         break;
     case CircleGrid:
         found=cv::findCirclesGrid(calibimage,patternnum,grid2dpoint);
@@ -1198,6 +1203,10 @@ bool CalibrateCameraVelodyneChessboardROS::grabCalibData()
     {
         return 0;
     }
+    cv::Mat calibimagegray;
+    cv::cvtColor(calibimage, calibimagegray, CV_BGR2GRAY);
+    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(10, 10),
+      cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
     calibimages.push_back(calibimage.clone());
     grid3dpoints.push_back(grid3dpoint);
     grid2dpoints.push_back(grid2dpoint);

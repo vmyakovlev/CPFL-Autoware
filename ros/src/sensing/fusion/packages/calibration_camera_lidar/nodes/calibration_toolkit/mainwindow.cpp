@@ -57,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QSettings settings("RobotSDK","CalibrationToolkit");
 
-    QSizeF patternsize=settings.value("PatternSize",QSizeF(0.035,0.035)).toSizeF();
+    QSizeF patternsize=settings.value("PatternSize",QSizeF(0.1,0.1)).toSizeF();
     ui->patternwidth->setText(QString("%1").arg(patternsize.width()));
     ui->patternheight->setText(QString("%1").arg(patternsize.height()));
     cv::Size2f cvpatternsize=cv::Size2f(patternsize.width(),patternsize.height());
