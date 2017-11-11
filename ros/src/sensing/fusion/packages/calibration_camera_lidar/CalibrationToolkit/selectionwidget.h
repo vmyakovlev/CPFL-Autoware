@@ -86,7 +86,7 @@ signals:
 protected:
     QPoint convert2ImagePoint(QPointF point);
     QPointF convert2RealPoint(QPoint point);
-    void drawPoints();    
+    void drawPoints();
     void drawRectangle();
     QVector<QPointF> extractPoints();
 };

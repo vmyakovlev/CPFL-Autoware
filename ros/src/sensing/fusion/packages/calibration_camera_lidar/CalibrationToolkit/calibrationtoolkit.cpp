@@ -527,7 +527,7 @@ bool CalibrateCameraChessboardROS::grabCalibData()
     }
     cv::Mat calibimagegray;
     cv::cvtColor(calibimage, calibimagegray, CV_BGR2GRAY);
-    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(10, 10),
+    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(4, 4),
       cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
     calibimages.push_back(calibimage.clone());
     grid3dpoints.push_back(grid3dpoint);
@@ -898,40 +898,38 @@ bool CalibrateCameraVelodyneChessboardBase::calibrateSensor()
     CameraVelodyneCalibrationData calibrationdata;
     cv::Mat normal=cv::Mat(1,3,CV_64F);
     normal.at<double>(0)=0;normal.at<double>(1)=0;normal.at<double>(2)=1;
-    int i,n=calibvelodynespoints.size();
+    int i;
+    std::vector<int> calibvelodynespointsidx; // not NULL indices
+    for(i=0;i<calibvelodynespoints.size();i++)
+    {
+      if(calibvelodynespoints[i]!=NULL) { calibvelodynespointsidx.push_back(i); }
+    }
+    int k,n=calibvelodynespointsidx.size();
+    if(n==0) return 0;
+    std::cout << n << std::endl;
     calibrationdata.chessboardnormals=cv::Mat(n,3,CV_64F);
     calibrationdata.chessboardpoints=cv::Mat(n,3,CV_64F);
     calibrationdata.velodynepoints.resize(n);
     calibrationdata.velodynenormals=cv::Mat(n,3,CV_64F);
-    bool flag=0;
     cv::Mat idmat=cv::Mat::eye(3,3,CV_64F);
     for(i=0;i<n;i++)
     {
-        calibrationdata.chessboardnormals.row(i)=normal*chessboardposes[i](cv::Rect(0,0,3,3)).t();
-        calibrationdata.chessboardpoints.at<double>(i,0)=chessboardposes[i].at<double>(0,3);
-        calibrationdata.chessboardpoints.at<double>(i,1)=chessboardposes[i].at<double>(1,3);
-        calibrationdata.chessboardpoints.at<double>(i,2)=chessboardposes[i].at<double>(2,3);
-        if(calibvelodynespoints[i]==NULL)
-        {
-            calibrationdata.velodynepoints[i]=cv::Mat(1,1,CV_64F);
-            continue;
-        }
-        flag=1;
-        int j,m=calibvelodynespoints[i]->size();
+        k=calibvelodynespointsidx[i]; // not NULL -> using only selected frame
+        calibrationdata.chessboardnormals.row(i)=normal*chessboardposes[k](cv::Rect(0,0,3,3)).t();
+        calibrationdata.chessboardpoints.at<double>(i,0)=chessboardposes[k].at<double>(0,3);
+        calibrationdata.chessboardpoints.at<double>(i,1)=chessboardposes[k].at<double>(1,3);
+        calibrationdata.chessboardpoints.at<double>(i,2)=chessboardposes[k].at<double>(2,3);
+        int j,m=calibvelodynespoints[k]->size();
         calibrationdata.velodynepoints[i]=cv::Mat(m,3,CV_64F);
         for(j=0;j<m;j++)
         {
-            calibrationdata.velodynepoints[i].at<double>(j,0)=double(calibvelodynespoints[i]->points[j].x);
-            calibrationdata.velodynepoints[i].at<double>(j,1)=double(calibvelodynespoints[i]->points[j].y);
-            calibrationdata.velodynepoints[i].at<double>(j,2)=double(calibvelodynespoints[i]->points[j].z);
+            calibrationdata.velodynepoints[i].at<double>(j,0)=double(calibvelodynespoints[k]->points[j].x);
+            calibrationdata.velodynepoints[i].at<double>(j,1)=double(calibvelodynespoints[k]->points[j].y);
+            calibrationdata.velodynepoints[i].at<double>(j,2)=double(calibvelodynespoints[k]->points[j].z);
         }
-        calibrationdata.velodynenormals.at<double>(i,0)=calibvelodynesnormals[i].at<double>(0);
-        calibrationdata.velodynenormals.at<double>(i,1)=calibvelodynesnormals[i].at<double>(1);
-        calibrationdata.velodynenormals.at<double>(i,2)=calibvelodynesnormals[i].at<double>(2);
-    }
-    if(!flag)
-    {
-        return 0;
+        calibrationdata.velodynenormals.at<double>(i,0)=calibvelodynesnormals[k].at<double>(0);
+        calibrationdata.velodynenormals.at<double>(i,1)=calibvelodynesnormals[k].at<double>(1);
+        calibrationdata.velodynenormals.at<double>(i,2)=calibvelodynesnormals[k].at<double>(2);
     }
 
     cv::Mat NN=calibrationdata.chessboardnormals.t()*calibrationdata.chessboardnormals;
@@ -1205,7 +1203,7 @@ bool CalibrateCameraVelodyneChessboardROS::grabCalibData()
     }
     cv::Mat calibimagegray;
     cv::cvtColor(calibimage, calibimagegray, CV_BGR2GRAY);
-    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(10, 10),
+    cv::cornerSubPix(calibimagegray,grid2dpoint,cv::Size(4, 4),
       cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
     calibimages.push_back(calibimage.clone());
     grid3dpoints.push_back(grid3dpoint);
