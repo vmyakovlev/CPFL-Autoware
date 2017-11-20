@@ -44,18 +44,19 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float32.h>
 
 #include "libndt_slam_pcl.h"
 #include "libndt_slam_pcl_omp.h"
 #include "libndt_slam_pcl_gpu.h"
 #include "libdata_structs.h"
 #include "libconvert_ros_msgs.h"
-
+#include "libslam_observer.h"
 
 class NdtSlam
 {
-    using PointSource = pcl::PointXYZ;
-    using PointTarget = pcl::PointXYZ;
+    using PointSource = pcl::PointXYZI;
+    using PointTarget = pcl::PointXYZI;
 
     public:
         NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh);
@@ -78,6 +79,7 @@ class NdtSlam
         ros::Publisher points_map_region_pub_;
         ros::Publisher localizer_pose_pub_;
         ros::Publisher localizer_velocity_pub_;
+        ros::Publisher transformation_probability_pub_;
 
         ros::Subscriber points_map_updated_sub_;
         ros::Subscriber manual_pose_sub_;
@@ -91,7 +93,7 @@ class NdtSlam
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformListener tf_listener_;
         std::unique_ptr< LibNdtSlamBase<PointSource, PointTarget> > localizer_ptr_;
-
+        LibSlamObserver observer_;  //this instance is not observer pattern
 
         Eigen::Matrix4f tf_ltob_;
         bool is_with_mapping_;
@@ -147,13 +149,15 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     nh.getParam("tf_yaw", tf_pose.yaw);
     ROS_INFO("tf(x, y, z, roll, pitch, yaw): %lf, %lf, %lf, %lf, %lf, %lf", tf_pose.x, tf_pose.y, tf_pose.z, tf_pose.roll, tf_pose.pitch, tf_pose.yaw);
 
-    tf_ltob_ = convertToEigenMatrix4f(tf_pose*(-1.0));
+    auto tf_btol = convertToEigenMatrix4f(tf_pose);
+    tf_ltob_ = tf_btol.inverse();
 
     const int points_buffer = is_with_mapping_ ? 1000 : 10;
 
     points_map_region_pub_  = nh_.advertise<sensor_msgs::PointCloud2>   ("points_map_region",  10);
     localizer_pose_pub_     = nh_.advertise<geometry_msgs::PoseStamped> ("localizer_pose",     10);
     localizer_velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("localizer_velocity", 10);
+    transformation_probability_pub_ = nh_.advertise<std_msgs::Float32>  ("transformation_probability", 10);
 
     //points_map_updated_sub_ = nh_.subscribe("/points_map_updated", 10, &NdtSlam::pointsMapUpdatedCallback, this);
     points_map_updated_sub_ = nh_.subscribe("/points_map", 10, &NdtSlam::pointsMapUpdatedCallback, this);
@@ -237,6 +241,14 @@ void NdtSlam::pointsFilteredCallback(const sensor_msgs::PointCloud2::ConstPtr& p
     if(is_with_mapping_)
         localizer_ptr_->updateMap();  //TODO: this code should be called after pointsRawCallback
     publishTopics(pointcloud2_msg_ptr->header);
+    localizer_ptr_->writeLogFile();
+
+    EvaluationValue ev;
+    ev.pose = localizer_ptr_->getLocalizerPose();
+    ev.align_time = localizer_ptr_->getAlignTime();
+    ev.transformation_probability = localizer_ptr_->getTransformationProbability();
+    observer_.update(ev);
+
 }
 
 void NdtSlam::publishTopics(std_msgs::Header header)
@@ -277,5 +289,11 @@ void NdtSlam::publishTopics(std_msgs::Header header)
     transform.setRotation(base_link_q);
     tf_broadcaster_.sendTransform(tf::StampedTransform(transform, common_header.stamp, "/map", "/base_link"));
 
+
+    const double trans_probability_score = observer_.getTransformationProbabilityScore();
+    std_msgs::Float32 trans_probability_score_msg;
+    trans_probability_score_msg.data = trans_probability_score;
+    transformation_probability_pub_.publish(trans_probability_score_msg);
 }
+
 #endif

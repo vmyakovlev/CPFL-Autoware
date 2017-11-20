@@ -55,6 +55,7 @@ class LibNdtSlamPCLOMP
         double getStepSize() const override;
         float getResolution() const override;
         int getMaximumIterations() override;
+        double getTransformationProbability() const override;
 
     protected:
         void align(const Pose& predict_pose) override;
@@ -118,6 +119,12 @@ template <class PointSource, class PointTarget>
 int LibNdtSlamPCLOMP<PointSource, PointTarget>::getMaximumIterations()
 {
     return ndt_.getMaximumIterations();
+}
+
+template <class PointSource, class PointTarget>
+double LibNdtSlamPCLOMP<PointSource, PointTarget>::getTransformationProbability() const
+{
+    return ndt_.getTransformationProbability();
 }
 
 template <class PointSource, class PointTarget>

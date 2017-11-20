@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(registration)
+project(pcl_omp_registration)
 
 find_package(catkin REQUIRED COMPONENTS)
 find_package(PCL REQUIRED)
@@ -7,7 +7,7 @@ find_package(PCL REQUIRED)
 IF(PCL_VERSION VERSION_LESS "1.7.2")
 message("pcl_omp requires PCL 1.7.2 or higher versions")
 ELSE(PCL_VERSION VERSION_LESS "1.7.2")
-set(SUBSYS_NAME registration)
+set(SUBSYS_NAME pcl_omp_registration)
 set(SUBSYS_DESC "Point cloud registration library")
 set(SUBSYS_DEPS pcl_common octree kdtree search sample_consensus features)
 

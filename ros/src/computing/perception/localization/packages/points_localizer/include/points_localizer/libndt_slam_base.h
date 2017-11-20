@@ -48,6 +48,18 @@ class LibNdtSlamBase : public LibLocalizer<PointSource, PointTarget>
         virtual double getStepSize() const = 0;
         virtual float getResolution() const = 0;
         virtual int getMaximumIterations() = 0;
+
+        virtual double getTransformationProbability() const = 0;
+        virtual std::stringstream logFileContent() const override;
 };
+
+template <class PointSource, class PointTarget>
+std::stringstream LibNdtSlamBase<PointSource, PointTarget>::logFileContent() const
+{
+    std::stringstream content = LibLocalizer<PointSource, PointTarget>::logFileContent();
+    content << ","
+            << getTransformationProbability();
+    return content;
+}
 
 #endif

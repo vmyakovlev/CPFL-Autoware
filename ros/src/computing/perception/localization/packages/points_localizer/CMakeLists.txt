@@ -9,7 +9,7 @@ execute_process(
 find_package(PCL REQUIRED)
 
 IF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
-SET(FAST_PCL_PACKAGES registration ndt_gpu)
+SET(FAST_PCL_PACKAGES pcl_omp_registration ndt_gpu)
 ENDIF(NOT (PCL_VERSION VERSION_LESS "1.7.2"))
 
 find_package( OpenMP )

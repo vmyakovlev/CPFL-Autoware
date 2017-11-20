@@ -97,11 +97,11 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
     const double begin_time_sec = (it != std::begin(queue_) && it->first > previous_time_sec) ? it->first : previous_time_sec;
     const double end_time_sec   = (it+1 != std::end(queue_) && it2->first < next_time_sec) ? it2->first : next_time_sec;
 
-    std::cout << std::fmod(it->first, 100.0)
-      << " " << std::fmod(begin_time_sec, 100.0)
-      << " " << std::fmod(it2->first, 100.0)
-      << " " << std::fmod(end_time_sec, 100.0)
-      << std::endl;
+    // std::cout << std::fmod(it->first, 100.0)
+    //   << " " << std::fmod(begin_time_sec, 100.0)
+    //   << " " << std::fmod(it2->first, 100.0)
+    //   << " " << std::fmod(end_time_sec, 100.0)
+    //   << std::endl;
 
     //linear interpolation
     const double diff_time_ratio = (it->first != it2->first) ? (end_time_sec - begin_time_sec) / (it2->first - it->first) : 1.0;
@@ -116,9 +116,10 @@ Pose LibCalcPredictPose::predictNextPose(const double previous_time_sec, const d
     const double z = it2->second.z * diff_time_ratio;
     const double dis = std::sqrt(x*x + y*y+ z*z);
 
-    next_pose.x += dis*cos(-next_pose.pitch)*cos(next_pose.yaw);
-    next_pose.y += dis*cos(-next_pose.pitch)*sin(next_pose.yaw);
-    next_pose.z += dis*sin(-next_pose.pitch);
+    next_pose.x += dis*cos(next_pose.yaw);
+    next_pose.y += dis*sin(next_pose.yaw);
+    //next_pose.z += dis*sin(-next_pose.pitch);
+    next_pose.z += 0;
   }
 
   return next_pose;

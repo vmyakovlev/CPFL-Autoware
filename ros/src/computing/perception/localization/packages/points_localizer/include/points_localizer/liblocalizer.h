@@ -47,6 +47,7 @@
 #include "libdata_structs.h"
 #include "libcalc_predict_pose.h"
 
+
 static Eigen::Matrix4f convertToEigenMatrix4f(const Pose& pose)
 {
     const Eigen::Translation3f translation(pose.x, pose.y, pose.z);
@@ -164,6 +165,7 @@ class LibLocalizer
         Pose getLocalizerPose() const;
         Velocity getLocalizerVelocity() const;
         pcl::PointCloud<PointTarget> getMap() const;
+        double getAlignTime() const;
         void updateMap();
         void writeLogFile();
 
@@ -173,10 +175,12 @@ class LibLocalizer
         virtual void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& scan_ptr) = 0;
         virtual double getFitnessScore() = 0;
         virtual Pose getFinalPose() = 0;
+        virtual bool swapMap(){};
         virtual std::stringstream logFileContent() const;
 
     private:
         Pose localizer_pose_;
+        Pose previous_localizer_pose_;
         Velocity localizer_velocity_;
 
         LibCalcPredictPose calc_predict_pose_;
@@ -187,12 +191,15 @@ class LibLocalizer
         boost::shared_ptr< pcl::PointCloud<PointSource> > scan_filtered_ptr_;
 
         bool is_initial_pose_set_;
+        bool is_use_predict_pose_;
+        double align_time_;
         double fitness_score_;
 };
 
 template <class PointSource, class PointTarget>
 LibLocalizer<PointSource, PointTarget>::LibLocalizer()
     :is_initial_pose_set_(false)
+    ,is_use_predict_pose_(false)
     ,fitness_score_(0)
 {
 }
@@ -202,14 +209,18 @@ LibLocalizer<PointSource, PointTarget>::~LibLocalizer()
 {
     std::string filename = "ndt_mapping.pcd";
     pcl::io::savePCDFileBinary(filename, *map_raw_ptr_);
+    //pcl::io::savePCDFileBinary(filename, *map_filtered_ptr_);
 }
 
 template <class PointSource, class PointTarget>
 void LibLocalizer<PointSource, PointTarget>::updatePointsMap(const pcl::PointCloud<PointTarget>& pointcloud)
 {
     std::cout << __func__ << std::endl;
+    if(map_raw_ptr_ == nullptr)
+    {
     map_raw_ptr_ = boost::make_shared< pcl::PointCloud<PointTarget> >(pointcloud);
     setInputTarget(map_raw_ptr_);
+}
 }
 
 template <class PointSource, class PointTarget>
@@ -233,8 +244,12 @@ void LibLocalizer<PointSource, PointTarget>::updateManualPose(const Pose& pose)
       }
       localizer_pose_.z = nearest_z;
     }
+
+    previous_localizer_pose_ = localizer_pose_;
+
     std::cout << localizer_pose_ << std::endl;
     is_initial_pose_set_ = true;
+    is_use_predict_pose_ = false;
 }
 
 template <class PointSource, class PointTarget>
@@ -242,6 +257,7 @@ void LibLocalizer<PointSource, PointTarget>::updateStaticPose(const Pose& pose)
 {
     std::cout << __func__ << std::endl;
     localizer_pose_ = pose;
+    previous_localizer_pose_ = localizer_pose_;
     is_initial_pose_set_ = true;
 }
 
@@ -251,6 +267,7 @@ void LibLocalizer<PointSource, PointTarget>::updateGnssPose(const Pose& pose)
     std::cout << __func__ << "   " << fitness_score_ <<std::endl;
     if(is_initial_pose_set_ == false || fitness_score_ >= 500.0)
     {
+        previous_localizer_pose_ = localizer_pose_;
         localizer_pose_ = pose;
         is_initial_pose_set_ = true;
     }
@@ -281,49 +298,60 @@ void LibLocalizer<PointSource, PointTarget>::updatePointsFiltered(const pcl::Poi
 {
     std::cout << __func__ << std::endl;
     scan_filtered_ptr_ = boost::make_shared< pcl::PointCloud<PointSource> >(pointcloud);
-    setInputSource(scan_filtered_ptr_);
+    //setInputSource(scan_filtered_ptr_);
 }
 
 template <class PointSource, class PointTarget>
 void LibLocalizer<PointSource, PointTarget>::updateLocalizer(double current_scan_time_sec)
 {
     std::cout << __func__ << std::endl;
+
     if(map_raw_ptr_ == nullptr)
     {
-        std::cout << "received points. But map is not loaded" << std::endl;
+        std::cout << "[WARN]received points. But map is not loaded" << std::endl;
         return;
     }
     if(is_initial_pose_set_ == false)
     {
-        std::cout << "received points. But initial pose is not set" << std::endl;
+        std::cout << "[WARN]received points. But initial pose is not set" << std::endl;
         return;
     }
 
+    if(swapMap())
+        std::cout << "map swapped" <<std::endl;
+
+    setInputSource(scan_filtered_ptr_);
+
+
     static double previous_scan_time_sec = current_scan_time_sec;
 
-    auto predict_pose = calc_predict_pose_.predictNextPose(previous_scan_time_sec, current_scan_time_sec, localizer_pose_);
+    auto predict_pose = is_use_predict_pose_ ? calc_predict_pose_.predictNextPose(previous_scan_time_sec, current_scan_time_sec, localizer_pose_) : localizer_pose_;
+
+    is_use_predict_pose_ = true;
     std::cout << localizer_pose_ << std::endl;
     std::cout << predict_pose << std::endl;
 
     const auto align_start = std::chrono::system_clock::now();
     align(predict_pose);
     const auto align_end = std::chrono::system_clock::now();
-    const auto align_time = std::chrono::duration_cast<std::chrono::microseconds>(align_end - align_start).count() / 1000.0;
-    std::cout << "align_time: " << align_time << "ms" << std::endl;
+    align_time_ = std::chrono::duration_cast<std::chrono::microseconds>(align_end - align_start).count() / 1000.0;
+    std::cout << "align_time: " << align_time_ << "ms" << std::endl;
 
     const auto calc_fitness_score_start = std::chrono::system_clock::now();
+    std::cout << __LINE__ << std::endl;
     fitness_score_ = getFitnessScore();
+    std::cout << __LINE__ << std::endl;
     const auto calc_fitness_score_end = std::chrono::system_clock::now();
     const auto calc_fitness_score_time = std::chrono::duration_cast<std::chrono::microseconds>(calc_fitness_score_end - calc_fitness_score_start).count() / 1000.0;
 
     localizer_pose_ = getFinalPose();
     std::cout << localizer_pose_ << std::endl;
 
-    static Pose previous_localizer_pose = localizer_pose_;
-    localizer_velocity_ = Velocity(previous_localizer_pose, localizer_pose_, current_scan_time_sec-previous_scan_time_sec);
+    //TODO: fix rotate speed
+    localizer_velocity_ = Velocity(previous_localizer_pose_, localizer_pose_, current_scan_time_sec-previous_scan_time_sec);
 
     previous_scan_time_sec = current_scan_time_sec;
-    previous_localizer_pose = localizer_pose_;
+    previous_localizer_pose_ = localizer_pose_;
 
 }
 
@@ -337,6 +365,12 @@ template <class PointSource, class PointTarget>
 Velocity LibLocalizer<PointSource, PointTarget>::getLocalizerVelocity() const
 {
     return localizer_velocity_;
+}
+
+template <class PointSource, class PointTarget>
+double LibLocalizer<PointSource, PointTarget>::getAlignTime() const
+{
+    return align_time_;
 }
 
 template <class PointSource, class PointTarget>
@@ -375,7 +409,7 @@ void LibLocalizer<PointSource, PointTarget>::updateMap()
         added_pose = localizer_pose_;
     }
 
-    //for acceleration of matching
+    //for acceleration of matching speed
     static Pose filtered_pose;
     double filtering_scan_shift_meter = std::sqrt(std::pow(localizer_pose_.x - filtered_pose.x, 2.0) + std::pow(localizer_pose_.y - filtered_pose.y, 2.0));
     const double min_filtering_scan_shift_meter = 10.0;
@@ -383,6 +417,7 @@ void LibLocalizer<PointSource, PointTarget>::updateMap()
     {
         const double filtered_meter = 80.0;
         passThroughPointCloud(map_raw_ptr_, map_filtered_ptr_, localizer_pose_, filtered_meter);
+        //passThroughPointCloud(map_filtered_ptr_, map_filtered_ptr_, localizer_pose_, filtered_meter);
 
         const double voxel_leaf_size_meter = 0.2;
         pcl::VoxelGrid<PointTarget> voxel_grid_filter;
@@ -395,6 +430,8 @@ void LibLocalizer<PointSource, PointTarget>::updateMap()
         filtered_pose = localizer_pose_;
     }
 }
+
+
 
 template <class PointSource, class PointTarget>
 void LibLocalizer<PointSource, PointTarget>::writeLogFile()
@@ -417,7 +454,7 @@ void LibLocalizer<PointSource, PointTarget>::writeLogFile()
       //exit(1);
     }
 
-    log_file_stream << logFileContent() << std::endl;
+    log_file_stream << logFileContent().str() << std::endl;
 }
 
 template <class PointSource, class PointTarget>
@@ -429,7 +466,9 @@ std::stringstream LibLocalizer<PointSource, PointTarget>::logFileContent() const
             << localizer_pose_.z << ","
             << localizer_pose_.roll << ","
             << localizer_pose_.pitch << ","
-            << localizer_pose_.yaw << ",";
+            << localizer_pose_.yaw << ","
+            << align_time_;
+    return content;
 }
 
 #endif
