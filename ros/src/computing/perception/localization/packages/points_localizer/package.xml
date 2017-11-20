@@ -15,6 +15,7 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>pcl_omp_registration</build_depend>
+  <build_depend>ndt_cpu</build_depend>
   <build_depend>ndt_gpu</build_depend>
   <build_depend>ndt_tku</build_depend>
   <build_depend>autoware_msgs</build_depend>
@@ -27,6 +28,7 @@
   <run_depend>sensor_msgs</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>pcl_omp_registration</run_depend>
+  <run_depend>ndt_cpu</run_depend>
   <run_depend>ndt_gpu</run_depend>
   <run_depend>ndt_tku</run_depend>
   <run_depend>autoware_msgs</run_depend>

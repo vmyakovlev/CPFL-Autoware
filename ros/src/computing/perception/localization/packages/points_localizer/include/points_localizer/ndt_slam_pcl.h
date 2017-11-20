@@ -49,6 +49,7 @@
 #include "libndt_slam_pcl.h"
 #include "libndt_slam_pcl_omp.h"
 #include "libndt_slam_pcl_gpu.h"
+#include "libndt_slam_pcl_cpu.h"
 #include "libdata_structs.h"
 #include "libconvert_ros_msgs.h"
 #include "libslam_observer.h"
@@ -108,20 +109,27 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
 
     bool use_omp = false;
     private_nh_.getParam("use_omp", use_omp);
+    bool use_cpu = false;
+    private_nh_.getParam("use_cpu", use_cpu);
     bool use_gpu = false;
     private_nh_.getParam("use_gpu", use_gpu);
 
-    if(use_omp && use_gpu)
+    if((use_omp && use_cpu) || (use_omp && use_gpu) || (use_cpu && use_gpu))
     {
-        ROS_ERROR("cannot set both OMP and GPU. please check rosparam 'use_omp' and 'use_gpu'.");
+        ROS_ERROR("cannot use OMP, CPU and GPU at the same time. Please check rosparam 'use_omp', 'use_cpu' and 'use_gpu'.");
         exit(1);
     }
-    else if(use_omp && !use_gpu)
+    else if(use_omp && !use_cpu && !use_gpu)
     {
         ROS_INFO("use NDT SLAM PCL OMP version");
         localizer_ptr_.reset(new LibNdtSlamPCLOMP<PointSource, PointTarget>);
     }
-    else if(!use_omp && use_gpu)
+    else if(!use_omp && use_cpu && !use_gpu)
+    {
+        ROS_INFO("use NDT SLAM PCL GPU version");
+        localizer_ptr_.reset(new LibNdtSlamPCLCPU<PointSource, PointTarget>);
+    }
+    else if(!use_omp && !use_cpu && use_gpu)
     {
         ROS_INFO("use NDT SLAM PCL GPU version");
         localizer_ptr_.reset(new LibNdtSlamPCLGPU<PointSource, PointTarget>);
