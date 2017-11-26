@@ -74,33 +74,44 @@ set(SIMUH_SRC
 if (CUDA_FOUND)
 cuda_add_library(${PROJECT_NAME}
 	    ${SIMUH_SRC}
+  	    STATIC
+)
+
+target_link_libraries(${PROJECT_NAME}
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${GLUT_LIBRARIES}
+	${GLEW_LIBRARIES}
+	${X11_LIBRARIES}
+	${TinyXML_LIBRARIES}
+	${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a
+	${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+	# ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/libop_planner.a
 )
 else()
 add_library(${PROJECT_NAME}
 	    ${SIMUH_SRC}
 )
+target_link_libraries(${PROJECT_NAME}
+	${catkin_LIBRARIES}
+	${OpenCV_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${GLUT_LIBRARIES}
+	${GLEW_LIBRARIES}
+	${X11_LIBRARIES}
+	${TinyXML_LIBRARIES}
+)
+
 endif(CUDA_FOUND)
 
-target_link_libraries(${PROJECT_NAME}
-		${catkin_LIBRARIES}
-		${OpenCV_LIBRARIES}
-		${OPENGL_LIBRARIES}
-		${GLUT_LIBRARIES}
-		${GLEW_LIBRARIES}
-		${X11_LIBRARIES}
-		${TinyXML_LIBRARIES}
-)
+
+
 if (CUDA_FOUND)
 cuda_add_executable(Simu
 	    ${SIMUH_SRC}
 	    main.cpp
 )
-else()
-add_executable(Simu
-	    ${SIMUH_SRC}
-	    main.cpp
-)
-endif(CUDA_FOUND)
 
 target_link_libraries(Simu
 		${catkin_LIBRARIES}
@@ -112,6 +123,25 @@ target_link_libraries(Simu
 		${X11_LIBRARIES}
 		${CMAKE_THREAD_LIBS_INIT}
 		${TinyXML_LIBRARIES}
+		${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a
+		${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+		# ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/libop_planner.a
 )
-
+else()
+add_executable(Simu
+	    ${SIMUH_SRC}
+	    main.cpp
+)
+target_link_libraries(Simu
+		${catkin_LIBRARIES}
+		${OpenCV_LIBRARIES}
+		${OPENGL_LIBRARIES}
+		${GLUT_LIBRARIES}
+		${GLUT_LIBRARY}
+		${GLEW_LIBRARIES}
+		${X11_LIBRARIES}
+		${CMAKE_THREAD_LIBS_INIT}
+		${TinyXML_LIBRARIES}
+)
+endif(CUDA_FOUND)
 

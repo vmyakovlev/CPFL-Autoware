@@ -56,10 +56,15 @@ endif(CUDA_FOUND)
 link_directories(lib)
 if(CUDA_FOUND)
 cuda_add_executable(op_simulator nodes/OpenPlannerSimulator.cpp nodes/OpenPlannerSimulator_core.cpp nodes/PolygonGenerator.cpp)
+target_link_libraries(op_simulator
+  ${catkin_LIBRARIES}
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+  )
 else()
 add_executable(op_simulator nodes/OpenPlannerSimulator.cpp nodes/OpenPlannerSimulator_core.cpp nodes/PolygonGenerator.cpp)
-endif(CUDA_FOUND)
 target_link_libraries(op_simulator ${catkin_LIBRARIES})
+endif(CUDA_FOUND)
 
 add_dependencies(op_simulator
 runtime_manager_generate_messages_cpp

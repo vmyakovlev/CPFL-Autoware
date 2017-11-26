@@ -59,10 +59,19 @@ link_directories(lib)
 
 if(CUDA_FOUND)
 cuda_add_executable(dp_planner nodes/dp_planner.cpp nodes/dp_planner_core.cpp nodes/RosHelpers.cpp nodes/PolygonGenerator.cpp)
+
+target_link_libraries(dp_planner
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+  # ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/libop_planner.a
+  )
 else()
 add_executable(dp_planner nodes/dp_planner.cpp nodes/dp_planner_core.cpp nodes/RosHelpers.cpp nodes/PolygonGenerator.cpp)
-endif(CUDA_FOUND)
 target_link_libraries(dp_planner ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+endif(CUDA_FOUND)
+
 add_dependencies(dp_planner 
 ${catkin_EXPORTED_TARGETS}
 runtime_manager_generate_messages_cpp

@@ -72,6 +72,17 @@ endif()
 
 
 function(add_cuda_lib name files cpp_files libraries)
+  # Create flag to make cuda enable
+  set(CUDA_ENABLE_FLAGS
+	"-DCUDA_FOUND"
+	)
+
+  # Collect required libraries
+  set(lib_list)
+  foreach(library_name ${libraries})
+  	LIST(APPEND lib_list "-l${library_name}")
+  endforeach()
+
   # Generate object files for each .cu files
   set(obj_list)
   foreach(file ${files})
@@ -83,7 +94,7 @@ function(add_cuda_lib name files cpp_files libraries)
 	  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o
 	  DEPENDS ${file}
 	  COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --blue "Building NVCC Device object ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
-	  COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -dc --compiler-options '-fPIC' "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o"
+	  COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_ENABLE_FLAGS} ${CUDA_NVCC_FLAGS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} --device-c "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o" ${lib_list}
 	  COMMENT "Building ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
 	  VERBATIM
 	  )
@@ -93,18 +104,8 @@ function(add_cuda_lib name files cpp_files libraries)
 
   endforeach()
 
-  # Collect required libraries
-  set(lib_list)
-  LIST(APPEND lib_list "-lcudadevrt") # "-lcudadevrt" is required for dynamic parallelism
-  LIST(APPEND lib_list "-lcudart")
-  LIST(APPEND lib_list "-lcuda")
-  foreach(library_name ${libraries})
-	LIST(APPEND lib_list "-l${library_name}")
-  endforeach()
-
   # Set compile flags and target name
-  set(flags "-shared;-Xcompiler;-fPIC;-dlink")
-  set(obj_name "${CMAKE_CURRENT_BINARY_DIR}/libcuda_compiled_library.so")
+  set(obj_name "${CMAKE_CURRENT_BINARY_DIR}/libcuda_compiled_library.a")
 
   # Get full path for cpp sources
   set(cpp_path)
@@ -114,28 +115,43 @@ function(add_cuda_lib name files cpp_files libraries)
 
   # Link cuda object files into one
   add_custom_target(cuda_linked_object ALL
-	COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -dlink -Xcompiler -fPIC ${obj_list} -o cuda_linked_object.o -lcudadevrt
-	DEPENDS ${obj_list}
-	)
+	COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} --device-link ${obj_list} -o cuda_linked_object.o
+  	DEPENDS ${obj_list}
+  	)
 
-  # Create flag to make cuda enable
-  set(CUDA_ENABLE_FLAGS
-	"-DCUDA_FOUND"
-	)
+  # Generate object files for each cpp file
+  foreach(file ${cpp_files})
+	# Extract file name from path
+	get_filename_component(file_name ${file} NAME)
 
-  # Link cpp files and cuda object files and generate shared library
+	# Execute cpp compiler to generate object file
+	add_custom_command(
+	  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o
+	  DEPENDS ${file}
+	  COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --blue "Building c++ Device object ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
+	  COMMAND ${CMAKE_CXX_COMPILER} ${CUDA_ENABLE_FLAGS} -std=c++11 -I${CUDA_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -L${CUDA_TOOLKIT_ROOT_DIR}/lib64 -c "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o" ${lib_list}
+	  COMMENT "Building ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
+	  VERBATIM
+	  )
+
+	# Create list of object files
+	LIST(APPEND obj_list ${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o)
+
+  endforeach()
+
+  # Link cpp files and cuda object files and generate static library
   add_custom_target(linked_library ALL
 	COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --red "Linking CXX executable ${name}"
-	COMMAND ${CUDA_NVCC_EXECUTABLE} -I${catkin_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include ${CUDA_ENABLE_FLAGS} -std=c++11 -Xcompiler -fPIC -shared -o ${obj_name} cuda_linked_object.o ${obj_list} ${cpp_path}
+	COMMAND ${CUDA_NVCC_EXECUTABLE} --lib --output-file ${obj_name} ${obj_list} cuda_linked_object.o
 	DEPENDS ${obj_list}
 	)
 
   add_dependencies(linked_library cuda_linked_object)
-  add_library(${name} SHARED IMPORTED GLOBAL)
+  add_library(${name} STATIC IMPORTED GLOBAL)
 
   add_custom_target(
 	copy_library ALL
-	COMMAND cmake -E copy ${obj_name} ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.so
+	COMMAND cmake -E copy ${obj_name} ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.a
 	)
 
   add_dependencies(copy_library linked_library)
@@ -143,7 +159,7 @@ function(add_cuda_lib name files cpp_files libraries)
 
   set_target_properties(${name}
 	PROPERTIES
-	IMPORTED_LOCATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.so
+	IMPORTED_LOCATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_LIB_DESTINATION}/lib${name}.a
 	)
 
 endfunction()

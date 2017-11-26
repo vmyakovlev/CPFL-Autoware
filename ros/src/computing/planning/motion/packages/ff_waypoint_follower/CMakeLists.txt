@@ -52,10 +52,15 @@ endif(CUDA_FOUND)
 link_directories(lib)
 if(CUDA_FOUND)
 cuda_add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp)
+target_link_libraries(ff_waypoint_follower
+  ${catkin_LIBRARIES}
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a
+  ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudart.so
+  )
 else()
 add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp)
-endif(CUDA_FOUND)
 target_link_libraries(ff_waypoint_follower  ${catkin_LIBRARIES})
+endif(CUDA_FOUND)
 
 #link_directories(/usr/local/lib/zmp/minivan)
 #add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp nodes/HevCnt.cpp nodes/HevComm.cpp)
