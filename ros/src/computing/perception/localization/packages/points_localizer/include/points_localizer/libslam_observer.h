@@ -148,8 +148,8 @@ void LibSlamObserver::readLogFile(const std::string& file_name)
                 >> ev.pose.yaw >> split
                 >> ev.align_time >> split
                 >> ev.transformation_probability;
-        std::cout << std::fixed;
-        std::cout << ev.transformation_probability << std::endl;
+        // std::cout << std::fixed;
+        // std::cout << ev.transformation_probability << std::endl;
         ev_reference_array_.push_back(ev);
     }
 }

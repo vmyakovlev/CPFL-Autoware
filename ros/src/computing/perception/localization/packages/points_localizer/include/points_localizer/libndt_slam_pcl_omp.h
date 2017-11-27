@@ -158,5 +158,5 @@ Pose LibNdtSlamPCLOMP<PointSource, PointTarget>::getFinalPose()
 {
     return convertToPose(ndt_.getFinalTransformation());
 }
-
+z
 #endif

@@ -65,7 +65,7 @@ class LibNdtSlamPCLCPU
         Pose getFinalPose() override;
 
     private:
-        gpu::GNormalDistributionsTransform ndt_;
+        cpu::NormalDistributionsTransform<PointSource, PointTarget> ndt_;
 };
 
 template <class PointSource, class PointTarget>

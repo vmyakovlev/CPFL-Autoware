@@ -175,7 +175,7 @@ class LibLocalizer
         virtual void setInputSource(const boost::shared_ptr< pcl::PointCloud<PointSource> const>& scan_ptr) = 0;
         virtual double getFitnessScore() = 0;
         virtual Pose getFinalPose() = 0;
-        virtual bool swapMap(){};
+        virtual bool swapMap(){}; //TODO
         virtual std::stringstream logFileContent() const;
 
     private:
@@ -216,11 +216,11 @@ template <class PointSource, class PointTarget>
 void LibLocalizer<PointSource, PointTarget>::updatePointsMap(const pcl::PointCloud<PointTarget>& pointcloud)
 {
     std::cout << __func__ << std::endl;
-    if(map_raw_ptr_ == nullptr)
+    if(map_raw_ptr_ == nullptr || pointcloud.points.size() != map_raw_ptr_->points.size())
     {
-    map_raw_ptr_ = boost::make_shared< pcl::PointCloud<PointTarget> >(pointcloud);
-    setInputTarget(map_raw_ptr_);
-}
+        map_raw_ptr_ = boost::make_shared< pcl::PointCloud<PointTarget> >(pointcloud);
+        setInputTarget(map_raw_ptr_);
+    }
 }
 
 template <class PointSource, class PointTarget>

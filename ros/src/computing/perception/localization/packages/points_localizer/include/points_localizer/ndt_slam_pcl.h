@@ -94,7 +94,7 @@ class NdtSlam
         tf::TransformBroadcaster tf_broadcaster_;
         tf::TransformListener tf_listener_;
         std::unique_ptr< LibNdtSlamBase<PointSource, PointTarget> > localizer_ptr_;
-        LibSlamObserver observer_;  //this instance is not observer pattern
+        LibSlamObserver observer_;
 
         Eigen::Matrix4f tf_ltob_;
         bool is_with_mapping_;
@@ -126,7 +126,7 @@ NdtSlam::NdtSlam(ros::NodeHandle nh, ros::NodeHandle private_nh)
     }
     else if(!use_omp && use_cpu && !use_gpu)
     {
-        ROS_INFO("use NDT SLAM PCL GPU version");
+        ROS_INFO("use NDT SLAM PCL CPU version");
         localizer_ptr_.reset(new LibNdtSlamPCLCPU<PointSource, PointTarget>);
     }
     else if(!use_omp && !use_cpu && use_gpu)

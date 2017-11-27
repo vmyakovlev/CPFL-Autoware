@@ -32,11 +32,13 @@
 #define LIBNDT_SLAM_BASE_H
 
 #include "liblocalizer.h"
+#include <thread>
 
 template <class PointSource, class PointTarget>
 class LibNdtSlamBase : public LibLocalizer<PointSource, PointTarget>
 {
     public:
+        LibNdtSlamBase();
         virtual ~LibNdtSlamBase() = default;
 
         virtual void setTransformationEpsilon(double trans_eps) = 0;
@@ -51,7 +53,25 @@ class LibNdtSlamBase : public LibLocalizer<PointSource, PointTarget>
 
         virtual double getTransformationProbability() const = 0;
         virtual std::stringstream logFileContent() const override;
+
+        virtual bool swapMap() override;
+
+    protected:
+        virtual void buildMapThread(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr);
+        virtual void buildMap(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr) {};
+        virtual void swapInstance() {};
+
+    private:
+        enum class ThreadStatus{sleeping, running, finished};
+        ThreadStatus thread_status_;
 };
+
+template <class PointSource, class PointTarget>
+LibNdtSlamBase<PointSource, PointTarget>::LibNdtSlamBase()
+    :thread_status_(ThreadStatus::sleeping)
+{
+
+}
 
 template <class PointSource, class PointTarget>
 std::stringstream LibNdtSlamBase<PointSource, PointTarget>::logFileContent() const
@@ -62,4 +82,32 @@ std::stringstream LibNdtSlamBase<PointSource, PointTarget>::logFileContent() con
     return content;
 }
 
+template <class PointSource, class PointTarget>
+void LibNdtSlamBase<PointSource, PointTarget>::buildMapThread(const boost::shared_ptr< pcl::PointCloud<PointTarget> const>& map_ptr)
+{
+    //not want to make many threads
+    if(thread_status_ != ThreadStatus::sleeping)
+        return;
+
+    thread_status_ = ThreadStatus::running;
+
+    std::thread build_map_thread([this, map_ptr](){
+        buildMap(map_ptr);
+        thread_status_ = ThreadStatus::finished;
+    });
+
+    build_map_thread.detach();
+
+}
+
+template <class PointSource, class PointTarget>
+bool LibNdtSlamBase<PointSource, PointTarget>::swapMap()
+{
+    if(thread_status_ != ThreadStatus::finished)
+        return false;
+
+    swapInstance();
+    thread_status_ = ThreadStatus::sleeping;
+    return true;
+}
 #endif

@@ -99,7 +99,7 @@ struct Pose
 
   friend std::ostream& operator<<(std::ostream& os, const Pose& pose)
   {
-    os << "x:" << pose.x << " y:" << pose.y << " z:" << pose.z << " roll:" << pose.roll/M_PI*180.0 << " pitch:" << pose.pitch/M_PI*180.0 << " yaw:" << pose.yaw/M_PI*180.0;
+    os << "x:" << pose.x << " y:" << pose.y << " z:" << pose.z << " roll:" << pose.roll/M_PI*180.0 << "[deg] pitch:" << pose.pitch/M_PI*180.0 << "[deg] yaw:" << pose.yaw/M_PI*180.0 << "[deg]";
     return os;
   };
 
