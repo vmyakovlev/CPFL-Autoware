@@ -40,10 +40,6 @@ include_directories(
 find_package(CUDA)
 if (CUDA_FOUND)
 include_directories(${CUDA_INCLUDE_DIRS})
-# Create flag to make cuda enable
-set(CUDA_ENABLE_FLAGS
-  "-DCUDA_FOUND"
-  )
 endif(CUDA_FOUND)
 
 ## Declare a C++ library
@@ -52,6 +48,13 @@ endif(CUDA_FOUND)
 link_directories(lib)
 if(CUDA_FOUND)
 cuda_add_executable(ff_waypoint_follower nodes/ff_waypoint_follower.cpp nodes/ff_waypoint_follower_core.cpp)
+
+# Create flag to make cuda enable
+target_compile_definitions(ff_waypoint_follower
+  PRIVATE
+  CUDA_FOUND=1
+  )
+
 target_link_libraries(ff_waypoint_follower
   ${catkin_LIBRARIES}
   ${CUDA_TOOLKIT_ROOT_DIR}/lib64/libcudadevrt.a

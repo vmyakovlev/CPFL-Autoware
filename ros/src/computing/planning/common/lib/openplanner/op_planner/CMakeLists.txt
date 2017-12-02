@@ -129,7 +129,7 @@ function(add_cuda_lib name files cpp_files libraries)
 	  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o
 	  DEPENDS ${file}
 	  COMMAND ${CMAKE_COMMAND} -E cmake_echo_color --blue "Building c++ Device object ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
-	  COMMAND ${CMAKE_CXX_COMPILER} ${CUDA_ENABLE_FLAGS} -std=c++11 -I${CUDA_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -L${CUDA_TOOLKIT_ROOT_DIR}/lib64 -c "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o" ${lib_list}
+	  COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_ENABLE_FLAGS} -std=c++11 -I${CUDA_INCLUDE_DIRS} -I${CMAKE_CURRENT_SOURCE_DIR}/include -I${catkin_INCLUDE_DIRS} -L${CUDA_TOOLKIT_ROOT_DIR}/lib64 -c "${CMAKE_CURRENT_SOURCE_DIR}/${file}" -o "${CMAKE_CURRENT_BINARY_DIR}/${file_name}.o" ${lib_list}
 	  COMMENT "Building ${CMAKE_CURRENT_SOURCE_DIR}/${file}"
 	  VERBATIM
 	  )

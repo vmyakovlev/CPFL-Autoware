@@ -50,10 +50,6 @@ include_directories(${catkin_INCLUDE_DIRS}
 find_package(CUDA)
 if (CUDA_FOUND)
 include_directories(${CUDA_INCLUDE_DIRS})
-# Create flag to make cuda enable
-set(CUDA_ENABLE_FLAGS
-  "-DCUDA_FOUND"
-  )
 endif(CUDA_FOUND)
 
 set(SIMUH_SRC
@@ -76,6 +72,12 @@ cuda_add_library(${PROJECT_NAME}
 	    ${SIMUH_SRC}
   	    STATIC
 )
+
+# Create flag to make cuda enable
+target_compile_definitions(${PROJECT_NAME}
+  PRIVATE
+  CUDA_FOUND=1
+  )
 
 target_link_libraries(${PROJECT_NAME}
 	${catkin_LIBRARIES}
@@ -112,6 +114,12 @@ cuda_add_executable(Simu
 	    ${SIMUH_SRC}
 	    main.cpp
 )
+
+# Create flag to make cuda enable
+target_compile_definitions(Simu
+  PRIVATE
+  CUDA_FOUND=1
+  )
 
 target_link_libraries(Simu
 		${catkin_LIBRARIES}

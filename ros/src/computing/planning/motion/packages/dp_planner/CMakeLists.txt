@@ -46,10 +46,6 @@ include_directories(
 find_package(CUDA)
 if(CUDA_FOUND)
 include_directories(${CUDA_INCLUDE_DIRS})
-# Create flag to make cuda enable
-set(CUDA_ENABLE_FLAGS
-  "-DCUDA_FOUND"
-  )
 endif()
 
 ## Declare a C++ library
@@ -59,6 +55,12 @@ link_directories(lib)
 
 if(CUDA_FOUND)
 cuda_add_executable(dp_planner nodes/dp_planner.cpp nodes/dp_planner_core.cpp nodes/RosHelpers.cpp nodes/PolygonGenerator.cpp)
+
+# Create flag to make cuda enable
+target_compile_definitions(${PROJECT_NAME}
+  PRIVATE
+  CUDA_FOUND=1
+  )
 
 target_link_libraries(dp_planner
   ${catkin_LIBRARIES}
