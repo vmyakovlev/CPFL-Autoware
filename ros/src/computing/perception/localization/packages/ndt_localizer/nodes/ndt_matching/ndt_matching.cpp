@@ -411,7 +411,7 @@ static void map_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
       {
         ros::Time now = ros::Time(0);
         local_transform_listener.waitForTransform("/map", "/world", now, ros::Duration(10.0));
-        local_transform_listener.lookupTransform("/map", "world", now, local_transform);
+        local_transform_listener.lookupTransform("/map", "/world", now, local_transform);
       }
       catch (tf::TransformException& ex)
       {
@@ -522,8 +522,8 @@ static void initialpose_callback(const geometry_msgs::PoseWithCovarianceStamped:
   try
   {
     ros::Time now = ros::Time(0);
-    listener.waitForTransform("/map", "/world", now, ros::Duration(10.0));
-    listener.lookupTransform("/map", "world", now, transform);
+    listener.waitForTransform("/map", input->header.frame_id, now, ros::Duration(10.0));
+    listener.lookupTransform("/map", input->header.frame_id, now, transform);
   }
   catch (tf::TransformException& ex)
   {
