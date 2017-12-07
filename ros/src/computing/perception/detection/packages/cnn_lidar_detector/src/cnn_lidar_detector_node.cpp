@@ -292,6 +292,7 @@ class RosLidarDetectorApp
 		jsk_recognition_msgs::BoundingBoxArray objects_boxes;
 
 		objects_boxes.header = in_sensor_cloud->header;
+		objects_boxes.boxes.clear();
 
 		lidar_detector_->Detect(projected_cloud_intensity,
 		                        projected_cloud_range,

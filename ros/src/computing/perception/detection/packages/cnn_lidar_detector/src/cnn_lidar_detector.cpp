@@ -337,16 +337,24 @@ void CnnLidarDetector::GetNetworkResults(cv::Mat& out_objectness_image,
 	//apply NMS to boxes
 	std::vector< std::vector<float> > final_cars_boxes, final_person_boxes, final_bike_boxes;
 
-	/*final_cars_boxes = Nms(cars_boxes, 0.3);
-	final_person_boxes = Nms(person_boxes, 0.3);
-	final_bike_boxes = Nms(bike_boxes, 0.3);
-	std::cout << "before nms (cars):" << cars_boxes.size() << " after nms:" << final_cars_boxes.size() << std::endl;
-	std::cout << "before nms (cars):" << person_boxes.size() << " after nms:" << final_person_boxes.size() << std::endl;
-	std::cout << "before nms (cars):" << bike_boxes.size() << " after nms:" << final_bike_boxes.size() << std::endl;*/
+	const bool use_nms = true;
+	if (use_nms)
+	{
+		final_cars_boxes = Nms(cars_boxes, 0.3);
+		final_person_boxes = Nms(person_boxes, 0.3);
+		final_bike_boxes = Nms(bike_boxes, 0.3);
+		std::cout << "before nms (cars):" << cars_boxes.size() << " after nms:" << final_cars_boxes.size() << std::endl;
+		std::cout << "before nms (cars):" << person_boxes.size() << " after nms:" << final_person_boxes.size()
+		          << std::endl;
+		std::cout << "before nms (cars):" << bike_boxes.size() << " after nms:" << final_bike_boxes.size() << std::endl;
+	}
+	else
+	{
+		final_cars_boxes = cars_boxes;
+		final_person_boxes = person_boxes;
+		final_bike_boxes = bike_boxes;
+	}
 
-	final_cars_boxes = cars_boxes;
-	final_person_boxes = person_boxes;
-	final_bike_boxes = bike_boxes;
 	//copy resulting boxes to output message
 	out_boxes.boxes.clear();
 
