@@ -112,6 +112,13 @@ namespace PlannerHNS
 						     const double carInfo_length,
 						     const double params_minFollowingDistance,
 						     const int* rollOuts_each_length);
+
+    /*
+     * Maximum the number of threads for one dimension per block
+     * The available range is [ 1, 32(=sqrt(1024)) ]
+     */
+    static const int kBlockSize = 4;
+
 }
 
 #endif /* TRAJECTORYCOSTSONGPU_KERNEL_H_ */

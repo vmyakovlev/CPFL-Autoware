@@ -71,7 +71,6 @@ private:
 
 	struct TrajectoryCostsDevVectors m_TrajectoryCostsDevVectors;
 
-	static const int kBlockSize = 32;
 };
 
 }

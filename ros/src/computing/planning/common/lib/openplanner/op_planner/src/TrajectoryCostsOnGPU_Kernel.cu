@@ -158,36 +158,36 @@ namespace PlannerHNS
         double* closest_obj_distance_tmp_buffer = closest_obj_distance_tmp_buffer_begin + iCostIndex * num_of_contourPoints;
 
         // Define kernel shape of dynamic parallelism kernel
-        dim3 block_dim;
-        block_dim.y = 1;
-        block_dim.z = 1;
-        if (num_of_contourPoints < 32) {
-            block_dim.x = num_of_contourPoints;
-        } else {
-            block_dim.x = 32;
-        }
+        dim3 block_dim(kBlockSize, 1, 1);
 
         dim3 grid_dim((num_of_contourPoints + block_dim.x - 1) / block_dim.x, 1, 1);
 
+        // Create CUDA stream so that child kernel can be executed parallelly
+        cudaStream_t stream;
+        cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+
         // Execute dynamic kernel
-        CalculateLateralAndLongitudinalCosts_parallel<<<grid_dim, block_dim>>>(bBlocked_tmp_buffer,
-                                                                               lateral_cost_tmp_buffer,
-                                                                               longitudinal_cost_tmp_buffer,
-                                                                               closest_obj_distance_tmp_buffer,
-                                                                               num_of_contourPoints,
-                                                                               contourPoints,
-                                                                               &(totalPaths[trajectory_index]),
-                                                                               trajectory_length,
-                                                                               car_info,
-                                                                               distance_from_center_vector[iCostIndex],
-                                                                               carInfo_length,
-                                                                               critical_long_front_distance,
-                                                                               safetyBorder,
-                                                                               num_of_safetyBorder,
-                                                                               critical_lateral_distance,
-                                                                               params_minFollowingDistance);
+        CalculateLateralAndLongitudinalCosts_parallel<<<grid_dim, block_dim, 0, stream>>>(bBlocked_tmp_buffer,
+                                                                                          lateral_cost_tmp_buffer,
+                                                                                          longitudinal_cost_tmp_buffer,
+                                                                                          closest_obj_distance_tmp_buffer,
+                                                                                          num_of_contourPoints,
+                                                                                          contourPoints,
+                                                                                          &(totalPaths[trajectory_index]),
+                                                                                          trajectory_length,
+                                                                                          car_info,
+                                                                                          distance_from_center_vector[iCostIndex],
+                                                                                          carInfo_length,
+                                                                                          critical_long_front_distance,
+                                                                                          safetyBorder,
+                                                                                          num_of_safetyBorder,
+                                                                                          critical_lateral_distance,
+                                                                                          params_minFollowingDistance);
         // Synchronize only child kernel launched by this thread
-        cudaDeviceSynchronize();
+        cudaError_t res = cudaDeviceSynchronize();
+        if (res != cudaSuccess) {
+            printf("Error occured in child kernel. Error: %s\n", cudaGetErrorString(res));
+        }
 
         // Merge values in temporary buffer
 

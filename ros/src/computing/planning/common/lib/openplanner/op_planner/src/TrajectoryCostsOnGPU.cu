@@ -381,19 +381,7 @@ void TrajectoryCostsOnGPU::CalculateLateralAndLongitudinalCostsOnGPU(struct Traj
 
 	int grid_total_y_dim = rollOuts.size();
 
-	dim3 block_dim;
-	block_dim.z = 1;
-	if (grid_total_x_dim < kBlockSize) {
-	    block_dim.x = grid_total_x_dim;
-	} else {
-	    block_dim.x = kBlockSize;
-	}
-
-	if (grid_total_y_dim < kBlockSize) {
-	    block_dim.y = grid_total_y_dim;
-	} else {
-	    block_dim.y = kBlockSize;
-	}
+	dim3 block_dim(kBlockSize, kBlockSize, 1);
 
 	dim3 grid_dim((grid_total_x_dim + block_dim.x - 1) / block_dim.x,
 		      (grid_total_y_dim + block_dim.y - 1) / block_dim.y,
@@ -524,7 +512,15 @@ void TrajectoryCostsOnGPU::NormalizeCostsOnGPU(struct TrajectoryCostsDevVectors&
 	double transitionCosts = 0;
 
 	// Confirm that all GPU calculations executed before are completed
-	cudaDeviceSynchronize();
+	cudaError_t synch_status = cudaDeviceSynchronize();
+	if (synch_status != cudaSuccess) {
+	    // This is fatal status because one CUDA operations issued until here was failed.
+	    // Exit program with EXIT_FAILURE status.
+	    std::cerr << "*** CUDA internal error is occured at line " << __LINE__ << " at " << __FILE__ << std::endl
+		      << "*** The error was: " << cudaGetErrorString(synch_status) << std::endl
+		      << "*** Program will be terminated." << std::endl;
+	    exit(EXIT_FAILURE);
+	}
 
 	// Calculate total sum of elements in each buffers
 	totalPriorities = thrust::reduce(trajectoryCostsDev.priority_cost_dev_vector.begin(),
@@ -651,24 +647,54 @@ void TrajectoryCostsOnGPU::InitDevVectors(const vector<TrajectoryCost>& trajecto
     devVectors.longitudinal_cost_dev_vector.resize(new_size);
     devVectors.bBlocked_dev_vector.resize(new_size);
 
-    // Copy current data to GPU
+    // Prepare the thurst::host_vector for efficient copy from host to device
+    thrust::host_vector<int> relative_index_host_vector;
+    thrust::host_vector<double> closest_obj_velocity_host_vector;
+    thrust::host_vector<double> distance_from_center_host_vector;
+    thrust::host_vector<double> priority_cost_host_vector;
+    thrust::host_vector<double> transition_cost_host_vector;
+    thrust::host_vector<double> closest_obj_cost_host_vector;
+    thrust::host_vector<double> cost_host_vector;
+    thrust::host_vector<double> closest_obj_distance_host_vector;
+    thrust::host_vector<int> lane_index_host_vector;
+    thrust::host_vector<double> lane_change_cost_host_vector;
+    thrust::host_vector<double> lateral_cost_host_vector;
+    thrust::host_vector<double> longitudinal_cost_host_vector;
+    thrust::host_vector<bool> bBlocked_host_vector;
+
+    // Copy current data to temporary host memory
     for (int index = 0; index < trajectoryCosts.size(); index++){
 	TrajectoryCost cost = trajectoryCosts.at(index);
 
-	devVectors.relative_index_dev_vector[index] = cost.relative_index;
-	devVectors.closest_obj_velocity_dev_vector[index] = cost.closest_obj_velocity;
-	devVectors.distance_from_center_dev_vector[index] = cost.distance_from_center;
-	devVectors.priority_cost_dev_vector[index] = cost.priority_cost;
-	devVectors.transition_cost_dev_vector[index] = cost.transition_cost;
-	devVectors.closest_obj_cost_dev_vector[index] = cost.closest_obj_cost;
-	devVectors.cost_dev_vector[index] = cost.cost;
-	devVectors.closest_obj_distance_dev_vector[index] = cost.closest_obj_distance;
-	devVectors.lane_index_dev_vector[index] = cost.lane_index;
-	devVectors.lane_change_cost_dev_vector[index] = cost.lane_change_cost;
-	devVectors.lateral_cost_dev_vector[index] = cost.lateral_cost;
-	devVectors.longitudinal_cost_dev_vector[index] = cost.longitudinal_cost;
-	devVectors.bBlocked_dev_vector[index] = cost.bBlocked;
+	relative_index_host_vector.push_back(cost.relative_index);
+	closest_obj_velocity_host_vector.push_back(cost.closest_obj_velocity);
+	distance_from_center_host_vector.push_back(cost.distance_from_center);
+	priority_cost_host_vector.push_back(cost.priority_cost);
+	transition_cost_host_vector.push_back(cost.transition_cost);
+	closest_obj_cost_host_vector.push_back(cost.closest_obj_cost);
+	cost_host_vector.push_back(cost.cost);
+	closest_obj_distance_host_vector.push_back(cost.closest_obj_distance);
+	lane_index_host_vector.push_back(cost.lane_index);
+	lane_change_cost_host_vector.push_back(cost.lane_change_cost);
+	lateral_cost_host_vector.push_back(cost.lateral_cost);
+	longitudinal_cost_host_vector.push_back(cost.longitudinal_cost);
+	bBlocked_host_vector.push_back(cost.bBlocked);
     }
+
+    // Copy data to GPU
+    devVectors.relative_index_dev_vector = relative_index_host_vector;
+    devVectors.closest_obj_velocity_dev_vector = closest_obj_velocity_host_vector;
+    devVectors.distance_from_center_dev_vector = distance_from_center_host_vector;
+    devVectors.priority_cost_dev_vector = priority_cost_host_vector;
+    devVectors.transition_cost_dev_vector = transition_cost_host_vector;
+    devVectors.closest_obj_cost_dev_vector = closest_obj_cost_host_vector;
+    devVectors.cost_dev_vector = cost_host_vector;
+    devVectors.closest_obj_distance_dev_vector = closest_obj_distance_host_vector;
+    devVectors.lane_index_dev_vector = lane_index_host_vector;
+    devVectors.lane_change_cost_dev_vector = lane_change_cost_host_vector;
+    devVectors.lateral_cost_dev_vector = lateral_cost_host_vector;
+    devVectors.longitudinal_cost_dev_vector = longitudinal_cost_host_vector;
+    devVectors.bBlocked_dev_vector = bBlocked_host_vector;
 }
 
 }  // namespace PlannerHNS
