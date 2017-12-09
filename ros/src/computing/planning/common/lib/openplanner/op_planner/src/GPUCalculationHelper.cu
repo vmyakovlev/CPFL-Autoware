@@ -147,7 +147,8 @@ namespace PlannerHNS
             info.perp_point.pos = invRotationMat  * info.perp_point.pos;
             info.perp_point.pos = invTranslationMat  * info.perp_point.pos;
 
-            info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
+            // info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
+            info.from_back_distance = sqrt(pow(info.perp_point.pos.y - prevWP.pos.y, 2) + pow(info.perp_point.pos.x - prevWP.pos.x, 2));
 
             info.angle_diff = AngleBetweenTwoAnglesPositive(p1.pos.a, p.pos.a)*RAD2DEG;
 
@@ -167,14 +168,17 @@ namespace PlannerHNS
 		return p2.to_front_distance - p1.to_front_distance;
 	    } else if(p2.iBack >= p1.iFront) {
 		double d_on_path = p1.to_front_distance + p2.from_back_distance;
-		for(unsigned int i = p1.iFront; i < p2.iBack; i++)
-			d_on_path += hypot(trajectory[i+1].pos.y - trajectory[i].pos.y, trajectory[i+1].pos.x - trajectory[i].pos.x);
+		for(unsigned int i = p1.iFront; i < p2.iBack; i++) {
+		    // d_on_path += hypot(trajectory[i+1].pos.y - trajectory[i].pos.y, trajectory[i+1].pos.x - trajectory[i].pos.x);
+		    d_on_path += sqrt(pow(trajectory[i+1].pos.y - trajectory[i].pos.y, 2) + pow(trajectory[i+1].pos.x - trajectory[i].pos.x, 2));
+		}
 
 		return d_on_path;
 	    } else if(p2.iFront <= p1.iBack) {
 		double d_on_path = p1.from_back_distance + p2.to_front_distance;
 		for(unsigned int i = p2.iFront; i < p1.iBack; i++)
-		    d_on_path += hypot(trajectory[i+1].pos.y - trajectory[i].pos.y, trajectory[i+1].pos.x - trajectory[i].pos.x);
+		    // d_on_path += hypot(trajectory[i+1].pos.y - trajectory[i].pos.y, trajectory[i+1].pos.x - trajectory[i].pos.x);
+		    d_on_path += sqrt(pow(trajectory[i+1].pos.y - trajectory[i].pos.y, 2) + pow(trajectory[i+1].pos.x - trajectory[i].pos.x, 2));
 
 		return -d_on_path;
 	    } else {

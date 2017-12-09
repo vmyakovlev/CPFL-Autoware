@@ -34,7 +34,7 @@ namespace PlannerHNS
                                                        const double critical_lateral_distance,
                                                        const double params_minFollowingDistance) {
         // "icon" is the index value in this kernel
-        int icon = blockIdx.x * blockDim.x + threadIdx.x;
+        unsigned int icon = blockIdx.x * blockDim.x + threadIdx.x;
         if (num_of_contourPoints <= icon) return;
 
         // Initialize output buffer
@@ -62,12 +62,12 @@ namespace PlannerHNS
         longitudinalDist = longitudinalDist - critical_long_front_distance;
 
         // Calculate bBlocked value for each buffer.
-        // Here, if conditions are converted into bool operation to avoid divergent branch.
+        // Here, "if conditions" are converted into bool operation to avoid divergent branch.
         // Original processes are following:
         // ==============================================
         // if(ForGPU::PolygonShape::PointInsidePolygon(safetyBorder, num_of_safetyBorder, contourPoints[icon].pos) == true)
         //     bBlocked_buffer[icon] = true;
-
+        //
         // if(lateralDist <= critical_lateral_distance
         //    && longitudinalDist >= -carInfo_length/1.5
         //    && longitudinalDist < params_minFollowingDistance)
@@ -78,7 +78,7 @@ namespace PlannerHNS
             && (longitudinalDist >= -carInfo_length/1.5)
             && (longitudinalDist < params_minFollowingDistance);
 
-        bBlocked_buffer[icon] = bBlocked_condition1 && bBlocked_condition2;
+        bBlocked_buffer[icon] = bBlocked_condition1 || bBlocked_condition2;
 
         // Calculate lateral_cost and longitudinal_cost for each buffer
         lateral_cost_buffer[icon] = 1.0/lateralDist;
@@ -123,17 +123,24 @@ namespace PlannerHNS
                                                      const ForGPU::GPSPoint* safetyBorder,
                                                      const int num_of_safetyBorder,
                                                      const double carInfo_length,
-                                                     const double params_minFollowingDistance) {
-        // Define indices of this thread
-        int it = blockIdx.x * blockDim.x + threadIdx.x;
-        int il = blockIdx.y * blockDim.y + threadIdx.y;
-        int iCostIndex = it + il * valid_id_limit.x;
+                                                     const double params_minFollowingDistance,
+                                                     const int* rollOuts_each_length
+                                                     ) {
+        // Define indices of this thread and check indices range
+        unsigned int il = blockIdx.y * blockDim.y + threadIdx.y;
+        if (valid_id_limit.y <= il || rollOuts_each_length[il] == 0) return;
 
-        // Check indices range
-        if (valid_id_limit.x <= it || valid_id_limit.y <= il) return;
+        unsigned int it = blockIdx.x * blockDim.x + threadIdx.x;
+        if (rollOuts_each_length[il] <= it) return;
+
+        int iCostIndex = 0;
+        for (int i = 0; i < il; i++) {
+            iCostIndex += rollOuts_each_length[i];
+        }
+        iCostIndex += it;
 
         ForGPU::RelativeInfo car_info;
-        int trajectory_index;
+        int trajectory_index = 0;
         for (int i = 0; i < il; i++) {
             trajectory_index += totalPaths_each_length[i];
         }
@@ -151,7 +158,15 @@ namespace PlannerHNS
         double* closest_obj_distance_tmp_buffer = closest_obj_distance_tmp_buffer_begin + iCostIndex * num_of_contourPoints;
 
         // Define kernel shape of dynamic parallelism kernel
-        dim3 block_dim(32, 1, 1);
+        dim3 block_dim;
+        block_dim.y = 1;
+        block_dim.z = 1;
+        if (num_of_contourPoints < 32) {
+            block_dim.x = num_of_contourPoints;
+        } else {
+            block_dim.x = 32;
+        }
+
         dim3 grid_dim((num_of_contourPoints + block_dim.x - 1) / block_dim.x, 1, 1);
 
         // Execute dynamic kernel
@@ -184,13 +199,13 @@ namespace PlannerHNS
 
         // lateral_cost_vector[iCostIndex] and longitudinal_cost_vector[iCostIndex]
         // will be simply sum of all element of corresponding buffer
-        lateral_cost_vector[iCostIndex] = thrust::reduce(thrust::device,
-                                                         lateral_cost_tmp_buffer,
-                                                         lateral_cost_tmp_buffer + num_of_contourPoints);
+        lateral_cost_vector[iCostIndex] += thrust::reduce(thrust::device,
+                                                          lateral_cost_tmp_buffer,
+                                                          lateral_cost_tmp_buffer + num_of_contourPoints);
 
-        longitudinal_cost_vector[iCostIndex] = thrust::reduce(thrust::device,
-                                                              longitudinal_cost_tmp_buffer,
-                                                              longitudinal_cost_tmp_buffer + num_of_contourPoints);
+        longitudinal_cost_vector[iCostIndex] += thrust::reduce(thrust::device,
+                                                               longitudinal_cost_tmp_buffer,
+                                                               longitudinal_cost_tmp_buffer + num_of_contourPoints);
 
         // closest_obj_distance_vector[iCostIndex] will be the minimum value in correspoinding buffer
         double* minimum_element = thrust::min_element(thrust::device,
@@ -201,18 +216,8 @@ namespace PlannerHNS
         closest_obj_distance_vector[iCostIndex] = *minimum_element;
         closest_obj_velocity_vector[iCostIndex] = contourPoints[minimum_element_index].v;
 
+
 #if 0
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
-        // ここのループをdynamic parallel executionで並列化する
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
-        // ******************************************************************
         for (int icon = 0; icon < num_of_contourPoints; icon++) {
             ForGPU::RelativeInfo obj_info;
             ForGPU::GetRelativeInfo(&(totalPaths[trajectory_index]), trajectory_length, contourPoints[icon], obj_info);

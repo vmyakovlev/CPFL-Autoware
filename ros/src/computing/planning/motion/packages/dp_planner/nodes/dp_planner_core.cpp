@@ -873,12 +873,10 @@ void PlannerX::PlannerMainLoop()
 
 	while (ros::ok())
 	{
-		std::cerr << "###########before 0############ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
 		timespec iterationTime;
 		UtilityHNS::UtilityH::GetTickCount(iterationTime);
 
 		ros::spinOnce();
-		std::cerr << "###########before 1############ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
 
 		if(m_MapSource == MAP_KML_FILE && !bKmlMapLoaded)
 		{
@@ -910,7 +908,6 @@ void PlannerX::PlannerMainLoop()
 //			double drift = hypot(m_LocalPlanner.state.pos.y-m_CurrentPos.pos.y, m_LocalPlanner.state .pos.x-m_CurrentPos.pos.x);
 //			if(drift > 10)
 //				bMakeNewPlan = true;
-			std::cerr << "###########before 2############ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
 
 			m_LocalPlanner.m_pCurrentBehaviorState->GetCalcParams()->bOutsideControl = m_bOutsideControl;
 			m_LocalPlanner.state = m_CurrentPos;
@@ -918,11 +915,7 @@ void PlannerX::PlannerMainLoop()
 			double dt  = UtilityHNS::UtilityH::GetTimeDiffNow(m_PlanningTimer);
 			UtilityHNS::UtilityH::GetTickCount(m_PlanningTimer);
 
-			std::cerr << "############################ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
-
 			m_CurrentBehavior = m_LocalPlanner.DoOneStep(dt, m_VehicleState, m_TrackedClusters, 1, m_Map, m_bEmergencyStop, m_bGreenLight, true);
-
-			std::cerr << "###########after############ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
 
 			visualization_msgs::Marker behavior_rviz;
 
@@ -1075,7 +1068,6 @@ void PlannerX::PlannerMainLoop()
 		//double onePassTime = UtilityHNS::UtilityH::GetTimeDiffNow(iterationTime);
 //		if(onePassTime > 0.1)
 //			std::cout << "Slow Iteration Time = " << onePassTime << " , for Obstacles : (" << m_TrackedClusters.size() << ", " << m_OriginalClusters.size() << ")" <<  std::endl;
-		std::cerr << "###########after2############ m_LocalPlanner.m_pCurrentBehaviorState->m_pParams).horizonDistance: " << (m_LocalPlanner.m_pCurrentBehaviorState->m_pParams)->horizonDistance << std::endl;
 	}
 }
 

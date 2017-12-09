@@ -62,7 +62,7 @@ namespace PlannerHNS
 
 	template <typename Tuple>
 	__device__
-	double operator()(Tuple t)
+	void operator()(Tuple t)
 	{
 	    auto &priority_cost = thrust::get<0>(t);
 	    auto &transition_cost = thrust::get<1>(t);
@@ -110,7 +110,8 @@ namespace PlannerHNS
 						     const ForGPU::GPSPoint* safetyBorder,
 						     const int num_of_safetyBorder,
 						     const double carInfo_length,
-						     const double params_minFollowingDistance);
+						     const double params_minFollowingDistance,
+						     const int* rollOuts_each_length);
 }
 
 #endif /* TRAJECTORYCOSTSONGPU_KERNEL_H_ */

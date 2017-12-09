@@ -865,116 +865,43 @@ bool LocalPlannerH::CalculateObstacleCosts(PlannerHNS::RoadNetwork& map, const P
 	UtilityH::GetTickCount(costTimer);
 
 #ifndef CUDA_FOUND
-	std::cerr << "************ CPU mode *****************" << std::endl;
+	// std::cerr << "************ CPU mode *****************" << std::endl;
 	std::cerr << "horizonDitance: " << (*m_pCurrentBehaviorState->m_pParams).horizonDistance << std::endl;
 	TrajectoryCost tc = m_TrajectoryCostsCalculatotor.DoOneStep(m_RollOuts, m_TotalPath, state,
 			m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory, m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeLane, *m_pCurrentBehaviorState->m_pParams,
 			m_CarInfo,vehicleState, obj_list);
 #else
-	std::cerr << "************ GPU acceleration mode enable *****************" << std::endl;
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	// m_pCurrentBehaviorState->m_pParamsのメンバ値が
-	// この関数（LocalPlannerH::DoOneStep）が2回目以降にコールされた際にバグっている
-	// CUDA_FOUNDのマクロが有効になってない場合は、1回目も２回目も同じ値が入って来る
-	std::cerr << "horizonDitance: " << (*m_pCurrentBehaviorState->m_pParams).horizonDistance << std::endl;
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////
+	// std::cerr << "************ GPU acceleration mode enable *****************" << std::endl;
 	TrajectoryCost tc = m_TrajectoryCostsCalculatotorOnGPU.DoOneStep(m_RollOuts, m_TotalPath, state,
 			m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory, m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeLane, *m_pCurrentBehaviorState->m_pParams,
 			m_CarInfo,vehicleState, obj_list);
-	std::cerr << "returned from Do one step" << std::endl;
 
-
-#if 0
 	// Copy data to m_TrajectoryCostsCalculatotor for being called from other unit
-	std::cerr << "PrevCostIndex" << std::endl
-			  << "CPU: " << m_TrajectoryCostsCalculatotor.m_PrevCostIndex << std::endl
-			  << "GPU: " << m_TrajectoryCostsCalculatotorOnGPU.m_PrevCostIndex << std::endl;
 	m_TrajectoryCostsCalculatotor.m_PrevCostIndex = m_TrajectoryCostsCalculatotorOnGPU.m_PrevCostIndex;
 
-	std::cerr << "TrajectoryCosts.size()" << std::endl
-			  << "CPU: " << m_TrajectoryCostsCalculatotor.m_TrajectoryCosts.size() << std::endl
-			  << "GPU: " << m_TrajectoryCostsCalculatotorOnGPU.m_TrajectoryCosts.size() << std::endl;
-	m_TrajectoryCostsCalculatotor.m_TrajectoryCosts.reserve(m_TrajectoryCostsCalculatotorOnGPU.m_TrajectoryCosts.size());
+	m_TrajectoryCostsCalculatotor.m_TrajectoryCosts.clear();
 	std::copy(m_TrajectoryCostsCalculatotorOnGPU.m_TrajectoryCosts.begin(),
 			  m_TrajectoryCostsCalculatotorOnGPU.m_TrajectoryCosts.end(),
 			  std::back_inserter(m_TrajectoryCostsCalculatotor.m_TrajectoryCosts));
 
-	std::cerr << "SafetyBorder.size()" << std::endl
-			  << "CPU: " << m_TrajectoryCostsCalculatotor.m_SafetyBorder.points.size() << std::endl
-			  << "GPU: " << m_TrajectoryCostsCalculatotorOnGPU.m_SafetyBorder.points.size() << std::endl;
-	m_TrajectoryCostsCalculatotor.m_SafetyBorder.points.reserve(m_TrajectoryCostsCalculatotorOnGPU.m_SafetyBorder.points.size());
+	m_TrajectoryCostsCalculatotor.m_SafetyBorder.points.clear();
 	std::copy(m_TrajectoryCostsCalculatotorOnGPU.m_SafetyBorder.points.begin(),
 			  m_TrajectoryCostsCalculatotorOnGPU.m_SafetyBorder.points.end(),
 			  std::back_inserter(m_TrajectoryCostsCalculatotor.m_SafetyBorder.points));
 #endif
-#endif
+
 	m_CostCalculationTime = UtilityH::GetTimeDiffNow(costTimer);
-
-#if 0
-	std::cerr << "index: " << tc.index << std::endl
-			  << "relative_index: " << tc.relative_index << std::endl
-			  << "closest_obj_velocity: " << tc.closest_obj_velocity << std::endl
-			  << "distance_from_center: " << tc.distance_from_center << std::endl
-			  << "priority_cost: " << tc.priority_cost << std::endl
-			  << "transition_cost: " << tc.transition_cost << std::endl
-			  << "closest_obj_cost: " << tc.closest_obj_cost << std::endl
-			  << "cost: " << tc.cost << std::endl
-			  << "closest_obj_distance: " << tc.closest_obj_distance << std::endl
-			  << "lane_index: " << tc.lane_index << std::endl
-			  << "lane_change_cost: " << tc.lane_change_cost << std::endl
-			  << "lateral_cost: " << tc.lateral_cost << std::endl
-			  << "longitudinal_cost: " << tc.longitudinal_cost << std::endl
-			  << "bBlocked: " << tc.bBlocked << std::endl;
-	std::cerr << "lateral_costs: " << std::endl;
-	for (const auto p : tc.lateral_costs) {
-	  std::cerr << "  first, second: " << p.first << ", " << p.second << std::endl;
-	}
-#endif
-
-
-
-
 
 	timespec behTimer;
 	UtilityH::GetTickCount(behTimer);
 	CalculateImportantParameterForDecisionMaking(vehicleState, goalID, bEmergencyStop, bGreenTrafficLight, tc);
-	std::cerr << "returned from CalculateImportantParameterForDecisionMaking" << std::endl;
 
 	PlannerHNS::BehaviorState beh = GenerateBehaviorState(vehicleState);
-	std::cerr << "returned from GenerateBehaviorState" << std::endl;
 	m_BehaviorGenTime = UtilityH::GetTimeDiffNow(behTimer);
 
 	timespec t;
 	UtilityH::GetTickCount(t);
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// horizonDistanceの値がバグってると、以下の関数から一生返ってこない
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	// ########################################################################
-	std::cerr << "m_pCurrentBehaviorState->m_pParams->smoothingToleranceError: "
-			  << m_pCurrentBehaviorState->m_pParams->smoothingToleranceError
-			  << std::endl;
-
 	beh.bNewPlan = SelectSafeTrajectoryAndSpeedProfile(vehicleState);
-	std::cerr << "returned from SelectSafeTrajectoryAndSpeedProfile" << std::endl;
 	m_RollOutsGenerationTime = UtilityH::GetTimeDiffNow(t);
 
 	if(m_pCurrentBehaviorState->m_pParams->enabTrajectoryVelocities)

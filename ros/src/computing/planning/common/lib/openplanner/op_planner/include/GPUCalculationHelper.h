@@ -169,6 +169,11 @@ namespace PlannerHNS {
                 pos.y = p.pos.y;
                 pos.z = p.pos.z;
                 pos.a = p.pos.a;
+                pos.lat = p.pos.lat;
+                pos.lon = p.pos.lon;
+                pos.alt = p.pos.alt;
+                pos.dir = p.pos.dir;
+
                 v = p.v;
                 return *this;
             }
