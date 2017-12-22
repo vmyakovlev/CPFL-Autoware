@@ -32,6 +32,7 @@ FIND_PACKAGE(catkin REQUIRED COMPONENTS
 FIND_PACKAGE(CUDA)
 FIND_PACKAGE(OpenCV REQUIRED)
 FIND_PACKAGE(ZLIB REQUIRED)
+find_package(OpenMP)
 
 EXECUTE_PROCESS(
   COMMAND uname -m
@@ -104,6 +105,13 @@ if(EXISTS "${CNN_CAFFE_PATH}")
     src/cnn_lidar_detector.cpp
     src/nms.cpp
   )
+
+  if (OPENMP_FOUND)
+    set_target_properties(cnn_lidar_detector_node PROPERTIES
+      COMPILE_FLAGS ${OpenMP_CXX_FLAGS}
+      LINK_FLAGS ${OpenMP_CXX_FLAGS}
+    )
+  endif()
 
   TARGET_LINK_LIBRARIES(cnn_lidar_detector_node
     ${catkin_LIBRARIES}

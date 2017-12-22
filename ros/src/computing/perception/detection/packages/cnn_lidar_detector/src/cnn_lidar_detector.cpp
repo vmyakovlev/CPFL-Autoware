@@ -137,8 +137,10 @@ void CnnLidarDetector::Detect(const cv::Mat& in_image_intensity,
                               const cv::Mat& in_coordinates_x,
                               const cv::Mat& in_coordinates_y,
                               const cv::Mat& in_coordinates_z,
+                              const std::unordered_map< cv::Point2d, pcl::PointXYZI >& in_cloud_map,
                               cv::Mat& out_objectness_image,
-                              jsk_recognition_msgs::BoundingBoxArray& out_boxes)
+                              jsk_recognition_msgs::BoundingBoxArray& out_boxes,
+                              pcl::PointCloud<pcl::PointXYZRGB>& out_colored_cloud)
 {
 	caffe::Blob<float>* input_layer = net_->input_blobs()[0];
 	input_layer->Reshape(1,
@@ -164,7 +166,9 @@ void CnnLidarDetector::Detect(const cv::Mat& in_image_intensity,
 	                  in_coordinates_x,
 	                  in_coordinates_y,
 	                  in_coordinates_z,
-	                  out_boxes);
+	                  in_cloud_map,
+	                  out_boxes,
+	                  out_colored_cloud);
 
 }
 
@@ -259,7 +263,9 @@ void CnnLidarDetector::GetNetworkResults(cv::Mat& out_objectness_image,
                                          const cv::Mat& in_coordinates_x,
                                          const cv::Mat& in_coordinates_y,
                                          const cv::Mat& in_coordinates_z,
-                                         jsk_recognition_msgs::BoundingBoxArray& out_boxes)
+                                         const std::unordered_map< cv::Point2d, pcl::PointXYZI >& in_cloud_map,
+                                         jsk_recognition_msgs::BoundingBoxArray& out_boxes,
+                                         pcl::PointCloud<pcl::PointXYZRGB>& out_colored_cloud)
 {
 	caffe::Blob<float>* boxes_blob = net_->output_blobs().at(0);//0 boxes
 	caffe::Blob<float>* objectness_blob = net_->output_blobs().at(1);//1 objectness
@@ -300,7 +306,11 @@ void CnnLidarDetector::GetNetworkResults(cv::Mat& out_objectness_image,
 	//check each pixel of each channel and assign color depending threshold
 	cv::Mat bgr_channels(height, width, CV_8UC3, cv::Scalar(0,0,0));
 
+	//clear output pointcloud
+	out_colored_cloud.points.clear();
+
 	std::vector< std::vector<float> > cars_boxes, person_boxes, bike_boxes;
+#pragma omp for
 	for(unsigned int row = 0; row < height; row++)
 	{
 		for(unsigned int col = 0; col < width; col++)
@@ -314,23 +324,61 @@ void CnnLidarDetector::GetNetworkResults(cv::Mat& out_objectness_image,
 			//8 item vector (x1, y1), (x2,y2), (x3, y3), (x4,y4) forming the bottom rectangle of the box
 			std::vector<float> current_box;
 
+			std::unordered_map< cv::Point2d, pcl::PointXYZI >::const_iterator iterator_3d_2d;
+			pcl::PointXYZI corresponding_3d_point;
+			pcl::PointXYZRGB colored_3d_point;
+			iterator_3d_2d = in_cloud_map.find( cv::Point2d(col, row));
+
 			if (objectness_channels[1].at<float>(row,col) > score_threshold_)
 			{
 				get_box_points_from_matrices(row, col, boxes_channels, in_coordinates_x, in_coordinates_y, current_box);
 				bgr_channels.at<cv::Vec3b>(row,col) = cv::Vec3b(0, 0, 255);
 				cars_boxes.push_back(current_box);
+				if (iterator_3d_2d != in_cloud_map.end())
+				{
+					corresponding_3d_point = iterator_3d_2d->second;
+					colored_3d_point.x = corresponding_3d_point.x;
+					colored_3d_point.y = corresponding_3d_point.y;
+					colored_3d_point.z = corresponding_3d_point.z;
+					colored_3d_point.b = 0;
+					colored_3d_point.g = 0;
+					colored_3d_point.r = 255;
+					out_colored_cloud.points.push_back(colored_3d_point);
+				}
 			}
 			if (objectness_channels[2].at<float>(row,col) > score_threshold_)
 			{
 				get_box_points_from_matrices(row, col, boxes_channels, in_coordinates_x, in_coordinates_y, current_box);
 				bgr_channels.at<cv::Vec3b>(row,col) = cv::Vec3b(0, 255, 0);
 				person_boxes.push_back(current_box);
+				if (iterator_3d_2d != in_cloud_map.end())
+				{
+					corresponding_3d_point = iterator_3d_2d->second;
+					colored_3d_point.x = corresponding_3d_point.x;
+					colored_3d_point.y = corresponding_3d_point.y;
+					colored_3d_point.z = corresponding_3d_point.z;
+					colored_3d_point.b = 0;
+					colored_3d_point.g = 255;
+					colored_3d_point.r = 0;
+					out_colored_cloud.points.push_back(colored_3d_point);
+				}
 			}
 			if (objectness_channels[3].at<float>(row,col) > score_threshold_)
 			{
 				get_box_points_from_matrices(row, col, boxes_channels, in_coordinates_x, in_coordinates_y, current_box);
 				bgr_channels.at<cv::Vec3b>(row,col) = cv::Vec3b(255, 0, 0);
 				bike_boxes.push_back(current_box);
+				if (iterator_3d_2d != in_cloud_map.end())
+				{
+					corresponding_3d_point = iterator_3d_2d->second;
+					colored_3d_point.x = corresponding_3d_point.x;
+					colored_3d_point.y = corresponding_3d_point.y;
+					colored_3d_point.z = corresponding_3d_point.z;
+					colored_3d_point.b = 255;
+					colored_3d_point.g = 0;
+					colored_3d_point.r = 0;
+					out_colored_cloud.points.push_back(colored_3d_point);
+				}
 			}
 		}
 	}

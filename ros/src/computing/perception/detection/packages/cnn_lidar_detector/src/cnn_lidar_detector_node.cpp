@@ -136,7 +136,8 @@ class RosLidarDetectorApp
 			cv::Mat& out_z_image, //resulting z value projection image
 			cv::Mat& out_intensity_image, //resulting intensity image
 			std::vector<cv::Point2d>& out_points2d, //resulting 2d points
-			std::vector<pcl::PointXYZI>& out_points_3d//corresponding 3d points
+			std::vector<pcl::PointXYZI>& out_points_3d,//corresponding 3d points
+			std::unordered_map<cv::Point2d, pcl::PointXYZI>& out_projection_map//contains the relation between the 2d and 3d points
 			)
 	{
 		for(size_t i=0; i<in_point_cloud->points.size(); i++)
@@ -165,6 +166,7 @@ class RosLidarDetectorApp
 					//store correspondence between cloud and image coords
 					out_points2d[i] = cv::Point2d(image_x, image_y);
 					out_points_3d[i] = point;
+					out_projection_map.insert(std::pair<cv::Point2d, pcl::PointXYZI> (cv::Point2d(image_x, image_y), point) );
 				}
 			}
 		}
@@ -184,7 +186,7 @@ class RosLidarDetectorApp
 		applyColorMap(grayscale_cloud, out_image, cv::COLORMAP_JET);
 	}
 
-	void publish_image(ros::Publisher& in_publisher, cv::Mat& in_image, pcl::PCLHeader in_header)
+	void publish_image(const ros::Publisher& in_publisher, cv::Mat& in_image, pcl::PCLHeader in_header)
 	{
 		sensor_msgs::ImagePtr pub_image_msg;
 		pub_image_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", in_image).toImageMsg();
@@ -192,6 +194,18 @@ class RosLidarDetectorApp
 		pub_image_msg->header.frame_id = in_header.frame_id;
 		pub_image_msg->header.stamp = ros::Time(in_header.stamp);
 		in_publisher.publish(pub_image_msg);
+	}
+
+	void publish_cloud(const ros::Publisher& in_publisher,
+	                   const pcl::PointCloud<pcl::PointXYZRGB> in_cloud_to_publish,
+	                   const pcl::PCLHeader& in_header)
+	{
+		sensor_msgs::PointCloud2 cloud_msg;
+		pcl::toROSMsg(in_cloud_to_publish, cloud_msg);
+		cloud_msg.header.frame_id = in_header.frame_id;
+		cloud_msg.header.seq = in_header.seq;
+		cloud_msg.header.stamp = ros::Time(in_header.stamp);
+		in_publisher.publish(cloud_msg);
 	}
 
 	void subtract_image(cv::Mat& in_out_minuend_image, float in_subtrahend)
@@ -241,6 +255,7 @@ class RosLidarDetectorApp
 
 		std::vector<cv::Point2d> image_points;
 		std::vector<pcl::PointXYZI> cloud_points;
+		std::unordered_map<cv::Point2d, pcl::PointXYZI> image_cloud_map;
 
 		//store the 3d and 2d points relation for faster backprojection
 		image_points.resize(current_sensor_cloud_ptr->points.size());
@@ -253,7 +268,8 @@ class RosLidarDetectorApp
 								projected_cloud_z,
 								projected_cloud_intensity,
 								image_points,
-								cloud_points);
+								cloud_points,
+								image_cloud_map);
 
 		projected_cloud_x.copyTo(projected_cloud_x_original);
 		projected_cloud_y.copyTo(projected_cloud_y_original);
@@ -290,6 +306,7 @@ class RosLidarDetectorApp
 
 		//use image for CNN forward
 		jsk_recognition_msgs::BoundingBoxArray objects_boxes;
+		pcl::PointCloud<pcl::PointXYZRGB> colored_cloud;
 
 		objects_boxes.header = in_sensor_cloud->header;
 		objects_boxes.boxes.clear();
@@ -302,8 +319,10 @@ class RosLidarDetectorApp
 		                        projected_cloud_x_original, // kazuki fixed
 		                        projected_cloud_y_original, // kazuki fixed
 		                        projected_cloud_z_original, // kazuki fixed
+		                        image_cloud_map,
 		                        resulting_objectness,
-		                        objects_boxes);
+		                        objects_boxes,
+		                        colored_cloud);
 
 		cv::Mat ros_image_intensity, ros_image_range, ros_image_x, ros_image_y, ros_image_z; //mats for publishing
 
@@ -321,7 +340,7 @@ class RosLidarDetectorApp
 		publish_image(publisher_image_z_, ros_image_z, current_sensor_cloud_ptr->header);
 		publish_image(publisher_objectness_image_, resulting_objectness, current_sensor_cloud_ptr->header);
 
-
+		publish_cloud(publisher_pointcloud_class_, colored_cloud, current_sensor_cloud_ptr->header);
 		publisher_boxes_.publish(objects_boxes);
 	}//end cloud_callback
 

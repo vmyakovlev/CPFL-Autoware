@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 
 #include <caffe/caffe.hpp>
 
@@ -30,10 +31,18 @@
 
 #include "nms.hpp"
 
-
+namespace std {
+	template <>
+	class hash< cv::Point2d >{
+		public :
+			size_t operator()(const cv::Point2d &pixel_cloud ) const
+			{
+				return hash<std::string>()( std::to_string(pixel_cloud.x) + std::to_string(pixel_cloud.y) );
+			}
+	};
+};
 class CnnLidarDetector
 {
-
 public:
 	CnnLidarDetector(const std::string& in_network_definition_file,
 			const std::string& in_pre_trained_model_file,
@@ -42,15 +51,17 @@ public:
 			float in_score_threshold);
 
 	void Detect(const cv::Mat& in_image_intensity,
-	            const cv::Mat& in_image_range,
-	            const cv::Mat& in_image_x,
-	            const cv::Mat& in_image_y,
-	            const cv::Mat& in_image_z,
-	            const cv::Mat& in_coordinates_x,
-	            const cv::Mat& in_coordinates_y,
-	            const cv::Mat& in_coordinates_z,
-	            cv::Mat& out_objectness_image,
-	            jsk_recognition_msgs::BoundingBoxArray& out_boxes);
+			const cv::Mat& in_image_range,
+			const cv::Mat& in_image_x,
+			const cv::Mat& in_image_y,
+			const cv::Mat& in_image_z,
+			const cv::Mat& in_coordinates_x,
+			const cv::Mat& in_coordinates_y,
+			const cv::Mat& in_coordinates_z,
+			const std::unordered_map< cv::Point2d, pcl::PointXYZI >& in_cloud_map,
+			cv::Mat& out_objectness_image,
+			jsk_recognition_msgs::BoundingBoxArray& out_boxes,
+			pcl::PointCloud<pcl::PointXYZRGB>& out_colored_cloud);
 
 private:
 	struct BoundingBoxCorners
@@ -101,7 +112,9 @@ private:
 	                       const cv::Mat& in_coordinates_x,
 	                       const cv::Mat& in_coordinates_y,
 	                       const cv::Mat& in_coordinates_z,
-	                       jsk_recognition_msgs::BoundingBoxArray& out_boxes);//get objectness image and bounding boxes
+	                       const std::unordered_map<cv::Point2d, pcl::PointXYZI>& in_cloud_map,
+	                       jsk_recognition_msgs::BoundingBoxArray& out_boxes,
+	                       pcl::PointCloud<pcl::PointXYZRGB>& out_colored_cloud);//get objectness image and bounding boxes
 
 	void BoundingBoxCornersToJskBoundingBox(const CnnLidarDetector::BoundingBoxCorners& in_box_corners,
 	                                        unsigned int in_class,
