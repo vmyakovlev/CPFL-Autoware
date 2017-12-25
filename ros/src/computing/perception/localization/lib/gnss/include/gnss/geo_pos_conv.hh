@@ -1,6 +1,7 @@
 #ifndef __GEO_POS_CONV__
 #define __GEO_POS_CONV__
 
+#include <string>
 #include <math.h>
 
 class geo_pos_conv {
@@ -16,6 +17,7 @@ private:
 	double m_PLato;        //plane lat
 	double m_PLo;          //plane lon
 
+	std::string m_zone;
 public:
 	double x() const;
 	double y() const;
@@ -35,6 +37,14 @@ public:
 
 	void conv_llh2xyz(void);
 	void conv_xyz2llh(void);
+
+	//Find conversion zones according to the longitude, earth has 60 zones. each 6 degrees represent a zone.
+	std::string FindZone(const double& longitude);
+
+	//lat ,lon are in Degrees
+	void llaToxyz_proj(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out);
+	//out lat, lon in Degrees
+	void xyzTolla_proj(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt);
 };
 
 #endif

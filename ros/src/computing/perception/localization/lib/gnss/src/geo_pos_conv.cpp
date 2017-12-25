@@ -29,6 +29,8 @@
 */
 
 #include <geo_pos_conv.hh>
+#include <proj_api.h>
+#include <sstream>
 
 double geo_pos_conv::x() const
 {
@@ -49,6 +51,8 @@ void geo_pos_conv::set_plane(double lat, double lon)
 {
   m_PLato = lat;
   m_PLo = lon;
+
+  m_zone = FindZone(lon);
 }
 
 void geo_pos_conv::set_plane(int num)
@@ -191,6 +195,8 @@ void geo_pos_conv::set_plane(int num)
   // swap longitude and latitude
   m_PLo = M_PI * ((double)lat_deg + (double)lat_min / 60.0) / 180.0;
   m_PLato = M_PI * ((double)lon_deg + (double)lon_min / 60.0) / 180;
+
+  m_zone = FindZone(m_PLo*RAD_TO_DEG);
 }
 
 void geo_pos_conv::set_xyz(double cx, double cy, double cz)
@@ -331,4 +337,71 @@ void geo_pos_conv::conv_llh2xyz(void)
 void geo_pos_conv::conv_xyz2llh(void)
 {
   // n/a
+}
+
+std::string geo_pos_conv::FindZone(const double& longitude)
+{
+	int zone = floor((longitude+180.0)/6.0) + 1;
+	std::ostringstream str;
+	str << "+zone=";
+	str << zone;
+	return str.str();
+}
+
+
+void geo_pos_conv::llaToxyz_proj(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out)
+{
+	projPJ pj_latlong, pj_utm;
+	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
+	std::ostringstream str;
+	str << "+proj=utm ";
+	str << m_zone;
+	str << " +ellps=WGS84 +datum=WGS84 +units=m";
+	pj_utm = pj_init_plus(str.str().c_str());
+
+	double _z = alt;
+	double _x = DEG_TO_RAD;
+	double _y = DEG_TO_RAD;
+
+	if(pj_latlong != 0 && pj_utm !=0 )
+	{
+		pj_transform(pj_latlong, pj_utm, 1, 1, &_y, &_x, &_z);
+		x_out = _x;
+		y_out = _y;
+		z_out = _z;
+	}
+	else
+	{
+		x_out = y_out = z_out = 0;
+	}
+}
+
+void geo_pos_conv::xyzTolla_proj(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt)
+{
+	projPJ pj_latlong, pj_utm;
+	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
+	std::ostringstream str;
+	str << "+proj=utm ";
+	str << m_zone;
+	str << " +ellps=WGS84 +datum=WGS84 +units=m";
+	pj_utm = pj_init_plus(str.str().c_str());
+
+	double _lat = x_in;
+	double _lon = y_in;
+	double _alt = z_in;
+
+	if(pj_latlong != 0 && pj_utm !=0 )
+	{
+		pj_transform(pj_utm,pj_latlong, 1, 1, &_lon, &_lat, &_alt);
+		_lon = _lon * RAD_TO_DEG;
+		_lat = _lat * RAD_TO_DEG;
+
+		lon = _lon;
+		lat = _lat;
+		alt = _alt;
+	}
+	else
+	{
+		lon = lat = alt = 0;
+	}
 }

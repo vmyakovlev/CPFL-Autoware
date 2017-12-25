@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(gnss)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 find_package(catkin REQUIRED)
+find_package(Proj)
 
 ###################################
 ## catkin specific configuration ##
@@ -26,6 +29,9 @@ add_library(gnss
   src/geo_pos_conv.cpp
 )
 
+target_link_libraries(${PROJECT_NAME}
+		${catkin_LIBRARIES} ${PROJ_LIBRARY})
+		
 #############
 ## Install ##
 #############
