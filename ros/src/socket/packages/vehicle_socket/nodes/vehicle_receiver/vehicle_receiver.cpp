@@ -103,6 +103,13 @@ static bool parseCanValue(const std::string& can_data, autoware_msgs::CanInfo& m
   return true;
 }
 
+static void convertSpeedByDriveShift(autoware_msgs::CanInfo* const msg)
+{
+    enum DriveShift{Drive=16, Neutral=32, Reverse=64, Parking=128};
+    if(msg->driveshift == DriveShift::Reverse)
+        msg->speed *= -1;
+}
+
 static void* getCanValue(void *arg)
 {
   int *client_sockp = static_cast<int*>(arg);
@@ -145,6 +152,8 @@ static void* getCanValue(void *arg)
   bool ret = parseCanValue(can_data, can_msg);
   if(!ret)
     return nullptr;
+
+  convertSpeedByDriveShift(&can_msg);
 
   can_msg.header.frame_id = "/can";
   can_msg.header.stamp = ros::Time::now();
