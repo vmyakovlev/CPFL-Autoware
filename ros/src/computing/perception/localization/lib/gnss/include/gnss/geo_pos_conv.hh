@@ -5,7 +5,7 @@
 #include <math.h>
 
 class geo_pos_conv {
-private:
+public:
 	double m_x;  //m
 	double m_y;  //m
 	double m_z;  //m
@@ -45,6 +45,9 @@ public:
 	void llaToxyz_proj(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out);
 	//out lat, lon in Degrees
 	void xyzTolla_proj(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt);
+
+	void correct_gps_coor(double& lat,double& lon);
+	void correct_nmea_coor(double& lat,double& lon);
 };
 
 #endif

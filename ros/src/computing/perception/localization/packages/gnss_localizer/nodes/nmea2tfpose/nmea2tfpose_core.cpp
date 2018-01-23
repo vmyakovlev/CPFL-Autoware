@@ -30,7 +30,7 @@
 */
 
 #include "nmea2tfpose_core.h"
-
+#include <stdio.h>
 namespace gnss_localizer
 {
 // Constructor
@@ -112,7 +112,7 @@ void Nmea2TFPoseNode::convert(std::vector<std::string> nmea, ros::Time current_s
       pitch_ = -1 * stod(nmea.at(5)) * M_PI / 180.;
       yaw_ = -1 * stod(nmea.at(6)) * M_PI / 180. + M_PI / 2;
       orientation_stamp_ = current_stamp;
-      ROS_INFO("QQ is subscribed.");
+      //ROS_INFO("QQ is subscribed.");
     }
     else if (nmea.at(0) == "$PASHR")
     {
@@ -128,8 +128,29 @@ void Nmea2TFPoseNode::convert(std::vector<std::string> nmea, ros::Time current_s
       double lat = stod(nmea.at(2));
       double lon = stod(nmea.at(4));
       double h = stod(nmea.at(9));
-      geo_.set_llh_nmea_degrees(lat, lon, h);
-      ROS_INFO("GGA is subscribed.");
+
+     // geo_.set_llh_nmea_degrees(lat, lon, h);
+
+      //ROS_INFO("GGA is subscribed.");
+      double xx, yy, zz;
+      double _mod_lat = lat;
+      double _mod_lon = lon;
+
+      geo_.correct_nmea_coor(_mod_lat, _mod_lon);
+      geo_.llaToxyz_proj(_mod_lat, _mod_lon, h,geo_.m_x,geo_.m_y,zz);
+      geo_.xyzTolla_proj(-86497.664,-16680.952,0, xx,yy,zz);
+      double original_lat = 35.13126717;
+      double original_lon = 136.590034;
+
+      geo_.correct_gps_coor(original_lat, original_lon);
+
+      printf("\n");
+      printf("Orig Lat-Lon     : (%2.12f, %2.12f) \n" , _mod_lat, _mod_lon);
+      printf("Manual Conversion: (%2.12f, %2.12f) \n" , geo_.x(), geo_.y());
+      printf("Projec Conversion: (%2.12f, %2.12f) \n" , xx, yy);
+      printf("FromDa Conversion: (%2.12f, %2.12f) \n" , original_lat, original_lon);
+      printf("Diff             : (%2.12f, %2.12f, %2.12f) \n" , geo_.x() - xx, geo_.y() - yy, sqrt(pow(geo_.x() - xx,2)+pow(geo_.y() - yy,2)));
+      printf("\n");
     }
     else if(nmea.at(0) == "$GPRMC")
     {

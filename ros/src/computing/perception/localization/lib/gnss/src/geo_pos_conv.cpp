@@ -31,6 +31,7 @@
 #include <geo_pos_conv.hh>
 #include <proj_api.h>
 #include <sstream>
+#include <stdio.h>
 
 double geo_pos_conv::x() const
 {
@@ -194,7 +195,7 @@ void geo_pos_conv::set_plane(int num)
 
   // swap longitude and latitude
   m_PLo = M_PI * ((double)lat_deg + (double)lat_min / 60.0) / 180.0;
-  m_PLato = M_PI * ((double)lon_deg + (double)lon_min / 60.0) / 180;
+  m_PLato = M_PI * ((double)lon_deg + (double)lon_min / 60.0) / 180.0;
 
   m_zone = FindZone(m_PLo*RAD_TO_DEG);
 }
@@ -205,6 +206,7 @@ void geo_pos_conv::set_xyz(double cx, double cy, double cz)
   m_y = cy;
   m_z = cz;
   conv_xyz2llh();
+
 }
 
 void geo_pos_conv::set_llh_nmea_degrees(double latd, double lond, double h)
@@ -352,16 +354,17 @@ std::string geo_pos_conv::FindZone(const double& longitude)
 void geo_pos_conv::llaToxyz_proj(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out)
 {
 	projPJ pj_latlong, pj_utm;
-	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
-	std::ostringstream str;
-	str << "+proj=utm ";
-	str << m_zone;
-	str << " +ellps=WGS84 +datum=WGS84 +units=m";
-	pj_utm = pj_init_plus(str.str().c_str());
+	pj_latlong = pj_init_plus("+proj=latlong");
+	pj_utm = pj_init_plus("+proj=tmerc +lat_0=36.0 +lon_0=137.1666666666667 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
+
+	double _intern_lat = lat;
+	double _intern_lon = lon;
 
 	double _z = alt;
-	double _x = DEG_TO_RAD;
-	double _y = DEG_TO_RAD;
+	double _x = DEG_TO_RAD*_intern_lat;
+	double _y = DEG_TO_RAD*_intern_lon;
+
+	printf("Befor Conversionproj : (%2.12f, %2.12f) \n" , _x, _y);
 
 	if(pj_latlong != 0 && pj_utm !=0 )
 	{
@@ -379,18 +382,14 @@ void geo_pos_conv::llaToxyz_proj(const double& lat, const double& lon, const dou
 void geo_pos_conv::xyzTolla_proj(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt)
 {
 	projPJ pj_latlong, pj_utm;
-	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
-	std::ostringstream str;
-	str << "+proj=utm ";
-	str << m_zone;
-	str << " +ellps=WGS84 +datum=WGS84 +units=m";
-	pj_utm = pj_init_plus(str.str().c_str());
+	pj_latlong = pj_init_plus("+proj=latlong");
+	pj_utm = pj_init_plus("+proj=tmerc +lat_0=36.0 +lon_0=137.1666666666667 +k=0.9999 +x_0=0 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs");
 
 	double _lat = x_in;
 	double _lon = y_in;
 	double _alt = z_in;
 
-	if(pj_latlong != 0 && pj_utm !=0 )
+	if(pj_latlong != 0 && pj_utm !=0)
 	{
 		pj_transform(pj_utm,pj_latlong, 1, 1, &_lon, &_lat, &_alt);
 		_lon = _lon * RAD_TO_DEG;
@@ -404,4 +403,31 @@ void geo_pos_conv::xyzTolla_proj(const double& x_in, const double& y_in, const d
 	{
 		lon = lat = alt = 0;
 	}
+}
+
+void geo_pos_conv::correct_gps_coor(double& lat,double& lon)
+{
+	double part1 = floor(lat);
+	double part2 = floor((lat-part1)*100.0)/60.0;
+	double part_frac = (lat*100.0) - (int)(lat*100);
+	double part3 = part_frac*100.0 / 3600.0;
+
+	lat = part1+part2+part3;
+
+	part1 = floor(lon);
+	part2 = floor((lon - part1)*100.0)/60.0;
+	part_frac = (lon*100.0) - (int)(lon*100);
+	part3 = part_frac*100.0 / 3600.0;
+	lon = part1+part2+part3;
+}
+
+void geo_pos_conv::correct_nmea_coor(double& lat,double& lon)
+{
+	double precomma = trunc(lat/100);
+	double postcomma = (lat-(precomma)*100)/60;
+	lat =  precomma + postcomma;
+
+	precomma = trunc(lon/100);
+	postcomma = (lon-(precomma)*100)/60;
+	lon = precomma + postcomma;
 }
