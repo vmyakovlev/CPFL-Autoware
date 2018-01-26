@@ -452,10 +452,32 @@ subs :
       cmd  : roslaunch object_map potential_field.launch
       param: potential_field
 
-    - name : dist_transform
-      desc : Generate distance transformed cost map from OccupancyGrid
-      cmd  : roslaunch object_map dist_transform.launch
-      param: dist_transform
+    - name : grid_map_filter
+      desc : filter OccupancyGrid with some functions
+      cmd  : roslaunch object_map grid_map_filter.launch
+      param: grid_map_filter
+      gui  :
+        map_topic :
+          flags : [nl ]
+        use_wayarea :
+          flags : [nl ]
+        dist_transform_distance:
+          depend : use_dist_transform
+          depend_bool : 'lambda v : v == 1'
+        fill_circle_cost_threshold:
+          depend : use_fill_circle
+          depend_bool : 'lambda v : v == 1'
+        circle_radius:
+          depend : use_fill_circle
+          depend_bool : 'lambda v : v == 1'
+        map_frame:
+          depend : use_wayarea
+          depend_bool : 'lambda v : v == 1'
+
+    - name : wayarea2grid
+      desc : convert wayarea to OccupancyGrid
+      cmd  : roslaunch object_map wayarea2grid.launch
+      param: wayarea2grid
 
 - subs :
   - name : Mission Planning
@@ -3528,22 +3550,136 @@ params :
         dash      : ''
         delim     : ':='
 
-  - name : dist_transform
+  - name : grid_map_filter
     vars :
-    - name      : max_distance
-      desc      : Max distance for distance transform
-      label     : Max Distance
-      min       : 0.0
-      max       : 20.0
-      v         : 3.0
+    - name      : map_topic
+      desc      : Subscribing topic (OccupancyGrid message)
+      label     : Input OccupancyGrid Topic
+      kind      : str
+      v         : /realtime_cost_map
       cmd_param :
         dash      : ''
         delim     : ':='
-    - name      : map_topic
-      desc      : Subscribing topic of OccupancyGrid message
-      label     : Map Topic
+    - name : use_dist_transform
+      desc : apply distance transform to OccupancyGrid
+      label: Use Distance Transform
+      kind : checkbox
+      v    : True
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name      : dist_transform_distance
+      desc      : max distance for distance transform
+      label     : Max Distance
+      min       : 0.0
+      max       : 10.0
+      v         : 2.0
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name : use_fill_circle
+      desc : fill occupied cells with circle
+      label: Use Fill Circle
+      kind : checkbox
+      v    : True
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name      : fill_circle_cost_threshold
+      desc      : cells above this value are occupied (0 ~ 100)
+      label     : Cost Threshold
+      min       : 0
+      max       : 100
+      v         : 20
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : circle_radius
+      desc      : radius of circles
+      label     : Circle Radius [m]
+      min       : 0.0
+      max       : 10.0
+      v         : 1.7
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name : use_wayarea
+      desc : use wayarea in Vector Map
+      label: Use Wayarea
+      kind : checkbox
+      v    : True
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name      : map_frame
+      desc      : frame of Vector Map
+      label     : Vector Map Frame
       kind      : str
-      v         : /realtime_cost_map
+      v         : map
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+
+  - name : wayarea2grid
+    vars :
+    - name      : sensor_frame
+      desc      : origin of OccupancyGrid
+      label     : Grid Map Frame
+      kind      : str
+      v         : velodyne
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_frame
+      desc      : frame of Vector Map
+      label     : Vector Map Frame
+      kind      : str
+      v         : map
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_resolution
+      desc      : Map resolution [meter]
+      label     : Resolution [m]
+      min       : 0.0
+      max       : 5.0
+      v         : 0.2
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_length_x
+      desc      : map length x [meter]
+      label     : Map Length x [m]
+      min       : 0
+      max       : 1000
+      v         : 150
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_length_y
+      desc      : map length y [meter]
+      label     : Map Length y [m]
+      min       : 0
+      max       : 1000
+      v         : 30
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_position_x
+      desc      : map position x [meter]
+      label     : Map Position x [m]
+      min       : -500
+      max       : 500
+      v         : 20
+      cmd_param :
+        dash      : ''
+        delim     : ':='
+    - name      : map_position_y
+      desc      : map position y [meter]
+      label     : Map Position y [m]
+      min       : -500
+      max       : 500
+      v         : 0.0
       cmd_param :
         dash      : ''
         delim     : ':='
