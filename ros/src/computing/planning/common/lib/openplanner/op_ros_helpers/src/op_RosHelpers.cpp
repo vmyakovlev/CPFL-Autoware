@@ -775,6 +775,44 @@ void RosHelpers::ConvertFromRoadNetworkToAutowareVisualizeMapFormat(const Planne
 	  }
 }
 
+void RosHelpers::InitPredParticlesMarkers(const int& nMarkers, visualization_msgs::MarkerArray& paths)
+{
+	paths.markers.clear();
+	for(int i=0; i<nMarkers; i++)
+	{
+		visualization_msgs::Marker mkr = CreateGenMarker(0,0,0,0,1,1,1,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		mkr.scale.x = 0.3;
+		paths.markers.push_back(mkr);
+	}
+}
+
+void RosHelpers::ConvertParticles(std::vector<PlannerHNS::WayPoint>& points, visualization_msgs::MarkerArray& part_mkrs, visualization_msgs::MarkerArray& part_markers_d)
+{
+	part_mkrs = part_markers_d;
+	for(unsigned int i = 0; i < points.size(); i++)
+	{
+		visualization_msgs::Marker mkr;
+		if(points.at(i).bDir == PlannerHNS::STANDSTILL_DIR)
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,1,0,0,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		else if(points.at(i).bDir == PlannerHNS::FORWARD_DIR)
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,1,1,1,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		else if(points.at(i).bDir == PlannerHNS::FORWARD_RIGHT_DIR)
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,0,1,0,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		else if(points.at(i).bDir == PlannerHNS::FORWARD_LEFT_DIR)
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,0,0,1,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		else if(points.at(i).bDir == PlannerHNS::BACKWARD_DIR)
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,1,0,1,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+		else
+			mkr = CreateGenMarker(points.at(i).pos.x, points.at(i).pos.y,points.at(i).pos.z,points.at(i).pos.a,1,1,0,0.05,i,"Particles", visualization_msgs::Marker::ARROW);
+
+		mkr.scale.x = 0.3;
+		if(i < part_mkrs.markers.size())
+			part_mkrs.markers.at(i) = mkr;
+		else
+			part_mkrs.markers.push_back(mkr);
+	}
+}
+
 void RosHelpers::ConvertFromPlannerHRectangleToAutowareRviz(const std::vector<PlannerHNS::GPSPoint>& safety_rect,
 		visualization_msgs::Marker& marker)
 {

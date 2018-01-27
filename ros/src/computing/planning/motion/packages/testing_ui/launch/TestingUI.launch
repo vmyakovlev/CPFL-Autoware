@@ -1,0 +1,12 @@
+<!-- -->
+<launch>
+	<arg name="width" 						default="800" />
+	<arg name="height" 						default="1100" />
+	<arg name="info_ratio" 					default="0.70" />	
+	<node pkg="testing_ui" type="testing_ui" name="testing_ui" output="screen">
+		<param name="width" 						value="$(arg width)" />
+		<param name="height" 						value="$(arg height)" />		
+		<param name="info_ratio" 					value="$(arg info_ratio)" />		
+	</node>
+
+</launch>

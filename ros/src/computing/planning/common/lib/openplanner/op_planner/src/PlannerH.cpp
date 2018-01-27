@@ -359,6 +359,7 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 	vector<WayPoint*> pLaneCells;
 	vector<int> unique_lanes;
 	std::vector<WayPoint> path;
+
 	for(unsigned int j = 0 ; j < closestWPs.size(); j++)
 	{
 		pLaneCells.clear();
@@ -390,6 +391,9 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 				if(!bDirectionBased)
 					path.at(0).pos.a = path.at(1).pos.a;
 
+				path.at(0).beh_state = path.at(1).beh_state = PlannerHNS::BEH_FORWARD_STATE;
+				path.at(0).laneId = path.at(1).laneId;
+
 				PlanningHelpers::FixPathDensity(path, 1.0);
 				PlanningHelpers::SmoothPath(path, 0.3 , 0.3,0.1);
 				paths.push_back(path);
@@ -420,7 +424,7 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 
 	DeleteWaypoints(all_cell_to_delete);
 
-	return 1;
+	return paths.size();
 }
 
 double PlannerH::PredictPlanUsingDP(const WayPoint& startPose, WayPoint* closestWP, const double& maxPlanningDistance, std::vector<std::vector<WayPoint> >& paths, const bool& bFindBranches)

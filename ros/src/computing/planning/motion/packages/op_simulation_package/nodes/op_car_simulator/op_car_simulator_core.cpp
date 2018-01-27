@@ -46,6 +46,8 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 
 	m_bMap = false;
 	bPredictedObjects = false;
+	m_bStepByStep = false;
+	m_bGoNextStep = false;
 
 	ReadParamFromLaunchFile(m_CarInfo, m_ControlParams);
 
@@ -90,6 +92,8 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	pub_BehaviorStateRviz			= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 	pub_PointerBehaviorStateRviz	= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 
+
+	sub_StepSignal = nh.subscribe("/simu_step_signal", 		1, &OpenPlannerCarSimulator::callbackGetStepForwardSignals, 		this);
 
 	// define subscribers.
 	if(m_SimParams.bRvizPositions)
@@ -190,6 +194,7 @@ void OpenPlannerCarSimulator::ReadParamFromLaunchFile(PlannerHNS::CAR_BASIC_INFO
 	_nh.getParam("minPursuiteDistance", m_ControlParams.minPursuiteDistance );
 	_nh.getParam("maxAcceleration", m_CarInfo.max_acceleration );
 	_nh.getParam("maxDeceleration", m_CarInfo.max_deceleration );
+	_nh.getParam("enableStepByStepSignal", m_bStepByStep );
 
 	//_nh.getParam("enableCurbObstacles", m_bEnableCurbObstacles);
 	int iSource = 0;
@@ -213,6 +218,14 @@ OpenPlannerCarSimulator::~OpenPlannerCarSimulator()
 {
 	if(bInitPos && bGoalPos)
 		SaveSimulationData();
+}
+
+void OpenPlannerCarSimulator::callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg)
+{
+	if(msg->twist.linear.x == 1)
+		m_bGoNextStep = true;
+	else
+		m_bGoNextStep = false;
 }
 
 void OpenPlannerCarSimulator::callbackGetInitPose(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg)
@@ -694,28 +707,58 @@ void OpenPlannerCarSimulator::MainLoop()
 				bNewLightSignal = false;
 			}
 
-			/**
-			 *  Local Planning
-			 */
-			currBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+			if(!m_bStepByStep)
+			{
+				/**
+				 *  Local Planning
+				 */
+				currBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
 
-			/**
-			 * Localization, Odometry Simulation and Update
-			 */
-			m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
-			m_LocalPlanner->UpdateState(desiredStatus, false);
-			m_LocalPlanner->LocalizeMe(dt);
-			currStatus.shift = desiredStatus.shift;
-			currStatus.steer = m_LocalPlanner->m_CurrentSteering;
-			currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
-
-
-			/**
-			 * Control, Path Following
-			 */
-			desiredStatus = m_PredControl.DoOneStep(dt, currBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, currBehavior.bNewPlan);
+				/**
+				 * Localization, Odometry Simulation and Update
+				 */
+				m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
+				m_LocalPlanner->UpdateState(desiredStatus, false);
+				m_LocalPlanner->LocalizeMe(dt);
+				currStatus.shift = desiredStatus.shift;
+				currStatus.steer = m_LocalPlanner->m_CurrentSteering;
+				currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
 
 
+				/**
+				 * Control, Path Following
+				 */
+				desiredStatus = m_PredControl.DoOneStep(dt, currBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, currBehavior.bNewPlan);
+
+			}
+			else
+			{
+				if(m_bGoNextStep)
+				{
+					m_bGoNextStep = false;
+					dt = 0.02;
+					/**
+					 *  Local Planning
+					 */
+					currBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+
+					/**
+					 * Localization, Odometry Simulation and Update
+					 */
+					m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
+					m_LocalPlanner->UpdateState(desiredStatus, false);
+					m_LocalPlanner->LocalizeMe(dt);
+					currStatus.shift = desiredStatus.shift;
+					currStatus.steer = m_LocalPlanner->m_CurrentSteering;
+					currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
+
+
+					/**
+					 * Control, Path Following
+					 */
+					desiredStatus = m_PredControl.DoOneStep(dt, currBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, currBehavior.bNewPlan);
+				}
+			}
 			displayFollowingInfo(m_LocalPlanner->m_TrajectoryCostsCalculatotor.m_SafetyBorder.points, m_LocalPlanner->state);
 			visualizePath(m_LocalPlanner->m_Path);
 			visualizeBehaviors();

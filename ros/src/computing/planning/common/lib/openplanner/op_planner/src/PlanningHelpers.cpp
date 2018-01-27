@@ -899,13 +899,13 @@ void PlanningHelpers::CreateManualBranchFromTwoPoints(WayPoint& p1,WayPoint& p2 
 		{
 			path.at(i).state = INITIAL_STATE;
 			path.at(i).beh_state = BEH_BRANCH_LEFT_STATE;
-			path.at(i).laneId = -1;
+			path.at(i).laneId = -2;
 		}
 		if(direction == FORWARD_RIGHT_DIR)
 		{
 			path.at(i).state = INITIAL_STATE;
 			path.at(i).beh_state = BEH_BRANCH_RIGHT_STATE;
-			path.at(i).laneId = -2;
+			path.at(i).laneId = -3;
 		}
 	}
 }

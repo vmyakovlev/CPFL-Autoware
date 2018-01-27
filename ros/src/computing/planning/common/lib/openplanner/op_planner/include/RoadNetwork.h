@@ -727,6 +727,7 @@ public:
 	WayPoint predicted_center;
 	WayPoint noisy_center;
 	STATE_TYPE predicted_behavior;
+	BEH_STATE_TYPE behavior_state;
 	std::vector<WayPoint> centers_list;
 	std::vector<GPSPoint> contour;
 	std::vector<std::vector<WayPoint> > predTrajectories;
@@ -754,6 +755,7 @@ public:
 		t = GENERAL_OBSTACLE;
 		distance_to_center = 0;
 		predicted_behavior = INITIAL_STATE;
+		behavior_state = BEH_STOPPING_STATE;
 		actual_speed = 0;
 		actual_yaw = 0;
 	}

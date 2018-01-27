@@ -71,7 +71,7 @@ TrajectoryEval::TrajectoryEval()
 	sub_predicted_objects	= nh.subscribe("/predicted_objects", 	1,		&TrajectoryEval::callbackGetPredictedObjects, 	this);
 	sub_current_behavior    = nh.subscribe("/current_behavior", 1, &TrajectoryEval::callbackGetBehaviorState, this);
 
-	PlannerHNS::RosHelpers::InitCollisionPointsMarkers(25, m_CollisionsDummy);
+	PlannerHNS::RosHelpers::InitCollisionPointsMarkers(50, m_CollisionsDummy);
 }
 
 TrajectoryEval::~TrajectoryEval()

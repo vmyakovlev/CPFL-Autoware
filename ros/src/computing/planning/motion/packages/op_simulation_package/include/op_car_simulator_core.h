@@ -99,6 +99,8 @@ protected:
 	timespec m_PlanningTimer;
 	geometry_msgs::Pose m_OriginPos;
 
+	bool m_bStepByStep         ;
+	bool m_bGoNextStep;
 	bool 						m_bMap;
 	PlannerHNS::RoadNetwork		m_Map;
 	PlannerHNS::PlannerH		m_GlobalPlanner;
@@ -134,12 +136,14 @@ protected:
 	ros::Subscriber sub_goalpose;
 	ros::Subscriber sub_predicted_objects;
 	ros::Subscriber sub_TrafficLightSignals	;
+	ros::Subscriber sub_StepSignal;
 
 	// Callback function for subscriber.
 	void callbackGetInitPose(const geometry_msgs::PoseWithCovarianceStampedConstPtr &msg);
 	void callbackGetGoalPose(const geometry_msgs::PoseStampedConstPtr &msg);
 	void callbackGetPredictedObjects(const autoware_msgs::DetectedObjectArrayConstPtr& msg);
 	void callbackGetTrafficLightSignals(const autoware_msgs::Signals& msg);
+	void callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg);
 
 public:
 	OpenPlannerCarSimulator();

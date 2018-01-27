@@ -46,7 +46,6 @@ public:
 			m_pParams = pParams;
 	}
 
-
 	PreCalculatedConditions* m_pCalculatedValues;
 	PlanningParams* m_pParams;
 	timespec m_StateTimer;

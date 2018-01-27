@@ -60,6 +60,7 @@ protected:
 
 	PlannerHNS::VehicleState m_VehicleStatus;
 	bool bVehicleStatus;
+	bool m_bGoNextStep;
 
 	geometry_msgs::Pose m_OriginPos;
 	PlannerHNS::CAR_BASIC_INFO m_CarInfo;
@@ -82,9 +83,13 @@ protected:
 
 	timespec m_VisualizationTimer;
 	std::vector<std::vector<PlannerHNS::WayPoint> > m_all_pred_paths;
+	std::vector<PlannerHNS::WayPoint> m_particles_points;
 
 	visualization_msgs::MarkerArray m_PredictedTrajectoriesDummy;
 	visualization_msgs::MarkerArray m_PredictedTrajectoriesActual;
+
+	visualization_msgs::MarkerArray m_PredictedParticlesDummy;
+	visualization_msgs::MarkerArray m_PredictedParticlesActual;
 
 	visualization_msgs::MarkerArray m_CurbsDummy;
 	visualization_msgs::MarkerArray m_CurbsActual;
@@ -99,6 +104,7 @@ protected:
 	ros::Publisher  pub_predicted_objects_trajectories;
 	ros::Publisher  pub_PredictedTrajectoriesRviz ;
 	ros::Publisher  pub_CurbsRviz ;
+	ros::Publisher pub_ParticlesRviz;
 
 	// define subscribers.
 	ros::Subscriber sub_tracked_objects		;
@@ -106,6 +112,7 @@ protected:
 	ros::Subscriber sub_current_velocity	;
 	ros::Subscriber sub_robot_odom			;
 	ros::Subscriber sub_can_info			;
+	ros::Subscriber sub_StepSignal;
 
 protected:
 	// Callback function for subscriber.
@@ -114,6 +121,7 @@ protected:
 	void callbackGetVehicleStatus(const geometry_msgs::TwistStampedConstPtr& msg);
 	void callbackGetCanInfo(const autoware_msgs::CanInfoConstPtr &msg);
 	void callbackGetRobotOdom(const nav_msgs::OdometryConstPtr& msg);
+	void callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg);
 
 protected:
 	void VisualizePrediction();

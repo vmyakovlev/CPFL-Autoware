@@ -46,6 +46,7 @@ set(PLANNERH_SRC
 		src/TrajectoryPrediction.cpp
 		src/BehaviorPrediction.cpp
 		src/DecisionMaker.cpp
+		src/PassiveDecisionMaker.cpp
 )
 
 ## Declare a cpp library
