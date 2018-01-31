@@ -27,6 +27,8 @@
  *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+
 #include "../include/op_car_simulator_core.h"
 
 #include "UtilityH.h"
@@ -542,7 +544,16 @@ void OpenPlannerCarSimulator::visualizeBehaviors()
 		break;
 	}
 
-	std::ostringstream str_out;
+	std::ostringstream str_out, beh_out;
+
+	if(m_CurrBehavior.indicator == PlannerHNS::INDICATOR_RIGHT)
+		beh_out << "Right" ;
+	else if(m_CurrBehavior.indicator == PlannerHNS::INDICATOR_LEFT)
+		beh_out << "Left" ;
+	else
+		beh_out << "Forward" ;
+
+
 	str_out << str;
 	str_out << m_SimParams.id;
 	double two_prec_speed = (m_LocalPlanner->m_CurrentVelocity*3.6*100)/100.0;
@@ -553,7 +564,7 @@ void OpenPlannerCarSimulator::visualizeBehaviors()
 	if(speed_str.size() <= 1 )
 		speed_str = "0.0";
 
-	str_out << "(" << speed_str << ")" ;
+	str_out << "(" << speed_str << ")"  << "(" << beh_out.str() << ")";
 	behaviorMarker.text = str_out.str();
 
 	pub_BehaviorStateRviz.publish(behaviorMarker);
@@ -619,10 +630,8 @@ int OpenPlannerCarSimulator::LoadSimulationData(PlannerHNS::WayPoint& start_p, P
 
 void OpenPlannerCarSimulator::MainLoop()
 {
-
 	ros::Rate loop_rate(50);
 
-	PlannerHNS::BehaviorState currBehavior;
 	PlannerHNS::VehicleState  currStatus;
 	PlannerHNS::VehicleState  desiredStatus;
 
@@ -712,7 +721,7 @@ void OpenPlannerCarSimulator::MainLoop()
 				/**
 				 *  Local Planning
 				 */
-				currBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+				m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
 
 				/**
 				 * Localization, Odometry Simulation and Update
@@ -728,7 +737,7 @@ void OpenPlannerCarSimulator::MainLoop()
 				/**
 				 * Control, Path Following
 				 */
-				desiredStatus = m_PredControl.DoOneStep(dt, currBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, currBehavior.bNewPlan);
+				desiredStatus = m_PredControl.DoOneStep(dt, m_CurrBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, m_CurrBehavior.bNewPlan);
 
 			}
 			else
@@ -740,7 +749,7 @@ void OpenPlannerCarSimulator::MainLoop()
 					/**
 					 *  Local Planning
 					 */
-					currBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+					m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
 
 					/**
 					 * Localization, Odometry Simulation and Update
@@ -756,7 +765,7 @@ void OpenPlannerCarSimulator::MainLoop()
 					/**
 					 * Control, Path Following
 					 */
-					desiredStatus = m_PredControl.DoOneStep(dt, currBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, currBehavior.bNewPlan);
+					desiredStatus = m_PredControl.DoOneStep(dt, m_CurrBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, m_CurrBehavior.bNewPlan);
 				}
 			}
 			displayFollowingInfo(m_LocalPlanner->m_TrajectoryCostsCalculatotor.m_SafetyBorder.points, m_LocalPlanner->state);
@@ -765,7 +774,7 @@ void OpenPlannerCarSimulator::MainLoop()
 
 
 			geometry_msgs::PoseArray sim_data;
-			geometry_msgs::Pose p_id, p_pose, p_box;
+			geometry_msgs::Pose p_id, p_pose, p_box, p_indicator;
 
 
 			sim_data.header.frame_id = "map";
@@ -786,13 +795,16 @@ void OpenPlannerCarSimulator::MainLoop()
 			p_box.position.y = m_CarInfo.length;
 			p_box.position.z = 2.0;
 
+			p_indicator.orientation.w = m_CurrBehavior.indicator;
+
 			sim_data.poses.push_back(p_id);
 			sim_data.poses.push_back(p_pose);
 			sim_data.poses.push_back(p_box);
+			sim_data.poses.push_back(p_indicator);
 
 			pub_SimuBoxPose.publish(sim_data);
 
-			if(currBehavior.bNewPlan && m_SimParams.bEnableLogs)
+			if(m_CurrBehavior.bNewPlan && m_SimParams.bEnableLogs)
 			{
 				std::ostringstream str_out;
 				str_out << m_SimParams.logPath;
@@ -800,7 +812,7 @@ void OpenPlannerCarSimulator::MainLoop()
 				PlannerHNS::PlanningHelpers::WritePathToFile(str_out.str(),  m_LocalPlanner->m_Path);
 			}
 
-			if(m_SimParams.bLooper && currBehavior.state == PlannerHNS::FINISH_STATE)
+			if(m_SimParams.bLooper && m_CurrBehavior.state == PlannerHNS::FINISH_STATE)
 			{
 				InitializeSimuCar(m_SimParams.startPose);
 			}

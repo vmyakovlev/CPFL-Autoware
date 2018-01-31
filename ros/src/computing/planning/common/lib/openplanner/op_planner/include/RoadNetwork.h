@@ -743,8 +743,11 @@ public:
 	bool bDirection;
 	bool bVelocity;
 	int acceleration;
+	LIGHT_INDICATOR indicator_state;
+
 	DetectedObject()
 	{
+		indicator_state = INDICATOR_NONE;
 		bDirection = false;
 		bVelocity = false;
 		acceleration = 0;

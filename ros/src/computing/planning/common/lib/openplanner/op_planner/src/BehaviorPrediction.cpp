@@ -162,6 +162,14 @@ void BehaviorPrediction::ExtractTrajectoriesFromMapII(const std::vector<Detected
 
 }
 
+void BehaviorPrediction::CalPredictionTimeForObject(ObjParticles* pCarPart)
+{
+	if(pCarPart->obj.center.v > 0 )
+		pCarPart->m_PredictionTime = (MIN_PREDICTION_DISTANCE + 1.5*pCarPart->obj.center.v) / pCarPart->obj.center.v;
+	else
+		pCarPart->m_PredictionTime = MIN_PREDICTION_DISTANCE;
+}
+
 void BehaviorPrediction::PredictCurrentTrajectory(RoadNetwork& map, ObjParticles* pCarPart)
 {
 	pCarPart->obj.predTrajectories.clear();
@@ -205,7 +213,6 @@ void BehaviorPrediction::PredictCurrentTrajectory(RoadNetwork& map, ObjParticles
 			planner.PredictTrajectoriesUsingDP(pCarPart->obj.center, pCarPart->obj.pClosestWaypoints, m_PredictionDistance, pCarPart->obj.predTrajectories, m_bGenerateBranches, pCarPart->obj.bDirection);
 		}
 	}
-
 }
 
 void BehaviorPrediction::ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list,RoadNetwork& map, std::vector<ObjParticles>& old_list)
@@ -694,21 +701,25 @@ void BehaviorPrediction::SamplesParticlesII(ObjParticles* parts)
 
 		if(parts->m_TrajectoryTracker.at(t)->nAliveYield == 0 )
 		{
+
 			p.beh = PlannerHNS::BEH_YIELDING_STATE;
+			PlanningHelpers::GetRelativeInfo(*(parts->m_TrajectoryTracker.at(t)->trajectory), parts->obj.center, info);
+			unsigned int point_index = 0;
+			p.pose = PlanningHelpers::GetFollowPointOnTrajectory(*(parts->m_TrajectoryTracker.at(t)->trajectory), info, PREDICTION_DISTANCE/2.0, point_index);
 
 			parts->m_TrajectoryTracker.at(t)->m_YieldPart.clear();
 			for(unsigned int i=0; i < BEH_PARTICLES_NUM; i++)
 				parts->m_TrajectoryTracker.at(t)->InsertNewParticle(p);
 
-			double dx = info.perp_point.pos.x + (PREDICTION_DISTANCE * 0.5 * cos(info.perp_point.pos.a));
-			double dy = info.perp_point.pos.y + (PREDICTION_DISTANCE * 0.5 * sin(info.perp_point.pos.a));
-			double da = info.perp_point.pos.a;
+//			double dx = info.perp_point.pos.x + (PREDICTION_DISTANCE * 0.5 * cos(info.perp_point.pos.a));
+//			double dy = info.perp_point.pos.y + (PREDICTION_DISTANCE * 0.5 * sin(info.perp_point.pos.a));
+//			double da = info.perp_point.pos.a;
 
 			for(unsigned int i=0; i < parts->m_TrajectoryTracker.at(t)->m_YieldPart.size(); i++)
 			{
-				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.x = dx + gen_x();
-				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.y = dy + gen_x();
-				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.a = da + gen_a();
+				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.x = parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.x + gen_x();
+				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.y = parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.y + gen_x();
+				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.a = parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.a + gen_a();
 				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).pose.pos.z = parts->obj.center.pos.z;
 				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).vel = parts->obj.center.v - fabs(gen_v());
 				parts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).indicator = 0;
@@ -1088,6 +1099,58 @@ void BehaviorPrediction::CalculateWeightsII(ObjParticles* pParts)
 
 	double half_percent_value = pParts->min_w + (pParts->max_w - pParts->min_w)*KEEP_PERCENTAGE;
 
+//	std::cout << "Behavior Weights ------------------------------------------------ " << std::endl;
+//	std::cout << " Keep Percent Value: " << half_percent_value <<  std::endl;
+//
+//
+//	for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size(); t++)
+//	{
+//		double avg_sum = 0;
+//		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_ForwardPart.size(); i++)
+//		{
+//			avg_sum += pParts->m_TrajectoryTracker.at(t)->m_ForwardPart.at(i).w;
+//		}
+//		if(pParts->m_TrajectoryTracker.at(t)->m_ForwardPart.size() > 0)
+//			std::cout << "     F: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveForward << ", W:" << avg_sum/(double)pParts->m_TrajectoryTracker.at(t)->m_ForwardPart.size() << std::endl;
+//
+//		avg_sum = 0;
+//		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_LeftPart.size(); i++)
+//		{
+//			avg_sum += pParts->m_TrajectoryTracker.at(t)->m_LeftPart.at(i).w;
+//		}
+//
+//		if(pParts->m_TrajectoryTracker.at(t)->m_LeftPart.size() > 0)
+//			std::cout << "     L: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveLeft << ", W:" << avg_sum/(double)pParts->m_TrajectoryTracker.at(t)->m_LeftPart.size() << std::endl;
+//
+//		avg_sum = 0;
+//		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_RightPart.size(); i++)
+//		{
+//			avg_sum += pParts->m_TrajectoryTracker.at(t)->m_RightPart.at(i).w;
+//		}
+//		if(pParts->m_TrajectoryTracker.at(t)->m_RightPart.size() > 0)
+//			std::cout << "     R: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveRight << ", W:" << avg_sum/(double)pParts->m_TrajectoryTracker.at(t)->m_RightPart.size() << std::endl;
+//
+//		avg_sum = 0;
+//		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_StopPart.size(); i++)
+//		{
+//			avg_sum += pParts->m_TrajectoryTracker.at(t)->m_StopPart.at(i).w;
+//		}
+//		if(pParts->m_TrajectoryTracker.at(t)->m_StopPart.size() > 0)
+//			std::cout << "     S: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveStop << ", W:" << avg_sum/(double)pParts->m_TrajectoryTracker.at(t)->m_StopPart.size() << std::endl;
+//
+//		avg_sum = 0;
+//		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_YieldPart.size(); i++)
+//		{
+//			avg_sum += pParts->m_TrajectoryTracker.at(t)->m_YieldPart.at(i).w;
+//		}
+//		if(pParts->m_TrajectoryTracker.at(t)->m_YieldPart.size() > 0)
+//			std::cout << "     Y: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveYield << ", W:" << avg_sum/(double)pParts->m_TrajectoryTracker.at(t)->m_YieldPart.size() << std::endl;
+//	}
+//
+//	std::cout << "------------------------------------------------ --------------" << std::endl;
+//
+//	return;
+
 	for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size(); t++)
 	{
 		for(unsigned int i = 0; i < pParts->m_TrajectoryTracker.at(t)->m_ForwardPart.size(); i++)
@@ -1133,7 +1196,7 @@ void BehaviorPrediction::CalculateWeightsII(ObjParticles* pParts)
 
 	pParts->CalculateProbabilities();
 
-	/*std::cout << "Behavior Prob ------------------------------------------------ " << std::endl;
+	std::cout << "Behavior Prob ------------------------------------------------ " << std::endl;
 	for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size(); t++)
 	{
 		std::cout << "Traj:" << t << ", Best Beh:" << pParts->m_TrajectoryTracker.at(t)->best_beh << ", Best P: " << pParts->m_TrajectoryTracker.at(t)->best_p << std::endl;
@@ -1143,7 +1206,7 @@ void BehaviorPrediction::CalculateWeightsII(ObjParticles* pParts)
 		std::cout << "     S: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveStop << ", P:" << pParts->m_TrajectoryTracker.at(t)->pStop << std::endl;
 		std::cout << "     Y: N:" << pParts->m_TrajectoryTracker.at(t)->nAliveYield << ", P:" << pParts->m_TrajectoryTracker.at(t)->pYield << std::endl << std::endl;
 	}
-	std::cout << "------------------------------------------------ --------------" << std::endl;*/
+	std::cout << "------------------------------------------------ --------------" << std::endl;
 }
 
 void BehaviorPrediction::ReSamplesParticles(ObjParticles& parts)

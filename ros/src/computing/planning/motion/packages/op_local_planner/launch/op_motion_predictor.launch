@@ -4,7 +4,7 @@
 	<arg name="prediction_distance" 	default="5.0"/>
 	<arg name="enableGenrateBranches" 	default="false"/>
 	<arg name="enableCurbObstacles" 	default="false" />
-	<arg name="enableStepByStepSignal" 		default="true" />
+	<arg name="enableStepByStepSignal" 		default="false" />
 	
 	
 	<node pkg="op_local_planner" type="op_motion_predictor" name="op_motion_predictor" output="screen">		

@@ -508,16 +508,23 @@ void LocalPlannerH::ReInitializePlanner(const WayPoint& start_pose)
 	currentBehavior.state = m_pCurrentBehaviorState->m_Behavior;
 	currentBehavior.followDistance = preCalcPrams->distanceToNext;
 
-	if(preCalcPrams->bUpcomingRight)
-		currentBehavior.indicator = PlannerHNS::INDICATOR_RIGHT;
-	else if(preCalcPrams->bUpcomingLeft)
-		currentBehavior.indicator = PlannerHNS::INDICATOR_LEFT;
-	else
-		currentBehavior.indicator = PlannerHNS::INDICATOR_NONE;
+//	if(preCalcPrams->bUpcomingRight)
+//		currentBehavior.indicator = PlannerHNS::INDICATOR_RIGHT;
+//	else if(preCalcPrams->bUpcomingLeft)
+//		currentBehavior.indicator = PlannerHNS::INDICATOR_LEFT;
+//	else
+//		currentBehavior.indicator = PlannerHNS::INDICATOR_NONE;
 
 	currentBehavior.minVelocity		= 0;
 	currentBehavior.stopDistance 	= preCalcPrams->distanceToStop();
 	currentBehavior.followVelocity 	= preCalcPrams->velocityOfNext;
+
+	double average_braking_distance = -pow(vehicleState.speed, 2)/(m_CarInfo.max_deceleration) + m_params.additionalBrakingDistance;
+
+	if(average_braking_distance  < 15)
+		average_braking_distance = 15;
+
+	currentBehavior.indicator = PlanningHelpers::GetIndicatorsFromPath(m_Path, state, average_braking_distance );
 
 	return currentBehavior;
  }
@@ -773,10 +780,7 @@ void LocalPlannerH::ReInitializePlanner(const WayPoint& start_pose)
 
 	UpdateCurrentLane(map, 3.0);
 
-
 	ExtractHorizonAndCalculateRecommendedSpeed();
-
-
 
 	m_PredictedTrajectoryObstacles = obj_list;
 	//m_TrajectoryPredictionForMovingObstacles.DoOneStep(map, vehicleState, state, m_TotalPath.at(m_iCurrentTotalPathId), m_PredictedTrajectoryObstacles, m_params.minFollowingDistance);
@@ -787,7 +791,6 @@ void LocalPlannerH::ReInitializePlanner(const WayPoint& start_pose)
 			m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory, m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeLane, *m_pCurrentBehaviorState->m_pParams,
 			m_CarInfo,vehicleState, m_PredictedTrajectoryObstacles);
 	m_CostCalculationTime = UtilityH::GetTimeDiffNow(t);
-
 
 	UtilityH::GetTickCount(t);
 	CalculateImportantParameterForDecisionMaking(vehicleState, goalID, bEmergencyStop, trafficLight, tc);

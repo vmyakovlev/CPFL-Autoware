@@ -185,6 +185,8 @@ public:
 
 	static void WritePathToFile(const std::string& fileName, const std::vector<WayPoint>& path);
 
+	static LIGHT_INDICATOR GetIndicatorsFromPath(const std::vector<WayPoint>& path, const WayPoint& pose, const double& seachDistance);
+
 	static void TestQuadraticSpline(const std::vector<WayPoint>& center_line, std::vector<WayPoint>& path);
 	static double frunge ( double x );
 	static double fprunge ( double x );

@@ -598,6 +598,7 @@ void RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(co
 {
 	obj.id = det_obj.id;
 	obj.label = det_obj.label;
+	obj.indicator_state = det_obj.indicator_state;
 	obj.dimensions.x = det_obj.l;
 	obj.dimensions.y = det_obj.w;
 	obj.dimensions.z = det_obj.h;
@@ -1451,6 +1452,16 @@ void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const Planne
 	{
 		obj.id = clusters.clusters.at(i).id;
 		obj.label = clusters.clusters.at(i).label;
+
+
+		if(clusters.clusters.at(i).indicator_state == 0)
+			obj.indicator_state = PlannerHNS::INDICATOR_LEFT;
+		else if(clusters.clusters.at(i).indicator_state == 1)
+			obj.indicator_state = PlannerHNS::INDICATOR_RIGHT;
+		else if(clusters.clusters.at(i).indicator_state == 2)
+			obj.indicator_state = PlannerHNS::INDICATOR_BOTH;
+		else if(clusters.clusters.at(i).indicator_state == 3)
+			obj.indicator_state = PlannerHNS::INDICATOR_NONE;
 
 		obj.center.pos.x = clusters.clusters.at(i).centroid_point.point.x;
 		obj.center.pos.y = clusters.clusters.at(i).centroid_point.point.y;

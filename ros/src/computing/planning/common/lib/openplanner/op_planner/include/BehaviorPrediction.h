@@ -20,22 +20,25 @@ namespace PlannerHNS
 
 #define MOTION_POSE_ERROR 0.25 // 50 cm pose error
 #define MOTION_ANGLE_ERROR 0.08 // 0.05 rad angle error
-#define MOTION_VEL_ERROR 0.25
+#define MOTION_VEL_ERROR 0.1
 #define MEASURE_POSE_ERROR 0.25
 #define MEASURE_ANGLE_ERROR 0.08
-#define MEASURE_VEL_ERROR 0.25
+#define MEASURE_VEL_ERROR 0.1
 
 #define PREDICTION_DISTANCE 2 //meters
 
-#define BEH_PARTICLES_NUM 20
+#define BEH_PARTICLES_NUM 5
+#define BEH_MIN_PARTICLE_NUM 2
 
 #define POSE_FACTOR 0.33
 #define DIRECTION_FACTOR 0.33
 #define VELOCITY_FACTOR 0.33
 
-#define KEEP_PERCENTAGE 0.25
+#define KEEP_PERCENTAGE 0.9
 
 #define FIXED_PLANNING_DISTANCE 10
+
+#define MIN_PREDICTION_DISTANCE 5
 
 typedef boost::mt19937 ENG;
 typedef boost::normal_distribution<double> NormalDIST;
@@ -52,6 +55,7 @@ public:
 	int acc; //[-1 ->Slowing, 0, Stopping, 1 -> accelerating]
 	int indicator; //[-1 -> Left, 0 -> no, 1 -> Right ]
 	WayPoint pose;
+
 	double w;
 	double pose_w;
 	double dir_w;
@@ -449,35 +453,35 @@ public:
 
 	void DeleteParticle(const Particle& p, const int& _i)
 	{
-		if(p.beh == PlannerHNS::BEH_STOPPING_STATE && nAliveStop > 5)
+		if(p.beh == PlannerHNS::BEH_STOPPING_STATE && nAliveStop > BEH_MIN_PARTICLE_NUM)
 		{
 //			m_StopPart.at(_i).bDeleted = true;
 //			m_StopPart.at(_i).pTraj = 0;
 			m_StopPart.erase(m_StopPart.begin()+_i);
 			nAliveStop--;
 		}
-		else if(p.beh == PlannerHNS::BEH_YIELDING_STATE && nAliveYield > 5)
+		else if(p.beh == PlannerHNS::BEH_YIELDING_STATE && nAliveYield > BEH_MIN_PARTICLE_NUM)
 		{
 //			m_YieldPart.at(_i).bDeleted = true;
 //			m_YieldPart.at(_i).pTraj = 0;
 			m_YieldPart.erase(m_YieldPart.begin()+_i);
 			nAliveYield--;
 		}
-		else if(p.beh == PlannerHNS::BEH_FORWARD_STATE && nAliveForward > 5)
+		else if(p.beh == PlannerHNS::BEH_FORWARD_STATE && nAliveForward > BEH_MIN_PARTICLE_NUM)
 		{
 //			m_ForwardPart.at(_i).bDeleted = true;
 //			m_ForwardPart.at(_i).pTraj = 0;
 			m_ForwardPart.erase(m_ForwardPart.begin()+_i);
 			nAliveForward--;
 		}
-		else if(p.beh == PlannerHNS::BEH_BRANCH_LEFT_STATE && nAliveLeft > 5)
+		else if(p.beh == PlannerHNS::BEH_BRANCH_LEFT_STATE && nAliveLeft > BEH_MIN_PARTICLE_NUM)
 		{
 //			m_LeftPart.at(_i).bDeleted = true;
 //			m_LeftPart.at(_i).pTraj = 0;
 			m_LeftPart.erase(m_LeftPart.begin()+_i);
 			nAliveLeft--;
 		}
-		else if(p.beh == PlannerHNS::BEH_BRANCH_RIGHT_STATE && nAliveRight > 5)
+		else if(p.beh == PlannerHNS::BEH_BRANCH_RIGHT_STATE && nAliveRight > BEH_MIN_PARTICLE_NUM)
 		{
 //			m_RightPart.at(_i).bDeleted = true;
 //			m_RightPart.at(_i).pTraj = 0;
@@ -532,6 +536,7 @@ public:
 	GPSPoint prev_pose;
 
 	PlannerHNS::BehaviorState m_beh;
+	double m_PredictionTime;
 
 
 	double all_w;
@@ -574,6 +579,7 @@ public:
 
 	ObjParticles()
 	{
+		m_PredictionTime = 0;
 		best_beh_track = 0;
 		all_w = 0;
 		pose_w_t = 0;
@@ -802,154 +808,6 @@ public:
 		DeleteTheRest(delete_me_track);
 		m_TrajectoryTracker = m_TrajectoryTracker_temp;
 	}
-
-//	void MatchTrajectories()
-//	{
-//		std::vector<unsigned int > add_me_index;
-//		std::vector<TrajectoryTracker*> delete_me_track = m_TrajectoryTracker;
-//		std::vector<LLP> matching_list;
-//
-//		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
-//		{
-//			bool bMatched = false;
-//			int match_index = -1;
-//			double match_percentage = -1;
-//			LLP match_item;
-//			match_item.new_index = t;
-//
-//			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-//			{
-//				double vMatch = m_TrajectoryTracker.at(i)->CalcMatchingPercentage(obj.predTrajectories.at(t));
-//				if(vMatch == 1.0) // perfect match
-//				{
-//					m_TrajectoryTracker.at(i)->UpdatePathAndIndex(obj.predTrajectories.at(t), t);
-//					//delete from delete me
-//					DeleteFromList(delete_me_track, m_TrajectoryTracker.at(i));
-//
-//					match_index = i;
-//					match_percentage = vMatch;
-//					bMatched = true;
-//					break;
-//				}
-//				else if(vMatch > 0.5) // any matching less than 50%, the trajectory will be considered new
-//				{
-//					bMatched = true;
-//					match_item.old_index = i;
-//					match_item.match_percent = vMatch;
-//					matching_list.push_back(match_item);
-//				}
-//			}
-//
-//			if(!bMatched) // no match at all
-//				add_me_index.push_back(t);
-//		}
-//
-//		//Match Best Matches
-//		MatchWithMax(matching_list, delete_me_track, m_TrajectoryTracker);
-//
-//		//delete index which are not found
-//		DeleteTheRest(delete_me_track, m_TrajectoryTracker);
-//
-//		//add the new paths
-//		for(unsigned int k = 0; k < add_me_index.size(); k++)
-//		{
-//			m_TrajectoryTracker.push_back(new TrajectoryTracker(obj.predTrajectories.at(add_me_index.at(k)), add_me_index.at(k)));
-//		}
-//	}
-
-//	void MatchTrajectories()
-//	{
-//		std::vector<unsigned int > add_me_index;
-//		std::vector<TrajectoryTracker*> delete_me_track = m_TrajectoryTracker;
-//
-//		std::cout << "Original Trajectories: " << delete_me_track.size() << ", ";
-//
-//		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
-//		{
-//			bool bMatched = false;
-//			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-//			{
-//				if(m_TrajectoryTracker.at(i)->FindMatchIndex(obj.predTrajectories.at(t), t) >=0 )
-//				{
-//					m_TrajectoryTracker.at(i)->UpdatePathAndIndex(obj.predTrajectories.at(t), t);
-//					//delete from delete me
-//					for(unsigned int k = 0; k < delete_me_track.size(); k++)
-//					{
-//						if(delete_me_track.at(k) == m_TrajectoryTracker.at(i))
-//						{
-//							delete_me_track.erase(delete_me_track.begin()+k);
-//							break;
-//						}
-//					}
-//					bMatched = true;
-//					break;
-//				}
-//			}
-//
-//			if(!bMatched)
-//				add_me_index.push_back(t);
-//		}
-//
-//		//delete index which are not found
-//
-//		std::cout << "To Delete Trajectories: " << delete_me_track.size() << std::endl;
-//		for(unsigned int k = 0; k < delete_me_track.size(); k++)
-//		{
-//			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-//			{
-//				if(delete_me_track.at(k) == m_TrajectoryTracker.at(i))
-//				{
-//					delete m_TrajectoryTracker.at(i);
-//					m_TrajectoryTracker.erase(m_TrajectoryTracker.begin()+i);
-//					break;
-//				}
-//			}
-//			delete delete_me_track.at(k);
-//		}
-//
-//		delete_me_track.clear();
-//
-//		//add the new paths
-//		for(unsigned int k = 0; k < add_me_index.size(); k++)
-//			m_TrajectoryTracker.push_back(new TrajectoryTracker(obj.predTrajectories.at(add_me_index.at(k)), add_me_index.at(k)));
-//	}
-
-//	void MatchTrajectories()
-//	{
-//		m_TrajectoryTracker_temp.clear();
-//
-//		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
-//		{
-//			TrajectoryTracker tc(obj.predTrajectories.at(t), t);
-//			bool bMatched = false;
-//			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-//			{
-//				if(m_TrajectoryTracker.at(i).MatchIfEqual(tc))
-//				{
-//					m_TrajectoryTracker_temp.push_back(m_TrajectoryTracker.at(i));
-//					m_TrajectoryTracker.erase(m_TrajectoryTracker.begin()+i);
-//					bMatched = true;
-////					std::cout << " Ok [ " ;
-////					for(unsigned int it_ids = 0 ; it_ids < tc.ids.size(); it_ids++)
-////						std::cout << tc.ids.at(it_ids) << "," ;
-////					std::cout << " ] " << std::endl << std::endl;
-//					break;
-//				}
-//			}
-//
-//			if(!bMatched)
-//			{
-//
-////				std::cout << " #### NO Match ! [ " ;
-////				for(unsigned int it_ids = 0 ; it_ids < tc.ids.size(); it_ids++)
-////					std::cout << tc.ids.at(it_ids) << "," ;
-////				std::cout << " ] " << std::endl << std::endl;
-//				m_TrajectoryTracker_temp.push_back(tc);
-//			}
-//		}
-//
-//		m_TrajectoryTracker = m_TrajectoryTracker_temp;
-//	}
 };
 
 class BehaviorPrediction
@@ -978,7 +836,9 @@ public:
 	struct timespec m_GenerationTimer;
 	timespec m_ResamplingTimer;
 
+
 protected:
+	void CalPredictionTimeForObject(ObjParticles* pCarPart);
 	void PredictCurrentTrajectory(RoadNetwork& map, ObjParticles* pCarPart);
 	void FilterObservations(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<DetectedObject>& filtered_list);
 	void ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles>& old_list);

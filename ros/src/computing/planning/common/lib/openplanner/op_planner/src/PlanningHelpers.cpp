@@ -2502,6 +2502,43 @@ void PlanningHelpers::WritePathToFile(const string& fileName, const vector<WayPo
 	 dataFile.WriteLogData("", fileName, str_header.str(), dataList);
 }
 
+LIGHT_INDICATOR PlanningHelpers::GetIndicatorsFromPath(const std::vector<WayPoint>& path, const WayPoint& pose,  const double& seachDistance)
+{
+	if(path.size() < 2)
+		return INDICATOR_NONE;
+
+	LIGHT_INDICATOR ind = INDICATOR_NONE;
+	RelativeInfo info;
+	PlanningHelpers::GetRelativeInfo(path, pose, info);
+
+	if(info.perp_point.actionCost.size() > 0)
+	{
+		if(info.perp_point.actionCost.at(0).first == LEFT_TURN_ACTION)
+			ind = INDICATOR_LEFT;
+		else if(info.perp_point.actionCost.at(0).first == RIGHT_TURN_ACTION)
+			ind = INDICATOR_RIGHT;
+	}
+
+	double total_d = 0;
+	for(unsigned int i=info.iFront; i < path.size()-2; i++)
+	{
+		total_d+= hypot(path.at(i+1).pos.y - path.at(i).pos.y, path.at(i+1).pos.x - path.at(i).pos.x);
+
+		if(path.at(i).actionCost.size() > 0)
+		{
+			if(path.at(i).actionCost.at(0).first == LEFT_TURN_ACTION)
+				return INDICATOR_LEFT;
+			else if(path.at(i).actionCost.at(0).first == RIGHT_TURN_ACTION)
+				return INDICATOR_RIGHT;
+		}
+
+		if(total_d > seachDistance)
+			break;
+	}
+
+	return ind;
+}
+
 void PlanningHelpers::TestQuadraticSpline (const std::vector<WayPoint>& center_line, std::vector<WayPoint>& path)
 {
 

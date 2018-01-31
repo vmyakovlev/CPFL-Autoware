@@ -121,6 +121,7 @@ protected:
 	PlannerHNS::CAR_BASIC_INFO m_CarInfo;
 	PlannerHNS::ControllerParams m_ControlParams;
 	PlannerHNS::PlanningParams m_PlanningParams;
+	PlannerHNS::BehaviorState m_CurrBehavior;
 
 	ros::NodeHandle nh;
 

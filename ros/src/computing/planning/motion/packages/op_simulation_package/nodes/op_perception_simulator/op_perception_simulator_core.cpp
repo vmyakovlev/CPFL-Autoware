@@ -49,7 +49,7 @@ typedef boost::variate_generator<ENG, NormalDIST> VariatGEN;
 
 OpenPlannerSimulatorPerception::OpenPlannerSimulatorPerception()
 {
-	nh.getParam("/op_perception_simulator/simObjNumber" 			, m_DecParams.nSimuObjs);
+	nh.getParam("/op_perception_simulator/simObjNumber" , m_DecParams.nSimuObjs);
 	nh.getParam("/op_perception_simulator/GuassianErrorFactor" 	, m_DecParams.errFactor);
 
 	pub_DetectedObjects 	= nh.advertise<autoware_msgs::CloudClusterArray>("cloud_clusters",1);
@@ -83,11 +83,18 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 	int obj_id = -1;
 	double actual_speed = 0;
 	double actual_steering  = 0;
+	int indicator;
+
 	if(msg.poses.size() > 0 )
 	{
 		obj_id = msg.poses.at(0).position.x;
 		actual_speed = msg.poses.at(0).position.y;
 		actual_steering = msg.poses.at(0).position.z;
+	}
+
+	if(msg.poses.size() == 4)
+	{
+		indicator = msg.poses.at(3).orientation.w;
 	}
 
 //	ROS_INFO("Obj ID = %d", obj_id);
@@ -108,6 +115,7 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 	autoware_msgs::CloudCluster c = GenerateSimulatedObstacleCluster(msg.poses.at(2).position.y, msg.poses.at(2).position.x, msg.poses.at(2).position.z, 50, msg.poses.at(1));
 	c.id = obj_id;
 	c.score = actual_speed;
+	c.indicator_state = indicator;
 
 	if(index >= 0) // update existing
 	{
