@@ -55,7 +55,7 @@ public:
 	int acc; //[-1 ->Slowing, 0, Stopping, 1 -> accelerating]
 	int indicator; //[-1 -> Left, 0 -> no, 1 -> Right ]
 	WayPoint pose;
-
+	WayPoint op_pose;
 	double w;
 	double pose_w;
 	double dir_w;
