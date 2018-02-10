@@ -1,9 +1,9 @@
-/*
- * BehaviorStateMachine.cpp
- *
- *  Created on: Jun 19, 2016
- *      Author: hatem
- */
+
+/// \file BehaviorStateMachine.cpp
+/// \author Hatem Darweesh
+/// \brief OpenPlanner's state machine implementation for different driving behaviors
+/// \date Jun 19, 2016
+
 
 #include "BehaviorStateMachine.h"
 #include "UtilityH.h"
@@ -81,7 +81,7 @@ BehaviorStateMachine* BehaviorStateMachine::FindBestState(int nMinCount)
 		}
 	}
 
-	return 0;
+	return nullptr;
 }
 
 BehaviorStateMachine* BehaviorStateMachine::FindBehaviorState(const STATE_TYPE& behavior)
@@ -91,8 +91,8 @@ BehaviorStateMachine* BehaviorStateMachine::FindBehaviorState(const STATE_TYPE& 
 		BehaviorStateMachine* pState = pNextStates.at(i);
 		if(pState && behavior == pState->m_Behavior )
 		{
-			UpdateLogCount(pState);
-			pState = FindBestState(decisionMakingCount);
+			//UpdateLogCount(pState);
+			//pState = FindBestState(decisionMakingCount);
 
 			if(pState == 0) return this;
 
@@ -102,7 +102,7 @@ BehaviorStateMachine* BehaviorStateMachine::FindBehaviorState(const STATE_TYPE& 
 		}
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void BehaviorStateMachine::Init()
@@ -350,6 +350,12 @@ BehaviorStateMachine* ForwardStateII::GetNextState()
 	if(pCParams->currentGoalID != pCParams->prevGoalID)
 		return FindBehaviorState(GOAL_STATE);
 
+	else if(m_pParams->enableTrafficLightBehavior
+				&& pCParams->currentTrafficLightID > 0
+				&& pCParams->bTrafficIsRed
+				&& pCParams->currentTrafficLightID != pCParams->prevTrafficLightID)
+			return FindBehaviorState(TRAFFIC_LIGHT_STOP_STATE);
+
 	else if(m_pParams->enableStopSignBehavior
 			&& pCParams->currentStopSignID > 0
 			&& pCParams->currentStopSignID != pCParams->prevStopSignID)
@@ -374,6 +380,12 @@ BehaviorStateMachine* FollowStateII::GetNextState()
 
 	if(pCParams->currentGoalID != pCParams->prevGoalID)
 		return FindBehaviorState(GOAL_STATE);
+
+	else if(m_pParams->enableTrafficLightBehavior
+				&& pCParams->currentTrafficLightID > 0
+				&& pCParams->bTrafficIsRed
+				&& pCParams->currentTrafficLightID != pCParams->prevTrafficLightID)
+			return FindBehaviorState(TRAFFIC_LIGHT_STOP_STATE);
 
 	else if(m_pParams->enableStopSignBehavior
 			&& pCParams->currentStopSignID > 0
@@ -457,4 +469,49 @@ BehaviorStateMachine* StopSignWaitStateII::GetNextState()
 
 	return FindBehaviorState(FORWARD_STATE);
 }
+
+BehaviorStateMachine* TrafficLightStopStateII::GetNextState()
+{
+	PreCalculatedConditions* pCParams = GetCalcParams();
+
+	std::cout << "Stopping for trafficLight "  << std::endl;
+	if(!pCParams->bTrafficIsRed)
+	{
+		std::cout << "Color Changed Stopping for trafficLight "  << std::endl;
+		pCParams->prevTrafficLightID = pCParams->currentTrafficLightID;
+		return FindBehaviorState(FORWARD_STATE);
+	}
+
+	else if(pCParams->bTrafficIsRed && pCParams->currentVelocity <= m_zero_velocity)
+	{
+		std::cout << "Velocity Changed Stopping for trafficLight ("  <<pCParams->currentVelocity << ", " << m_zero_velocity << ")" <<  std::endl;
+		return FindBehaviorState(TRAFFIC_LIGHT_WAIT_STATE);
+	}
+
+	else
+	{
+		return FindBehaviorState(this->m_Behavior); // return and reset
+	}
+}
+
+BehaviorStateMachine* TrafficLightWaitStateII::GetNextState()
+{
+	PreCalculatedConditions* pCParams = GetCalcParams();
+
+	std::cout << "Wait for trafficLight "  << std::endl;
+
+	if(!pCParams->bTrafficIsRed)
+	{
+		pCParams->prevTrafficLightID = pCParams->currentTrafficLightID;
+		return FindBehaviorState(FORWARD_STATE);
+	}
+
+//	else if(pCParams->currentVelocity > m_zero_velocity)
+//		return FindBehaviorState(TRAFFIC_LIGHT_STOP_STATE);
+
+	else
+		return FindBehaviorState(this->m_Behavior); // return and reset
+
+}
+
 } /* namespace PlannerHNS */

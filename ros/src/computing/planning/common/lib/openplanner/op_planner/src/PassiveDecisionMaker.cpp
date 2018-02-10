@@ -391,7 +391,7 @@ void PassiveDecisionMaker::InitBehaviorStates(const BehaviorState& start_beh)
  	bool bGreenTrafficLight = true;
 
 
-  	distanceToClosestStopLine = PlanningHelpers::GetDistanceToClosestStopLineAndCheck(m_Path, state, stopLineID, stopSignID, trafficLightID) - critical_long_front_distance;
+  	distanceToClosestStopLine = PlanningHelpers::GetDistanceToClosestStopLineAndCheck(m_Path, state, 0, stopLineID, stopSignID, trafficLightID) - critical_long_front_distance;
 
  	if(distanceToClosestStopLine > 0 && distanceToClosestStopLine < pValues->minStoppingDistance)
  	{

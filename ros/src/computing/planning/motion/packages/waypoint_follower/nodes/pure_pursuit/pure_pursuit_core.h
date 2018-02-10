@@ -68,6 +68,7 @@ public:
 
   void run();
 
+  double m_prev_kappa;
 private:
   // handle
   ros::NodeHandle nh_;

@@ -27,7 +27,7 @@
  *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include "../include/op_signs_simulator_core.h"
+#include "op_signs_simulator_core.h"
 
 
 #include "UtilityH.h"
@@ -41,14 +41,16 @@ namespace SignsSimulatorNS
 OpenPlannerSimulatorSigns::OpenPlannerSimulatorSigns()
 {
 	std::string first_str, second_str;
-	nh.getParam("/op_simulator_signs/FirstSignsListIds" 	, first_str);
-	nh.getParam("/op_simulator_signs/SecondSignsListIds" 	, second_str);
+	ros::NodeHandle _nh("~");
+	_nh.getParam("first_signs_list_ids" , first_str);
+	_nh.getParam("second_signs_list_ids" , second_str);
 
-	nh.getParam("/op_simulator_signs/FirstGreenTime" 	, m_Params.firstGreenTime);
-	nh.getParam("/op_simulator_signs/SecondGreenTime" 	, m_Params.secondGreenTime);
-	nh.getParam("/op_simulator_signs/FirstYellowTime" 	, m_Params.firstyellowTime);
-	nh.getParam("/op_simulator_signs/SecondYellowTime" 	, m_Params.secondyellowTime);
+	_nh.getParam("first_green_time" , m_Params.firstGreenTime);
+	_nh.getParam("second_green_time" , m_Params.secondGreenTime);
+	_nh.getParam("first_yellow_time" , m_Params.firstyellowTime);
+	_nh.getParam("second_yellow_time" , m_Params.secondyellowTime);
 
+	std::cout << first_str  << " | " <<   second_str << std::endl;
 	m_Params.SetCommandParams(first_str, second_str);
 
 	for(unsigned int i = 0; i < m_Params.firstSignsIds.size(); i++)
@@ -92,11 +94,11 @@ void OpenPlannerSimulatorSigns::MainLoop()
 
 		if(m_CurrLightState == PlannerHNS::GREEN_LIGHT)
 		{
-			std::cout << "Greeeeeen" << std::endl;
+			//std::cout << "Greeeeeen" << std::endl;
 			if(UtilityHNS::UtilityH::GetTimeDiffNow(m_Timer) < m_Params.firstGreenTime)
 			{
 				for(unsigned int i =0; i<m_FirstSignals.Signals.size(); i++)
-					m_FirstSignals.Signals.at(i).type = 0;
+					m_FirstSignals.Signals.at(i).type = 1;
 
 				for(unsigned int i =0; i<m_SecondSignals.Signals.size(); i++)
 					m_SecondSignals.Signals.at(i).type = 0;
@@ -109,7 +111,7 @@ void OpenPlannerSimulatorSigns::MainLoop()
 		}
 		else if(m_CurrLightState == PlannerHNS::YELLOW_LIGHT)
 		{
-			std::cout << "Yelowwwwww" << std::endl;
+			//std::cout << "Yelowwwwww" << std::endl;
 			if(UtilityHNS::UtilityH::GetTimeDiffNow(m_Timer) < m_Params.firstyellowTime)
 			{
 				for(unsigned int i =0; i< m_FirstSignals.Signals.size(); i++)
@@ -126,14 +128,14 @@ void OpenPlannerSimulatorSigns::MainLoop()
 		}
 		else if(m_CurrLightState == PlannerHNS::RED_LIGHT)
 		{
-			std::cout << "Reeeeeeed" << std::endl;
+			//std::cout << "Reeeeeeed" << std::endl;
 			if(UtilityHNS::UtilityH::GetTimeDiffNow(m_Timer) < m_Params.secondGreenTime)
 			{
 				for(unsigned int i =0; i<m_FirstSignals.Signals.size(); i++)
 					m_FirstSignals.Signals.at(i).type = 0;
 
 				for(unsigned int i =0; i<m_SecondSignals.Signals.size(); i++)
-					m_SecondSignals.Signals.at(i).type = 0;
+					m_SecondSignals.Signals.at(i).type = 1;
 			}
 			else
 			{
@@ -143,7 +145,7 @@ void OpenPlannerSimulatorSigns::MainLoop()
 		}
 		else if(m_CurrLightState == PlannerHNS::FLASH_YELLOW)
 		{
-			std::cout << "Yelowwwwww" << std::endl;
+			//std::cout << "Yelowwwwww" << std::endl;
 			if(UtilityHNS::UtilityH::GetTimeDiffNow(m_Timer) < m_Params.secondyellowTime)
 			{
 				for(unsigned int i =0; i<m_FirstSignals.Signals.size(); i++)
@@ -162,6 +164,8 @@ void OpenPlannerSimulatorSigns::MainLoop()
 		autoware_msgs::Signals all_signals;
 		all_signals.Signals.insert(all_signals.Signals.end(), m_FirstSignals.Signals.begin(), m_FirstSignals.Signals.end());
 		all_signals.Signals.insert(all_signals.Signals.end(), m_SecondSignals.Signals.begin(), m_SecondSignals.Signals.end());
+
+		//std::cout << "Number of Signals before send: " << all_signals.Signals.size()  << std::endl;
 
 		pub_trafficLights.publish(all_signals);
 

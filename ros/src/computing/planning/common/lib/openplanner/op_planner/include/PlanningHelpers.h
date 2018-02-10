@@ -1,9 +1,9 @@
-/*
- * PlanningHelpers.h
- *
- *  Created on: Jun 16, 2016
- *      Author: hatem
- */
+
+/// \file PlanningHelpers.h
+/// \brief Helper functions for planning algorithms
+/// \author Hatem Darweesh
+/// \date Jun 16, 2016
+
 
 #ifndef PLANNINGHELPERS_H_
 #define PLANNINGHELPERS_H_
@@ -179,7 +179,7 @@ public:
 	static double GetVelocityAhead(const std::vector<WayPoint>& path, const RelativeInfo& info,int& prev_index, const double& reasonable_brake_distance);
 	static bool CompareTrajectories(const std::vector<WayPoint>& path1, const std::vector<WayPoint>& path2);
 
-	static double GetDistanceToClosestStopLineAndCheck(const std::vector<WayPoint>& path, const WayPoint& p, int& stopLineID,int& stopSignID, int& trafficLightID, const int& prevIndex = 0);
+	static double GetDistanceToClosestStopLineAndCheck(const std::vector<WayPoint>& path, const WayPoint& p, const double& giveUpDistance, int& stopLineID,int& stopSignID, int& trafficLightID, const int& prevIndex = 0);
 
 	static bool GetThreePointsInfo(const WayPoint& p0, const WayPoint& p1, const WayPoint& p2, WayPoint& perp_p, double& long_d, double lat_d);
 

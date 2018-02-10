@@ -27,8 +27,6 @@
  *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-
 #include "../include/op_car_simulator_core.h"
 
 #include "UtilityH.h"
@@ -630,6 +628,7 @@ int OpenPlannerCarSimulator::LoadSimulationData(PlannerHNS::WayPoint& start_p, P
 
 void OpenPlannerCarSimulator::MainLoop()
 {
+
 	ros::Rate loop_rate(50);
 
 	PlannerHNS::VehicleState  currStatus;

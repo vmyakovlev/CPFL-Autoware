@@ -1,14 +1,15 @@
-/*
- * MappingHelpers.cpp
- *
- *  Created on: Jul 2, 2016
- *      Author: Hatem
- */
+
+/// \file MappingHelpers.cpp
+/// \brief Helper functions for mapping operation such as (load and initialize vector maps , convert map from one format to another, .. )
+/// \author Hatem Darweesh
+/// \date Jul 2, 2016
+
 
 
 #include "MappingHelpers.h"
 #include "MatrixOperations.h"
 #include "PlanningHelpers.h"
+#include <float.h>
 
 #include "math.h"
 #include <fstream>
@@ -52,7 +53,7 @@ Lane* MappingHelpers::GetLaneById(const int& id,RoadNetwork& map)
 		}
 	}
 
-	return 0;
+	return nullptr;
 }
 
 int MappingHelpers::GetLaneIdByWaypointId(const int& id,std::vector<Lane>& lanes)
@@ -111,6 +112,7 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 	for(unsigned int l= 0; l < lanes_data.size(); l++)
 	{
 		curr_lane_point = lanes_data.at(l);
+		curr_lane_point.originalMapID = -1;
 
 		if(l+1 < lanes_data.size())
 		{
@@ -167,7 +169,9 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 					prev_lane_point.FLID = next_lane_point.LnID;
 
 				id_replace_list.push_back(make_pair(curr_lane_point.LnID, next_lane_point.LnID));
+				int originalMapID = curr_lane_point.LnID;
 				curr_lane_point = next_lane_point;
+				curr_lane_point.originalMapID = originalMapID;
 				l++;
 			}
 		}
@@ -193,6 +197,8 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 		WayPoint wp;
 		bool bFound = GetWayPoint(curr_lane_point.LnID, lane_obj.id, curr_lane_point.RefVel,curr_lane_point.DID,
 				dt_data, points_data,origin, wp);
+
+		wp.originalMapID = curr_lane_point.originalMapID;
 
 		if(curr_lane_point.LaneDir == 'L')
 		{
@@ -427,7 +433,7 @@ WayPoint* MappingHelpers::FindWaypoint(const int& id, RoadNetwork& map)
 		}
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMapPath, RoadNetwork& map, const bool& bZeroOrigin)
@@ -566,6 +572,7 @@ bool MappingHelpers::GetWayPoint(const int& id, const int& laneID,const double& 
 				{
 					WayPoint wp;
 					wp.id = id;
+					//wp.id = points.at(p).PID;
 					wp.laneId = laneID;
 					wp.v = refVel;
 //					double integ_part = points.at(p).L;
@@ -587,6 +594,8 @@ bool MappingHelpers::GetWayPoint(const int& id, const int& laneID,const double& 
 					wp.pos.dir = dtpoints.at(dtp).Dir;
 					wp.iOriginalIndex = p;
 
+					if(wp.id == 208)
+						std::cout << " <<<<<<<<<<<<<<<<<<< Found 208 >>>>>>>>>>>>>>>> "  << std::endl;
 
 					way_point = wp;
 					return 1;
@@ -595,7 +604,7 @@ bool MappingHelpers::GetWayPoint(const int& id, const int& laneID,const double& 
 		}
 	}
 
-	return 0;
+	return false;
 }
 
 void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
@@ -754,7 +763,6 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 
 }
 
-
 TiXmlElement* MappingHelpers::GetHeadElement(TiXmlElement* pMainElem)
 {
 	TiXmlElement* pElem = pMainElem;
@@ -766,13 +774,13 @@ TiXmlElement* MappingHelpers::GetHeadElement(TiXmlElement* pMainElem)
 		pElem = pElem->FirstChildElement("Document");
 
 	if(!pElem)
-		return 0;
+		return nullptr;
 	return pElem;
 }
 
 TiXmlElement* MappingHelpers::GetDataFolder(const string& folderName, TiXmlElement* pMainElem)
 {
-	if(!pMainElem) return 0;
+	if(!pMainElem) return nullptr;
 
 	TiXmlElement* pElem = pMainElem->FirstChildElement("Folder");
 
@@ -785,7 +793,7 @@ TiXmlElement* MappingHelpers::GetDataFolder(const string& folderName, TiXmlEleme
 		if(folderID.compare(folderName)==0)
 			return pElem;
 	}
-	return 0;
+	return nullptr;
 }
 
 WayPoint* MappingHelpers::GetClosestWaypointFromMap(const WayPoint& pos, RoadNetwork& map, const bool bDirectionBased)
@@ -798,7 +806,7 @@ WayPoint* MappingHelpers::GetClosestWaypointFromMap(const WayPoint& pos, RoadNet
 		distance_to_nearest_lane += 1;
 	}
 
-	if(!pLane) return 0;
+	if(!pLane) return nullptr;
 
 	int closest_index = PlanningHelpers::GetClosestNextPointIndexFast(pLane->points, pos);
 
@@ -835,7 +843,7 @@ WayPoint* MappingHelpers::GetClosestBackWaypointFromMap(const WayPoint& pos, Roa
 		distance_to_nearest_lane += 1;
 	}
 
-	if(!pLane) return 0;
+	if(!pLane) return nullptr;
 
 	int closest_index = PlanningHelpers::GetClosestNextPointIndexFast(pLane->points, pos);
 
@@ -853,14 +861,14 @@ Lane* MappingHelpers::GetClosestLaneFromMap(const WayPoint& pos, RoadNetwork& ma
 {
 	vector<pair<double, Lane*> > laneLinksList;
 	double d = 0;
-	double min_d = 9999999999;
+	double min_d = DBL_MAX;
 	for(unsigned int j=0; j< map.roadSegments.size(); j ++)
 	{
 		for(unsigned int k=0; k< map.roadSegments.at(j).Lanes.size(); k ++)
 		{
 			//Lane* pLane = &pEdge->lanes.at(k);
 			 d = 0;
-			min_d = 9999999999;
+			min_d = DBL_MAX;
 			for(unsigned int pindex=0; pindex< map.roadSegments.at(j).Lanes.at(k).points.size(); pindex ++)
 			{
 
@@ -874,9 +882,9 @@ Lane* MappingHelpers::GetClosestLaneFromMap(const WayPoint& pos, RoadNetwork& ma
 		}
 	}
 
-	if(laneLinksList.size() == 0) return 0;
+	if(laneLinksList.size() == 0) return nullptr;
 
-	min_d = 999999999;
+	min_d = DBL_MAX;
 	Lane* closest_lane = 0;
 	for(unsigned int i = 0; i < laneLinksList.size(); i++)
 	{
@@ -905,14 +913,14 @@ vector<Lane*> MappingHelpers::GetClosestLanesListFromMap(const WayPoint& pos, Ro
 {
 	vector<pair<double, Lane*> > laneLinksList;
 	double d = 0;
-	double min_d = 9999999999;
+	double min_d = DBL_MAX;
 	for(unsigned int j=0; j< map.roadSegments.size(); j ++)
 	{
 		for(unsigned int k=0; k< map.roadSegments.at(j).Lanes.size(); k ++)
 		{
 			//Lane* pLane = &pEdge->lanes.at(k);
 			 d = 0;
-			min_d = 9999999999;
+			min_d = DBL_MAX;
 			for(unsigned int pindex=0; pindex< map.roadSegments.at(j).Lanes.at(k).points.size(); pindex ++)
 			{
 
@@ -955,7 +963,7 @@ Lane* MappingHelpers::GetClosestLaneFromMapDirectionBased(const WayPoint& pos, R
 {
 	vector<pair<double, WayPoint*> > laneLinksList;
 	double d = 0;
-	double min_d = 9999999999;
+	double min_d = DBL_MAX;
 	int min_i = 0;
 	for(unsigned int j=0; j< map.roadSegments.size(); j ++)
 	{
@@ -963,7 +971,7 @@ Lane* MappingHelpers::GetClosestLaneFromMapDirectionBased(const WayPoint& pos, R
 		{
 			//Lane* pLane = &pEdge->lanes.at(k);
 			d = 0;
-			min_d = 9999999999;
+			min_d = DBL_MAX;
 			for(unsigned int pindex=0; pindex< map.roadSegments.at(j).Lanes.at(k).points.size(); pindex ++)
 			{
 
@@ -980,9 +988,9 @@ Lane* MappingHelpers::GetClosestLaneFromMapDirectionBased(const WayPoint& pos, R
 		}
 	}
 
-	if(laneLinksList.size() == 0) return 0;
+	if(laneLinksList.size() == 0) return nullptr;
 
-	min_d = 999999999;
+	min_d = DBL_MAX;
 	Lane* closest_lane = 0;
 	double a_diff = 0;
 	for(unsigned int i = 0; i < laneLinksList.size(); i++)
@@ -1003,7 +1011,6 @@ Lane* MappingHelpers::GetClosestLaneFromMapDirectionBased(const WayPoint& pos, R
 
 	return closest_lane;
 }
-
 
  std::vector<Lane*> MappingHelpers::GetClosestMultipleLanesFromMap(const WayPoint& pos, RoadNetwork& map, const double& distance)
 {
@@ -1069,7 +1076,7 @@ WayPoint* MappingHelpers::GetLastWaypoint(RoadNetwork& map)
 			return &lanes->at(lanes->size()-1).points.at(lanes->at(lanes->size()-1).points.size()-1);
 	}
 
-	return 0;
+	return nullptr;
 }
 
 void MappingHelpers::GetUniqueNextLanes(const Lane* l,  const vector<Lane*>& traversed_lanes, vector<Lane*>& lanes_list)
@@ -1093,7 +1100,7 @@ void MappingHelpers::GetUniqueNextLanes(const Lane* l,  const vector<Lane*>& tra
 
 Lane* MappingHelpers::GetLaneFromPath(const WayPoint& currPos, const std::vector<WayPoint>& currPath)
 {
-	if(currPath.size() < 1) return 0;
+	if(currPath.size() < 1) return nullptr;
 
 	int closest_index = PlanningHelpers::GetClosestNextPointIndexFast(currPath, currPos);
 
@@ -1544,7 +1551,7 @@ void MappingHelpers::FindAdjacentLanes(RoadNetwork& map)
 
 					if(pL->id != map.roadSegments.at(rs_2).Lanes.at(i2).id && angle_diff < 0.05 && distance < 3.5 && distance > 2.5)
 					{
-						double perp_distance = 99999;
+						double perp_distance = DBL_MAX;
 						if(pL->points.size() > 2 && map.roadSegments.at(rs_2).Lanes.at(i2).points.size()>2)
 						{
 							RelativeInfo info;
@@ -1629,6 +1636,10 @@ void MappingHelpers::ExtractStopLinesData(const std::vector<UtilityHNS::AisanSto
 		StopLine sl;
 		sl.linkID = stop_line_data.at(ist).LinkID;
 		sl.id = stop_line_data.at(ist).ID;
+		if(stop_line_data.at(ist).TLID>0)
+			sl.trafficLightID = stop_line_data.at(ist).TLID;
+		else
+			sl.stopSignID = 100+ist;
 
 		for(unsigned int il=0; il < line_data.size(); il++)
 		{
@@ -1706,6 +1717,53 @@ void MappingHelpers::LinkMissingBranchingWayPoints(RoadNetwork& map)
 
 void MappingHelpers::LinkTrafficLightsAndStopLines(RoadNetwork& map)
 {
+//	for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
+//	{
+//		std::cout << "StopLine: " << map.stopLines.at(isl).id << ", TrafficLightID: " << map.stopLines.at(isl).trafficLightID  << ", LinkID: " <<  map.stopLines.at(isl).linkID << ", LaneID: " <<  map.stopLines.at(isl).laneId << std::endl;
+//	}
+
+	//std::cout << std::endl << std::endl;
+
+	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
+	{
+		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
+		{
+			for(unsigned int p= 0; p < map.roadSegments.at(rs).Lanes.at(i).points.size(); p++)
+			{
+				for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
+				{
+					WayPoint* pWP = &map.roadSegments.at(rs).Lanes.at(i).points.at(p);
+
+					if(map.stopLines.at(isl).linkID == pWP->id || map.stopLines.at(isl).linkID == pWP->originalMapID)
+					{
+//						if(map.stopLines.at(isl).linkID == 208)
+//							std::cout << "<<<<<<<<<<<<<<<<<<< Found yaaaaaaaaaaaaaaaay >>>>>>>>>>>>>>>>>" << std::endl;
+
+						map.stopLines.at(isl).laneId = pWP->laneId;
+						map.stopLines.at(isl).pLane = pWP->pLane;
+						map.roadSegments.at(rs).Lanes.at(i).stopLines.push_back(map.stopLines.at(isl));
+
+						pWP->stopLineID = map.stopLines.at(isl).id;
+
+						//std::cout << "StopLine: " << map.stopLines.at(isl).id << ", TrafficLightID: " << map.stopLines.at(isl).trafficLightID  << ", LinkID: " <<  pWP->id << ", LaneID: " <<  pWP->laneId << std::endl;
+
+						for(unsigned int itl = 0; itl < map.trafficLights.size(); itl++)
+						{
+							if(map.trafficLights.at(itl).id == map.stopLines.at(isl).trafficLightID)
+							{
+								map.trafficLights.at(itl).laneIds.push_back(pWP->laneId);
+								map.trafficLights.at(itl).pLanes.push_back(pWP->pLane);
+							}
+						}
+						//WayPoint wp((map.stopLines.at(isl).points.at(0).x+map.stopLines.at(isl).points.at(1).x)/2.0, (map.stopLines.at(isl).points.at(0).y+map.stopLines.at(isl).points.at(1).y)/2.0, (map.stopLines.at(isl).points.at(0).z+map.stopLines.at(isl).points.at(1).z)/2.0, (map.stopLines.at(isl).points.at(0).a+map.stopLines.at(isl).points.at(1).a)/2.0);
+						//map.roadSegments.at(rs).Lanes.at(i).points.at(PlanningHelpers::GetClosestNextPointIndexFast(map.roadSegments.at(rs).Lanes.at(i).points, wp)).stopLineID = map.stopLines.at(isl).id;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
 	{
 		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
@@ -1715,11 +1773,12 @@ void MappingHelpers::LinkTrafficLightsAndStopLines(RoadNetwork& map)
 				for(unsigned int p= 0; p < map.roadSegments.at(rs).Lanes.at(i).points.size(); p++)
 				{
 					WayPoint* pWP = &map.roadSegments.at(rs).Lanes.at(i).points.at(p);
-					if(map.trafficLights.at(itl).linkID == pWP->id)
+					if(map.trafficLights.at(itl).linkID == pWP->id || map.trafficLights.at(itl).linkID == pWP->originalMapID)
 					{
-						map.trafficLights.at(itl).laneIds.push_back(pWP->laneId);
-						map.trafficLights.at(itl).pLanes.push_back(pWP->pLane);
+//						map.trafficLights.at(itl).laneIds.push_back(pWP->laneId);
+//						map.trafficLights.at(itl).pLanes.push_back(pWP->pLane);
 						map.roadSegments.at(rs).Lanes.at(i).trafficlights.push_back(map.trafficLights.at(itl));
+						//std::cout << "TrafficLight: " << map.trafficLights.at(itl).id << ", LinkID: " << pWP->id << ", LaneID: " << pWP->laneId << std::endl;
 						break;
 					}
 				}
@@ -1727,31 +1786,20 @@ void MappingHelpers::LinkTrafficLightsAndStopLines(RoadNetwork& map)
 		}
 	}
 
-	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
-		{
-			for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
-			{
-				for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
-				{
-					for(unsigned int p= 0; p < map.roadSegments.at(rs).Lanes.at(i).points.size(); p++)
-					{
-						WayPoint* pWP = &map.roadSegments.at(rs).Lanes.at(i).points.at(p);
-						if(map.stopLines.at(isl).linkID == pWP->id)
-						{
-							map.stopLines.at(isl).laneId = pWP->laneId;
-							map.stopLines.at(isl).pLane = pWP->pLane;
-							if(pWP->pLane->trafficlights.size() > 0)
-								map.stopLines.at(isl).trafficLightID = pWP->pLane->trafficlights.at(0).id;
-							map.stopLines.at(isl).stopSignID = 100+isl;
-							map.roadSegments.at(rs).Lanes.at(i).stopLines.push_back(map.stopLines.at(isl));
-							WayPoint wp((map.stopLines.at(isl).points.at(0).x+map.stopLines.at(isl).points.at(1).x)/2.0, (map.stopLines.at(isl).points.at(0).y+map.stopLines.at(isl).points.at(1).y)/2.0, (map.stopLines.at(isl).points.at(0).z+map.stopLines.at(isl).points.at(1).z)/2.0, (map.stopLines.at(isl).points.at(0).a+map.stopLines.at(isl).points.at(1).a)/2.0);
-							map.roadSegments.at(rs).Lanes.at(i).points.at(PlanningHelpers::GetClosestNextPointIndexFast(map.roadSegments.at(rs).Lanes.at(i).points, wp)).stopLineID = map.stopLines.at(isl).id;
-							break;
-						}
-					}
-				}
-			}
-		}
+//	for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
+//	{
+//		if(!map.stopLines.at(isl).pLane) continue;
+//
+//		for(unsigned int itl = 0; itl < map.trafficLights.size(); itl++)
+//		{
+//			if(map.trafficLights.at(itl).pLanes)
+//			if(map.stopLines.at(isl).pLane->id ==
+//		}
+////		if(pWP->pLane->trafficlights.size() > 0)
+////			map.stopLines.at(isl).trafficLightID = pWP->pLane->trafficlights.at(0).id;
+////		else
+////			map.stopLines.at(isl).stopSignID = 100+isl;
+//	}
 }
 
 void MappingHelpers::LinkTrafficLightsAndStopLinesConData(const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,

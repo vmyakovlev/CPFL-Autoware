@@ -94,7 +94,7 @@ protected:
 
 	visualization_msgs::MarkerArray m_DetectionCircles;
 
-protected: //ROS messages (topics)
+	//ROS messages (topics)
 	ros::NodeHandle nh;
 
 	//define publishers
@@ -108,11 +108,11 @@ protected: //ROS messages (topics)
 	ros::Subscriber sub_current_pose ;
 
 
-protected: // Callback function for subscriber.
+	// Callback function for subscriber.
 	void callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr &msg);
 	void callbackGetCurrentPose(const geometry_msgs::PoseStampedConstPtr& msg);
 
-protected: //Helper Functions
+	//Helper Functions
 	void VisualizeLocalTracking();
 
 public:

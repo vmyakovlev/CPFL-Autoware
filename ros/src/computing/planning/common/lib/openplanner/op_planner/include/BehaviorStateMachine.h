@@ -1,9 +1,9 @@
-/*
- * BehaviorStateMachine.h
- *
- *  Created on: Jun 19, 2016
- *      Author: hatem
- */
+
+/// \file BehaviorStateMachine.h
+/// \author Hatem Darweesh
+/// \brief OpenPlanner's state machine implementation for different driving behaviors
+/// \date Jun 19, 2016
+
 
 #ifndef BEHAVIORSTATEMACHINE_H_
 #define BEHAVIORSTATEMACHINE_H_
@@ -45,6 +45,7 @@ public:
 		else
 			m_pParams = pParams;
 	}
+
 
 	PreCalculatedConditions* m_pCalculatedValues;
 	PlanningParams* m_pParams;
@@ -151,7 +152,6 @@ public:
 	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_STOP_STATE;}
 	virtual ~TrafficLightStopState(){}
 	virtual BehaviorStateMachine* GetNextState();
-
 };
 
 class TrafficLightWaitState : public BehaviorStateMachine
@@ -161,7 +161,6 @@ public:
 	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_WAIT_STATE;}
 	virtual ~TrafficLightWaitState(){}
 	virtual BehaviorStateMachine* GetNextState();
-
 };
 
 class StopSignStopState : public BehaviorStateMachine
@@ -251,6 +250,24 @@ public:
 	virtual ~GoalStateII(){}
 	virtual BehaviorStateMachine* GetNextState();
 
+};
+
+class TrafficLightStopStateII : public BehaviorStateMachine
+{
+public:
+	TrafficLightStopStateII(PlanningParams* pParams, PreCalculatedConditions* pPreCalcVal, BehaviorStateMachine* pNextState)
+	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_STOP_STATE;}
+	virtual ~TrafficLightStopStateII(){}
+	virtual BehaviorStateMachine* GetNextState();
+};
+
+class TrafficLightWaitStateII : public BehaviorStateMachine
+{
+public:
+	TrafficLightWaitStateII(PlanningParams* pParams, PreCalculatedConditions* pPreCalcVal, BehaviorStateMachine* pNextState)
+	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_WAIT_STATE;}
+	virtual ~TrafficLightWaitStateII(){}
+	virtual BehaviorStateMachine* GetNextState();
 };
 
 } /* namespace PlannerHNS */

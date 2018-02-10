@@ -53,6 +53,8 @@ PurePursuitNode::PurePursuitNode()
 
   // initialize for PurePursuit
   pp_.setLinearInterpolationParameter(is_linear_interpolation_);
+
+  m_prev_kappa = 0;
 }
 
 // Destructor
@@ -101,17 +103,44 @@ void PurePursuitNode::run()
 
     pp_.setLookaheadDistance(computeLookaheadDistance());
 
-    double kappa = 0;
-    bool can_get_curvature = pp_.canGetCurvature(&kappa);
-    publishTwistStamped(can_get_curvature, kappa);
-    publishControlCommandStamped(can_get_curvature, kappa);
+    if(pp_.getTrajectorySize() < 5)
+    {
+    	  geometry_msgs::TwistStamped ts;
+    	  ts.header.stamp = ros::Time::now();
+    	  ts.twist.linear.x = 0;
+    	  ts.twist.angular.z = 0;
+    	  pub1_.publish(ts);
+    	publishControlCommandStamped(0,0);
 
-    // for visualization with Rviz
-    pub11_.publish(displayNextWaypoint(pp_.getPoseOfNextWaypoint()));
-    pub13_.publish(displaySearchRadius(pp_.getCurrentPose().position, pp_.getLookaheadDistance()));
-    pub12_.publish(displayNextTarget(pp_.getPoseOfNextTarget()));
-    pub15_.publish(displayTrajectoryCircle(
-        waypoint_follower::generateTrajectoryCircle(pp_.getPoseOfNextTarget(), pp_.getCurrentPose())));
+    	  autoware_msgs::ControlCommandStamped ccs;
+    	  ccs.header.stamp = ros::Time::now();
+    	  ccs.cmd.linear_velocity = 0;
+    	  ccs.cmd.steering_angle = 0;
+    	  pub2_.publish(ccs);
+    }
+    else
+    {
+		pp_.setLookaheadDistance(computeLookaheadDistance());
+
+		double kappa = 0;
+		bool can_get_curvature = pp_.canGetCurvature(&kappa);
+
+//		if(can_get_curvature == false || current_linear_velocity_)
+//			kappa = m_prev_kappa;
+//		else
+//			m_prev_kappa = kappa;
+
+		publishTwistStamped(can_get_curvature, kappa);
+		publishControlCommandStamped(can_get_curvature, kappa);
+
+		std::cout << "can_get_curvature: " << can_get_curvature << ", Kappa: " << kappa << ", Vel: " << command_linear_velocity_ << std::endl;
+
+		// for visualization with Rviz
+		pub11_.publish(displayNextWaypoint(pp_.getPoseOfNextWaypoint()));
+		pub13_.publish(displaySearchRadius(pp_.getCurrentPose().position, pp_.getLookaheadDistance()));
+		pub12_.publish(displayNextTarget(pp_.getPoseOfNextTarget()));
+		pub15_.publish(displayTrajectoryCircle(waypoint_follower::generateTrajectoryCircle(pp_.getPoseOfNextTarget(), pp_.getCurrentPose())));
+    }
 
     is_pose_set_ = false;
     is_velocity_set_ = false;
@@ -125,18 +154,22 @@ void PurePursuitNode::publishTwistStamped(const bool &can_get_curvature, const d
   geometry_msgs::TwistStamped ts;
   ts.header.stamp = ros::Time::now();
   ts.twist.linear.x = can_get_curvature ? computeCommandVelocity() : 0;
+  if(ts.twist.linear.x<0)
+	  ts.twist.linear.x*=-1;
   ts.twist.angular.z = can_get_curvature ? kappa * ts.twist.linear.x : 0;
   pub1_.publish(ts);
 }
 
 void PurePursuitNode::publishControlCommandStamped(const bool &can_get_curvature, const double &kappa) const
 {
-  if (!publishes_for_steering_robot_)
-    return;
+//  if (!publishes_for_steering_robot_)
+//    return;
 
   autoware_msgs::ControlCommandStamped ccs;
   ccs.header.stamp = ros::Time::now();
   ccs.cmd.linear_velocity = can_get_curvature ? computeCommandVelocity() : 0;
+  if(ccs.cmd.linear_velocity<0)
+	  ccs.cmd.linear_velocity*=-1;
   ccs.cmd.steering_angle = can_get_curvature ? convertCurvatureToSteeringAngle(wheel_base_, kappa) : 0;
 
   pub2_.publish(ccs);
@@ -188,6 +221,9 @@ void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStam
 
 void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr &msg)
 {
+	if(!msg) return;
+	if(msg->waypoints.size() == 0 ) return;
+
   if (!msg->waypoints.empty())
     command_linear_velocity_ = msg->waypoints.at(0).twist.twist.linear.x;
   else

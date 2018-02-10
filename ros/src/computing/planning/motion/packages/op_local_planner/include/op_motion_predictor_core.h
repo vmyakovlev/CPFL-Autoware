@@ -31,10 +31,7 @@
 #ifndef OP_MOTION_PREDICTION
 #define OP_MOTION_PREDICTION
 
-// ROS includes
 #include <ros/ros.h>
-#include "PlannerCommonDef.h"
-#include "BehaviorPrediction.h"
 
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Vector3Stamped.h>
@@ -47,7 +44,8 @@
 #include <autoware_msgs/DetectedObjectArray.h>
 #include <visualization_msgs/MarkerArray.h>
 
-
+#include "PlannerCommonDef.h"
+#include "BehaviorPrediction.h"
 
 namespace MotionPredictorNS
 {
@@ -94,13 +92,13 @@ protected:
 	visualization_msgs::MarkerArray m_CurbsDummy;
 	visualization_msgs::MarkerArray m_CurbsActual;
 
+	double m_DistanceBetweenCurbs;
+	double m_VisualizationTime;
 
 	timespec m_SensingTimer;
 
-protected:
 
 	ros::NodeHandle nh;
-
 	ros::Publisher  pub_predicted_objects_trajectories;
 	ros::Publisher  pub_PredictedTrajectoriesRviz ;
 	ros::Publisher  pub_CurbsRviz ;
@@ -114,7 +112,6 @@ protected:
 	ros::Subscriber sub_can_info			;
 	ros::Subscriber sub_StepSignal;
 
-protected:
 	// Callback function for subscriber.
 	void callbackGetTrackedObjects(const autoware_msgs::DetectedObjectArrayConstPtr& msg);
 	void callbackGetCurrentPose(const geometry_msgs::PoseStampedConstPtr& msg);
@@ -123,7 +120,7 @@ protected:
 	void callbackGetRobotOdom(const nav_msgs::OdometryConstPtr& msg);
 	void callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg);
 
-protected:
+	//Helper functions
 	void VisualizePrediction();
 	void UpdatePlanningParams(ros::NodeHandle& _nh);
 	void GenerateCurbsObstacles(std::vector<PlannerHNS::DetectedObject>& curb_obstacles);

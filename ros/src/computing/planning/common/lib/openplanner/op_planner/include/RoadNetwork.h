@@ -1,9 +1,9 @@
-/*
- * RoadNetwork.h
- *
- *  Created on: May 19, 2016
- *      Author: hatem
- */
+
+/// \file RoadNetwork.h
+/// \brief Definition of OpenPlanner's data types
+/// \author Hatem Darweesh
+/// \date May 19, 2016
+
 
 #ifndef ROADNETWORK_H_
 #define ROADNETWORK_H_
@@ -368,6 +368,8 @@ public:
 	double 		laneChangeCost;
 	int 		laneId;
 	int 		id;
+	int			originalMapID;
+	int			gid;
 	int 		LeftLaneId;
 	int 		RightLaneId;
 	int 		stopLineID;
@@ -387,7 +389,9 @@ public:
 
 	WayPoint()
 	{
+		gid = 0;
 		id = 0;
+		originalMapID = -1;
 		v = 0;
 		cost = 0;
 		laneId = -1;
@@ -414,7 +418,9 @@ public:
 		pos.z = z;
 		pos.a = a;
 
+		gid = 0;
 		id = 0;
+		originalMapID = -1;
 		v = 0;
 		cost = 0;
 		laneId = -1;
@@ -787,10 +793,13 @@ public:
 	double 	smoothingSmoothWeight;
 	double 	smoothingToleranceError;
 
+	double stopSignStopTime;
 
 	double additionalBrakingDistance;
 	double verticalSafetyDistance;
 	double horizontalSafetyDistancel;
+
+	double giveUpDistance;
 
 	int nReliableCount;
 
@@ -822,10 +831,13 @@ public:
 		smoothingSmoothWeight			= 0.2;
 		smoothingToleranceError			= 0.05;
 
+		stopSignStopTime 				= 2.0;
+
 		additionalBrakingDistance		= 1.0;
 		verticalSafetyDistance 			= 0.0;
 		horizontalSafetyDistancel		= 0.0;
 
+		giveUpDistance					= -4;
 		nReliableCount					= 2;
 
 		enableHeadingSmoothing			= false;

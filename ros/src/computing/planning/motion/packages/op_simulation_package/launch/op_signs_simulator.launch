@@ -1,19 +1,19 @@
 <!-- -->
 <launch>
-	<arg name="FirstSignsListIds"			default=",9,10," />
-	<arg name="FirstGreenTime"				default="15" />
-	<arg name="SecondSignsListIds"			default=",7,8," />
-	<arg name="SecondGreenTime"				default="15" />
-	<arg name="FirstYellowTime"				default="5" />
-	<arg name="SecondYellowTime"			default="5" />
+	<arg name="first_signs_list_ids"			default=",9,10," />
+	<arg name="first_green_time"				default="10" />
+	<arg name="second_signs_list_ids"			default=",7,8," />
+	<arg name="second_green_time"				default="10" />
+	<arg name="first_yellow_time"				default="5" />
+	<arg name="second_yellow_time"				default="5" />
 		
 	<node pkg="op_simulation_package" type="op_signs_simulator" name="op_signs_simulator" output="screen">		
-		<param name="FirstSignsListIds" 			value="$(arg FirstSignsListIds)" />		
-		<param name="SecondSignsListIds" 			value="$(arg SecondSignsListIds)" />		
-		<param name="FirstGreenTime" 				value="$(arg FirstGreenTime)" />
-		<param name="SecondGreenTime" 				value="$(arg SecondGreenTime)" />
-		<param name="FirstYellowTime" 				value="$(arg FirstYellowTime)" />
-		<param name="SecondYellowTime" 				value="$(arg SecondYellowTime)" />
+		<param name="first_signs_list_ids" 			value="$(arg first_signs_list_ids)" />		
+		<param name="first_green_time" 				value="$(arg first_green_time)" />
+		<param name="second_signs_list_ids" 		value="$(arg second_signs_list_ids)" />				
+		<param name="second_green_time" 			value="$(arg second_green_time)" />
+		<param name="first_yellow_time" 			value="$(arg first_yellow_time)" />
+		<param name="second_yellow_time" 			value="$(arg second_yellow_time)" />
 	</node>
 
 </launch>

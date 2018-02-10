@@ -46,6 +46,7 @@
 #include <visualization_msgs/InteractiveMarkerPose.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
+#include <geometry_msgs/PoseArray.h>
 
 #include "autoware_msgs/CloudCluster.h"
 #include "autoware_msgs/CloudClusterArray.h"

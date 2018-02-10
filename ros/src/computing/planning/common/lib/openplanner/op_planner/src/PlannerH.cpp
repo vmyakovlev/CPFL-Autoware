@@ -1,9 +1,9 @@
-/*
- * HelperFunctions.cpp
- *
- *  Created on: May 14, 2016
- *      Author: hatem
- */
+
+/// \file PlannerH.cpp
+/// \brief Main functions for path generation (global and local)
+/// \author Hatem Darweesh
+/// \date Dec 14, 2016
+
 
 #include "PlannerH.h"
 #include "PlanningHelpers.h"
@@ -178,18 +178,11 @@ double PlannerH::PlanUsingDP(const WayPoint& start,
 
 	if(fabs(start_info.perp_distance) > START_POINT_MAX_DISTANCE)
 	{
-		//if(fabs(start_info.perp_distance) > 20)
-		{
-			GPSPoint sp = start.pos;
-			cout << endl << "Error: PlannerH -> Start Distance to Lane is: " << start_info.perp_distance
-					<< ", Pose: " << sp.ToString() << ", LanePose:" << start_info.perp_point.pos.ToString()
-					<< ", LaneID: " << pStart->pLane->id << " -> Check origin and vector map. " << endl;
-			return 0;
-		}
-		// 		else
-		// 		{
-		// 			//PlanUsingReedShepp(start, *pStart, start_path, 1.0, 1);
-		// 		}
+		GPSPoint sp = start.pos;
+		cout << endl << "Error: PlannerH -> Start Distance to Lane is: " << start_info.perp_distance
+				<< ", Pose: " << sp.ToString() << ", LanePose:" << start_info.perp_point.pos.ToString()
+				<< ", LaneID: " << pStart->pLane->id << " -> Check origin and vector map. " << endl;
+		return 0;
 	}
 
 	if(fabs(goal_info.perp_distance) > GOAL_POINT_MAX_DISTANCE)
@@ -295,7 +288,7 @@ double PlannerH::PlanUsingDP(const WayPoint& start,
 	return totalPlanningDistance;
 }
 
-double PlannerH::PredictPlanUsingDP(Lane* l, const WayPoint& start, const double& maxPlanningDistance, std::vector<std::vector<WayPoint> >& paths)
+double PlannerH::PredictPlanUsingDP(PlannerHNS::Lane* l, const WayPoint& start, const double& maxPlanningDistance, std::vector<std::vector<WayPoint> >& paths)
 {
 	if(!l)
 	{
@@ -359,7 +352,6 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 	vector<WayPoint*> pLaneCells;
 	vector<int> unique_lanes;
 	std::vector<WayPoint> path;
-
 	for(unsigned int j = 0 ; j < closestWPs.size(); j++)
 	{
 		pLaneCells.clear();

@@ -36,7 +36,10 @@
 	<arg name="maxSteerAngle" 			default="0.45" />
 
 	<arg name="steeringDelay" 			default="1.2" />
-	<arg name="minPursuiteDistance" 		default="3.0"  />
+	<arg name="minPursuiteDistance" 	default="3.0"  />
+	<arg name="additionalBrakingDistance" default="5.0"  />
+	
+	<arg name="giveUpDistance" 			default="-4.0"  />
 	
 	<arg name="maxAcceleration" 			default="3.0" />
 	<arg name="maxDeceleration" 			default="-3.0" />
@@ -84,7 +87,10 @@
 	<param name="maxSteerAngle" 			value="$(arg maxSteerAngle)" />
 
 	<param name="steeringDelay" 			value="$(arg steeringDelay)" />
-	<param name="minPursuiteDistance" 		value="$(arg minPursuiteDistance)"  />
+	<param name="minPursuiteDistance" 		value="$(arg minPursuiteDistance)"  />	
+	<param name="additionalBrakingDistance" value="$(arg additionalBrakingDistance)"  />
+	
+	<param name="giveUpDistance" value="$(arg giveUpDistance)"  />
 	
 	<param name="maxAcceleration" 			value="$(arg maxAcceleration)" />
 	<param name="maxDeceleration" 			value="$(arg maxDeceleration)" />

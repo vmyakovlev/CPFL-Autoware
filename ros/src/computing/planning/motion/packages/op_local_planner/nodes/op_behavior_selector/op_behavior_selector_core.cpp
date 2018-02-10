@@ -38,12 +38,12 @@ BehaviorGen::BehaviorGen()
 	bNewCurrentPos = false;
 	bVehicleStatus = false;
 	bWayGlobalPath = false;
+	bWayGlobalPathLogs = false;
 	bNewLightStatus = false;
 	bNewLightSignal = false;
 	bBestCost = false;
 	bMap = false;
 	bRollOuts = false;
-
 
 	ros::NodeHandle _nh;
 	UpdatePlanningParams(_nh);
@@ -60,27 +60,29 @@ BehaviorGen::BehaviorGen()
 	pub_BehaviorState = nh.advertise<geometry_msgs::TwistStamped>("current_behavior", 1);
 	pub_SimuBoxPose	  = nh.advertise<geometry_msgs::PoseArray>("sim_box_pose_ego", 1);
 	pub_BehaviorStateRviz = nh.advertise<visualization_msgs::Marker>("behavior_state", 1);
+	pub_SelectedPathRviz = nh.advertise<visualization_msgs::MarkerArray>("local_selected_trajectory_rviz", 1);
+	pub_TrafficLightsRviz = nh.advertise<visualization_msgs::MarkerArray>("op_traffic_lights_rviz", 1);
 
-	sub_current_pose 	= nh.subscribe("/current_pose", 			1,		&BehaviorGen::callbackGetCurrentPose, 		this);
+	sub_current_pose = nh.subscribe("/current_pose", 10,	&BehaviorGen::callbackGetCurrentPose, this);
 
 	int bVelSource = 1;
 	_nh.getParam("/op_trajectory_evaluator/velocitySource", bVelSource);
 	if(bVelSource == 0)
-		sub_robot_odom 			= nh.subscribe("/odom", 					100,	&BehaviorGen::callbackGetRobotOdom, 	this);
+		sub_robot_odom = nh.subscribe("/odom", 10, &BehaviorGen::callbackGetRobotOdom, this);
 	else if(bVelSource == 1)
-		sub_current_velocity 	= nh.subscribe("/current_velocity",		100,	&BehaviorGen::callbackGetVehicleStatus, 	this);
+		sub_current_velocity = nh.subscribe("/current_velocity", 10, &BehaviorGen::callbackGetVehicleStatus, this);
 	else if(bVelSource == 2)
-		sub_can_info 			= nh.subscribe("/can_info",		100,	&BehaviorGen::callbackGetCanInfo, 	this);
+		sub_can_info = nh.subscribe("/can_info", 10, &BehaviorGen::callbackGetCanInfo, this);
 
-	sub_GlobalPlannerPaths 	= nh.subscribe("/lane_waypoints_array", 	1,		&BehaviorGen::callbackGetGlobalPlannerPath, 	this);
-	sub_LocalPlannerPaths 	= nh.subscribe("/local_weighted_trajectories", 	1,		&BehaviorGen::callbackGetLocalPlannerPath, 	this);
-	sub_TrafficLightStatus 		= nh.subscribe("/light_color", 		1,		&BehaviorGen::callbackGetTrafficLightStatus, 	this);
-	sub_TrafficLightSignals		= nh.subscribe("/roi_signal", 		1,		&BehaviorGen::callbackGetTrafficLightSignals, 	this);
-	sub_Trajectory_Cost			=  nh.subscribe("/local_trajectory_cost", 		1,		&BehaviorGen::callbackGetLocalTrajectoryCost, 	this);
+	sub_GlobalPlannerPaths = nh.subscribe("/lane_waypoints_array", 1, &BehaviorGen::callbackGetGlobalPlannerPath, this);
+	sub_LocalPlannerPaths = nh.subscribe("/local_weighted_trajectories", 1, &BehaviorGen::callbackGetLocalPlannerPath, this);
+	sub_TrafficLightStatus = nh.subscribe("/light_color", 1, &BehaviorGen::callbackGetTrafficLightStatus, this);
+	sub_TrafficLightSignals	= nh.subscribe("/roi_signal", 1, &BehaviorGen::callbackGetTrafficLightSignals, this);
+	sub_Trajectory_Cost = nh.subscribe("/local_trajectory_cost", 1, &BehaviorGen::callbackGetLocalTrajectoryCost, this);
 
-	sub_twist_raw = nh.subscribe("/twist_raw",		1,		&BehaviorGen::callbackGetTwistRaw, 	this);
-	sub_twist_cmd = nh.subscribe("/twist_cmd",		1,		&BehaviorGen::callbackGetTwistCMD, 	this);
-	//sub_ctrl_cmd = nh.subscribe("/ctrl_cmd",		1,		&BehaviorGen::callbackGetCommandCMD, 	this);
+	sub_twist_raw = nh.subscribe("/twist_raw", 1, &BehaviorGen::callbackGetTwistRaw, this);
+	sub_twist_cmd = nh.subscribe("/twist_cmd", 1, &BehaviorGen::callbackGetTwistCMD, this);
+	//sub_ctrl_cmd = nh.subscribe("/ctrl_cmd", 1, &BehaviorGen::callbackGetCommandCMD, this);
 }
 
 BehaviorGen::~BehaviorGen()
@@ -140,9 +142,11 @@ void BehaviorGen::UpdatePlanningParams(ros::NodeHandle& _nh)
 	controlParams.Velocity_Gain = PlannerHNS::PID_CONST(0.1, 0.005, 0.1);
 	nh.getParam("/op_common_params/steeringDelay", controlParams.SteeringDelay);
 	nh.getParam("/op_common_params/minPursuiteDistance", controlParams.minPursuiteDistance );
+	nh.getParam("/op_common_params/additionalBrakingDistance", m_PlanningParams.additionalBrakingDistance );
+	nh.getParam("/op_common_params/giveUpDistance", m_PlanningParams.giveUpDistance );
 
 	int iSource = 0;
-	_nh.getParam("/op_common_params/mapSource" 			, iSource);
+	_nh.getParam("/op_common_params/mapSource" , iSource);
 	if(iSource == 0)
 		m_MapType = PlannerHNS::MAP_AUTOWARE;
 	else if (iSource == 1)
@@ -150,10 +154,9 @@ void BehaviorGen::UpdatePlanningParams(ros::NodeHandle& _nh)
 	else if(iSource == 2)
 		m_MapType = PlannerHNS::MAP_KML_FILE;
 
-	_nh.getParam("/op_common_params/mapFileName" 		, m_MapPath);
+	_nh.getParam("/op_common_params/mapFileName" , m_MapPath);
 
 	_nh.getParam("/op_behavior_selector/evidence_tust_number", m_PlanningParams.nReliableCount);
-	m_PlanningParams.additionalBrakingDistance = 5.0;
 
 	//std::cout << "nReliableCount: " << m_PlanningParams.nReliableCount << std::endl;
 
@@ -251,6 +254,9 @@ void BehaviorGen::callbackGetGlobalPlannerPath(const autoware_msgs::LaneArrayCon
 				}
 				else
 					m_temp_path.at(j).pLane = pLane;
+
+
+				//std::cout << "StopLineInGlobalPath: " << m_temp_path.at(j).stopLineID << std::endl;
 			}
 
 			PlannerHNS::PlanningHelpers::CalcAngleAndCost(m_temp_path);
@@ -265,6 +271,7 @@ void BehaviorGen::callbackGetGlobalPlannerPath(const autoware_msgs::LaneArrayCon
 		if(!bOldGlobalPath)
 		{
 			bWayGlobalPath = true;
+			bWayGlobalPathLogs = true;
 			for(unsigned int i = 0; i < m_GlobalPaths.size(); i++)
 			{
 				PlannerHNS::PlanningHelpers::FixPathDensity(m_GlobalPaths.at(i), m_PlanningParams.pathDensity);
@@ -274,7 +281,7 @@ void BehaviorGen::callbackGetGlobalPlannerPath(const autoware_msgs::LaneArrayCon
 				m_GlobalPaths.at(i).at(m_GlobalPaths.at(i).size()-1).v = 0;
 			}
 
-			m_BehaviorGenerator.SetNewGlobalPath(m_GlobalPaths);
+			std::cout << "Received New Global Path Selector! " << std::endl;
 		}
 		else
 		{
@@ -298,12 +305,35 @@ void BehaviorGen::callbackGetLocalPlannerPath(const autoware_msgs::LaneArrayCons
 	if(msg->lanes.size() > 0)
 	{
 		m_RollOuts.clear();
+		int globalPathId_roll_outs = -1;
+
 		for(unsigned int i = 0 ; i < msg->lanes.size(); i++)
 		{
 			std::vector<PlannerHNS::WayPoint> path;
 			PlannerHNS::RosHelpers::ConvertFromAutowareLaneToLocalLane(msg->lanes.at(i), path);
 			m_RollOuts.push_back(path);
+
+			if(path.size() > 0)
+				globalPathId_roll_outs = path.at(0).gid;
 		}
+
+		if(bWayGlobalPath && m_GlobalPaths.size() > 0)
+		{
+			if(m_GlobalPaths.at(0).size() > 0)
+			{
+				int globalPathId = m_GlobalPaths.at(0).at(0).gid;
+				std::cout << "Before Synchronization At Behavior Selector: GlobalID: " <<  globalPathId << ", LocalID: " << globalPathId_roll_outs << std::endl;
+
+				if(globalPathId_roll_outs == globalPathId)
+				{
+					bWayGlobalPath = false;
+					m_GlobalPathsToUse = m_GlobalPaths;
+					m_BehaviorGenerator.SetNewGlobalPath(m_GlobalPathsToUse);
+					std::cout << "Synchronization At Behavior Selector: GlobalID: " <<  globalPathId << ", LocalID: " << globalPathId_roll_outs << std::endl;
+				}
+			}
+		}
+
 		m_BehaviorGenerator.m_RollOuts = m_RollOuts;
 		bRollOuts = true;
 	}
@@ -321,20 +351,56 @@ void BehaviorGen::callbackGetTrafficLightStatus(const autoware_msgs::traffic_lig
 
 void BehaviorGen::callbackGetTrafficLightSignals(const autoware_msgs::Signals& msg)
 {
-	//std::cout << "Received Traffic Light Signals : " << msg.Signals.size() << std::endl;
-	m_CurrTrafficLight.clear();
 	bNewLightSignal = true;
+	std::vector<PlannerHNS::TrafficLight> simulatedLights;
 	for(unsigned int i = 0 ; i < msg.Signals.size() ; i++)
 	{
 		PlannerHNS::TrafficLight tl;
 		tl.id = msg.Signals.at(i).signalId;
-		if(msg.Signals.at(i).type == 1)
-			tl.lightState = PlannerHNS::GREEN_LIGHT;
-		else
-			tl.lightState = PlannerHNS::RED_LIGHT;
 
-		m_CurrTrafficLight.push_back(tl);
+		for(unsigned int k = 0; k < m_Map.trafficLights.size(); k++)
+		{
+			if(m_Map.trafficLights.at(k).id == tl.id)
+			{
+				tl.pos = m_Map.trafficLights.at(k).pos;
+				break;
+			}
+		}
+
+		if(msg.Signals.at(i).type == 1)
+		{
+			tl.lightState = PlannerHNS::GREEN_LIGHT;
+		}
+		else
+		{
+			tl.lightState = PlannerHNS::RED_LIGHT;
+		}
+
+		simulatedLights.push_back(tl);
 	}
+
+	//visualize traffic light
+	visualization_msgs::MarkerArray lights;
+	PlannerHNS::RosHelpers::GetTrafficLightForVisualization(simulatedLights, lights);
+	pub_TrafficLightsRviz.publish(lights);
+
+	//std::cout << "Received Traffic Lights : " << lights.markers.size() << std::endl;
+
+	m_CurrTrafficLight = simulatedLights;
+
+//	int stopLineID = -1, stopSignID = -1, trafficLightID=-1;
+//	PlannerHNS::PlanningHelpers::GetDistanceToClosestStopLineAndCheck(m_BehaviorGenerator.m_Path, m_CurrentPos, stopLineID, stopSignID, trafficLightID);
+//	m_CurrTrafficLight.clear();
+//	if(trafficLightID > 0)
+//	{
+//		for(unsigned int i=0; i < simulatedLights.size(); i++)
+//		{
+//			if(simulatedLights.at(i).id == trafficLightID)
+//			{
+//				m_CurrTrafficLight.push_back(simulatedLights.at(i));
+//			}
+//		}
+//	}
 }
 
 void BehaviorGen::VisualizeLocalPlanner()
@@ -347,6 +413,16 @@ void BehaviorGen::VisualizeLocalPlanner()
 		iDirection = -1;
 	PlannerHNS::RosHelpers::VisualizeBehaviorState(m_CurrentPos, m_CurrentBehavior, !m_BehaviorGenerator.m_pCurrentBehaviorState->GetCalcParams()->bTrafficIsRed , iDirection, behavior_rviz, "beh_state");
 	pub_BehaviorStateRviz.publish(behavior_rviz);
+
+	//To Test Synchronization Problem
+//	visualization_msgs::MarkerArray selected_path;
+//	std::vector<std::vector<std::vector<PlannerHNS::WayPoint> > > paths;
+//  paths.push_back(std::vector<std::vector<PlannerHNS::WayPoint> >());
+//	paths.at(0).push_back(m_BehaviorGenerator.m_Path);
+//	paths.push_back(m_GlobalPathsToUse);
+//	paths.push_back(m_RollOuts);
+//	PlannerHNS::RosHelpers::TrajectoriesToMarkers(paths, selected_path);
+//	pub_SelectedPathRviz.publish(selected_path);
 }
 
 void BehaviorGen::SendLocalPlanningTopics()
@@ -421,7 +497,7 @@ void BehaviorGen::LogLocalPlanningInfo(double dt)
 	m_LogData.push_back(dataLine.str());
 
 
-	if(bWayGlobalPath)
+	if(bWayGlobalPathLogs)
 	{
 		for(unsigned int i=0; i < m_GlobalPaths.size(); i++)
 		{
@@ -434,7 +510,7 @@ void BehaviorGen::LogLocalPlanningInfo(double dt)
 			str_out << "_";
 			PlannerHNS::PlanningHelpers::WritePathToFile(str_out.str(), m_GlobalPaths.at(i));
 		}
-		bWayGlobalPath = false;
+		bWayGlobalPathLogs = false;
 	}
 }
 
@@ -462,6 +538,7 @@ void BehaviorGen::MainLoop()
 		{
 			bMap = true;
 			PlannerHNS::MappingHelpers::ConstructRoadNetworkFromDataFiles(m_MapPath, m_Map, true);
+
 		}
 
 		if(bNewCurrentPos && m_GlobalPaths.size()>0)
@@ -479,7 +556,7 @@ void BehaviorGen::MainLoop()
 					m_PrevTrafficLight.at(itls).lightState = m_CurrLightStatus;
 			}
 
-			m_CurrentBehavior = m_BehaviorGenerator.DoOneStep(dt, m_CurrentPos, m_VehicleStatus, 1, m_PrevTrafficLight, m_TrajectoryBestCost, 0 );
+			m_CurrentBehavior = m_BehaviorGenerator.DoOneStep(dt, m_CurrentPos, m_VehicleStatus, 1, m_CurrTrafficLight, m_TrajectoryBestCost, 0 );
 
 			SendLocalPlanningTopics();
 			VisualizeLocalPlanner();

@@ -1,9 +1,10 @@
-/*
- * BehaviorPrediction.cpp
- *
- *  Created on: Jul 6, 2017
- *      Author: user
- */
+
+/// \file  BehaviorPrediction.cpp
+/// \brief Predict detected vehicles's possible trajectories, these trajectories extracted from the vector map.
+/// \author Hatem Darweesh
+/// \date Jul 6, 2017
+
+
 
 #include "BehaviorPrediction.h"
 #include "MappingHelpers.h"
@@ -15,8 +16,8 @@ namespace PlannerHNS
 
 BehaviorPrediction::BehaviorPrediction()
 {
-	m_MaxLaneDetectionDistance = 1.5;
-	m_PredictionDistance = 10.0;
+	m_MaxLaneDetectionDistance = 0.5;
+	m_PredictionDistance = 20.0;
 	m_bGenerateBranches = false;
 	m_bUseFixedPrediction = true;
 	m_bStepByStep = false;
@@ -37,7 +38,7 @@ void BehaviorPrediction::FilterObservations(const std::vector<DetectedObject>& o
 
 		bool bFound = false;
 		int found_index = 0;
-		for(int ip=0; ip < (int)filtered_list.size(); ip++)
+		for(unsigned int ip=0; ip < filtered_list.size(); ip++)
 		{
 			if(filtered_list.at(ip).id == obj_list.at(i).id)
 			{
@@ -76,7 +77,7 @@ void BehaviorPrediction::FilterObservations(const std::vector<DetectedObject>& o
 
 void BehaviorPrediction::DoOneStep(const std::vector<DetectedObject>& obj_list, const WayPoint& currPose, const double& minSpeed, const double& maxDeceleration, RoadNetwork& map)
 {
-	if(!m_bUseFixedPrediction)
+	if(!m_bUseFixedPrediction && maxDeceleration !=0)
 		m_PredictionDistance = -pow(currPose.v, 2)/(maxDeceleration);
 
 	ExtractTrajectoriesFromMapII(obj_list, map, m_ParticleInfo_II);

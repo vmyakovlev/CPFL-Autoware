@@ -1,9 +1,8 @@
-/*
- * RosHelpers.cpp
- *
- *  Created on: Jun 30, 2016
- *      Author: ai-driver
- */
+
+/// \file  RosHelpers.cpp
+/// \brief Helper functions for rviz visualization
+/// \author Hatem Darweesh
+/// \date Jun 30, 2016
 
 #include "op_RosHelpers.h"
 
@@ -349,6 +348,8 @@ void RosHelpers::ConvertFromLocalLaneToAutowareLane(const std::vector<PlannerHNS
 		wp.right_lane_id = path.at(i).RightLaneId;
 		wp.time_cost = path.at(i).timeCost;
 
+		wp.gid = path.at(i).gid;
+
 		if(path.at(i).actionCost.size()>0)
 			wp.direction = path.at(i).actionCost.at(0).first;
 
@@ -388,6 +389,7 @@ void RosHelpers::ConvertFromAutowareLaneToLocalLane(const autoware_msgs::lane& t
 
 		wp.v = trajectory.waypoints.at(i).twist.twist.linear.x;
 
+		wp.gid = trajectory.waypoints.at(i).gid;
 		wp.laneId = trajectory.waypoints.at(i).lane_id;
 		wp.stopLineID = trajectory.waypoints.at(i).stop_line_id;
 		wp.LeftLaneId = trajectory.waypoints.at(i).left_lane_id;
@@ -555,6 +557,25 @@ void RosHelpers::createGlobalLaneArrayOrientationMarker(const autoware_msgs::Lan
 										   tmp_marker_array.markers.end());
 }
 
+void RosHelpers::GetTrafficLightForVisualization(std::vector<PlannerHNS::TrafficLight>& lights, visualization_msgs::MarkerArray& markerArray)
+{
+	markerArray.markers.clear();
+	for(unsigned int i=0; i<lights.size(); i++)
+	{
+		if(lights.at(i).lightState == RED_LIGHT)
+		{
+			visualization_msgs::Marker mkr = CreateGenMarker(lights.at(i).pos.x,lights.at(i).pos.y,lights.at(i).pos.z,0,1,0,0,3,i,"traffic_light_visualize", visualization_msgs::Marker::SPHERE);
+			markerArray.markers.push_back(mkr);
+		}
+		else if(lights.at(i).lightState == GREEN_LIGHT)
+		{
+			visualization_msgs::Marker mkr = CreateGenMarker(lights.at(i).pos.x,lights.at(i).pos.y,lights.at(i).pos.z,0,0,1,0,3,i,"traffic_light_visualize", visualization_msgs::Marker::SPHERE);
+			markerArray.markers.push_back(mkr);
+		}
+
+	}
+}
+
 void RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(const autoware_msgs::DetectedObject& det_obj, PlannerHNS::DetectedObject& obj)
 {
 	obj.id = det_obj.id;
@@ -702,7 +723,8 @@ void RosHelpers::ConvertFromRoadNetworkToAutowareVisualizeMapFormat(const Planne
 				text_marker.pose.position = lane_waypoint_marker.points.at(lane_waypoint_marker.points.size()/2);
 				std::ostringstream str_out;
 				str_out << " Lane: " ;
-				str_out << map_lane_array.lanes.at(i).waypoints.at(0).twist.twist.linear.y;
+				//str_out << map_lane_array.lanes.at(i).waypoints.at(0).twist.twist.linear.y;
+				str_out << map_lane_array.lanes.at(i).waypoints.at(0).lane_id;
 				text_marker.text = str_out.str();
 				markerArray.markers.push_back(text_marker);
 		  }
@@ -1344,6 +1366,15 @@ std::string RosHelpers::GetBehaviorNameFromCode(const PlannerHNS::STATE_TYPE& be
 	case PlannerHNS::BRANCH_LEFT_STATE:
 			str = "LEFT";
 			break;
+	case PlannerHNS::EMERGENCY_STATE:
+		str = "Emergency";
+		break;
+	case PlannerHNS::LANE_CHANGE_STATE:
+		str = "LaneChange";
+		break;
+	case PlannerHNS::GOAL_STATE:
+		str = "GoalAchieved";
+		break;
 	default:
 		str = "Unknown";
 		break;
