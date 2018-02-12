@@ -70,7 +70,7 @@ public:
 			const TrajectoryCost& tc,
 			const bool& bEmergencyStop);
 
-private:
+protected:
 	bool GetNextTrafficLight(const int& prevTrafficLightId, const std::vector<TrafficLight>& trafficLights, TrafficLight& trafficL);
 	void UpdateCurrentLane(const double& search_distance);
 	bool SelectSafeTrajectory();
@@ -79,7 +79,7 @@ private:
 	bool ReachEndOfGlobalPath(const double& min_distance, const int& iGlobalPathIndex);
 
 
-private:
+
 	std::vector<PlannerHNS::WayPoint> t_centerTrajectorySmoothed;
 	std::vector<std::vector<WayPoint> > m_TotalOriginalPath;
 	std::vector<std::vector<WayPoint> > m_TotalPath;

@@ -57,6 +57,7 @@
 #include "MappingHelpers.h"
 
 #include "SimpleTracker.h"
+#include "SimuDecisionMaker.h"
 
 namespace CarSimulatorNS
 {
@@ -104,9 +105,10 @@ protected:
 	bool 						m_bMap;
 	PlannerHNS::RoadNetwork		m_Map;
 	PlannerHNS::PlannerH		m_GlobalPlanner;
-	PlannerHNS::LocalPlannerH* 	m_LocalPlanner;
+	PlannerHNS::SimuDecisionMaker* 	m_LocalPlanner;
 	SimulationNS::TrajectoryFollower m_PredControl;
 	std::vector<PlannerHNS::DetectedObject> m_PredictedObjects;
+	std::vector<std::vector<PlannerHNS::WayPoint> > m_GlobalPaths;
 	bool bPredictedObjects;
 
 	bool bInitPos;

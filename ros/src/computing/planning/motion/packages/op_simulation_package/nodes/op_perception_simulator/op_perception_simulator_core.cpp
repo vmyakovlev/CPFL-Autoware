@@ -99,6 +99,8 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 
 //	ROS_INFO("Obj ID = %d", obj_id);
 
+	std::cout<<"ObjID: " << obj_id << std::endl;
+
 	if(obj_id <= 0)
 		return;
 

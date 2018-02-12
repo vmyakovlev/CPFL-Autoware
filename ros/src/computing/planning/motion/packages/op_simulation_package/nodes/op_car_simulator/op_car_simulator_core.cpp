@@ -39,7 +39,7 @@
 namespace CarSimulatorNS
 {
 
-#define REPLANNING_DISTANCE 3
+#define REPLANNING_DISTANCE 5
 
 OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 {
@@ -60,7 +60,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 
 	m_PredControl.Init(m_ControlParams, m_CarInfo, false, false);
 
-	m_LocalPlanner = new PlannerHNS::LocalPlannerH();
+	m_LocalPlanner = new PlannerHNS::SimuDecisionMaker();
 	m_LocalPlanner->Init(m_ControlParams, m_PlanningParams, m_CarInfo);
 	m_LocalPlanner->m_SimulationSteeringDelayFactor = m_ControlParams.SimulationSteeringDelay;
 
@@ -122,7 +122,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	}
 
 	if(m_PlanningParams.enableFollowing)
-		sub_predicted_objects 			= nh.subscribe("/predicted_objects", 	1, &OpenPlannerCarSimulator::callbackGetPredictedObjects, 		this);
+		sub_predicted_objects 			= nh.subscribe("/tracked_objects", 	1, &OpenPlannerCarSimulator::callbackGetPredictedObjects, 		this);
 
 	if(m_PlanningParams.enableTrafficLightBehavior)
 		sub_TrafficLightSignals		= nh.subscribe("/roi_signal", 		10,	&OpenPlannerCarSimulator::callbackGetTrafficLightSignals, 	this);
@@ -272,7 +272,7 @@ void OpenPlannerCarSimulator::callbackGetGoalPose(const geometry_msgs::PoseStamp
 void OpenPlannerCarSimulator::InitializeSimuCar(PlannerHNS::WayPoint start_pose)
 {
 	m_LocalPlanner->ReInitializePlanner(start_pose);
-	//cout << endl << "LocalPlannerInit: ID " << m_SimParams.strID << " , Pose = ( "  << start_pose.pos.ToString() << ")" << endl;
+	std::cout << std::endl << "LocalPlannerInit: ID " << m_SimParams.strID << " , Pose = ( "  << start_pose.pos.ToString() << ")" << std::endl;
 }
 
 void OpenPlannerCarSimulator::GetTransformFromTF(const std::string parent_frame, const std::string child_frame, tf::StampedTransform &transform)
@@ -424,19 +424,50 @@ void OpenPlannerCarSimulator::visualizePath(const std::vector<PlannerHNS::WayPoi
 void OpenPlannerCarSimulator::callbackGetTrafficLightSignals(const autoware_msgs::Signals& msg)
 {
 //	std::cout << "Received Traffic Light Signals : " << msg.Signals.size() << std::endl;
-	m_CurrTrafficLight.clear();
+//	m_CurrTrafficLight.clear();
+//	bNewLightSignal = true;
+//	for(unsigned int i = 0 ; i < msg.Signals.size() ; i++)
+//	{
+//		PlannerHNS::TrafficLight tl;
+//		tl.id = msg.Signals.at(i).signalId;
+//		if(msg.Signals.at(i).type == 1)
+//			tl.lightState = PlannerHNS::GREEN_LIGHT;
+//		else
+//			tl.lightState = PlannerHNS::RED_LIGHT;
+//
+//		m_CurrTrafficLight.push_back(tl);
+//	}
+
 	bNewLightSignal = true;
+	std::vector<PlannerHNS::TrafficLight> simulatedLights;
 	for(unsigned int i = 0 ; i < msg.Signals.size() ; i++)
 	{
 		PlannerHNS::TrafficLight tl;
 		tl.id = msg.Signals.at(i).signalId;
-		if(msg.Signals.at(i).type == 1)
-			tl.lightState = PlannerHNS::GREEN_LIGHT;
-		else
-			tl.lightState = PlannerHNS::RED_LIGHT;
 
-		m_CurrTrafficLight.push_back(tl);
+		for(unsigned int k = 0; k < m_Map.trafficLights.size(); k++)
+		{
+			if(m_Map.trafficLights.at(k).id == tl.id)
+			{
+				tl.pos = m_Map.trafficLights.at(k).pos;
+				break;
+			}
+		}
+
+		if(msg.Signals.at(i).type == 1)
+		{
+			tl.lightState = PlannerHNS::GREEN_LIGHT;
+		}
+		else
+		{
+			tl.lightState = PlannerHNS::RED_LIGHT;
+		}
+
+		simulatedLights.push_back(tl);
 	}
+	//std::cout << "Received Traffic Lights : " << lights.markers.size() << std::endl;
+
+	m_CurrTrafficLight = simulatedLights;
 }
 
 void OpenPlannerCarSimulator::visualizeBehaviors()
@@ -659,26 +690,26 @@ void OpenPlannerCarSimulator::MainLoop()
 			UtilityHNS::UtilityH::GetTickCount(m_PlanningTimer);
 
 			//Global Planning Step
-			if(m_LocalPlanner->m_TotalOriginalPath.size() > 0 && m_LocalPlanner->m_TotalOriginalPath.at(0).size() > 3)
+			if(m_GlobalPaths.size() > 0 && m_GlobalPaths.at(0).size() > 3)
 			{
 				PlannerHNS::RelativeInfo info;
-				bool ret = PlannerHNS::PlanningHelpers::GetRelativeInfoRange(m_LocalPlanner->m_TotalOriginalPath, m_LocalPlanner->state, 0.75, info);
-				if(ret == true && info.iGlobalPath >= 0 &&  info.iGlobalPath < (int)m_LocalPlanner->m_TotalOriginalPath.size() && info.iFront > 0 && info.iFront < (int)m_LocalPlanner->m_TotalOriginalPath.at(info.iGlobalPath).size())
+				bool ret = PlannerHNS::PlanningHelpers::GetRelativeInfoRange(m_GlobalPaths, m_LocalPlanner->state, 0.75, info);
+				if(ret == true && info.iGlobalPath >= 0 &&  info.iGlobalPath < (int)m_GlobalPaths.size() && info.iFront > 0 && info.iFront < (int)m_GlobalPaths.at(info.iGlobalPath).size())
 				{
-					PlannerHNS::WayPoint wp_end = m_LocalPlanner->m_TotalOriginalPath.at(info.iGlobalPath).at(m_LocalPlanner->m_TotalOriginalPath.at(info.iGlobalPath).size()-1);
-					PlannerHNS::WayPoint wp_first = m_LocalPlanner->m_TotalOriginalPath.at(info.iGlobalPath).at(info.iFront);
+					PlannerHNS::WayPoint wp_end = m_GlobalPaths.at(info.iGlobalPath).at(m_GlobalPaths.at(info.iGlobalPath).size()-1);
+					PlannerHNS::WayPoint wp_first = m_GlobalPaths.at(info.iGlobalPath).at(info.iFront);
 					double remaining_distance =   hypot(wp_end.pos.y - wp_first.pos.y, wp_end.pos.x - wp_first.pos.x) + info.to_front_distance;
 
 					if(remaining_distance <= REPLANNING_DISTANCE)
 					{
-
 						cout << "Remaining Distance : " << remaining_distance << endl;
+
 						bMakeNewPlan = true;
 						if(m_SimParams.bLooper)
 						{
 							delete m_LocalPlanner;
 							m_LocalPlanner = 0;
-							m_LocalPlanner = new  PlannerHNS::LocalPlannerH();
+							m_LocalPlanner = new  PlannerHNS::SimuDecisionMaker();
 							m_LocalPlanner->Init(m_ControlParams, m_PlanningParams, m_CarInfo);
 							m_LocalPlanner->m_SimulationSteeringDelayFactor = m_ControlParams.SimulationSteeringDelay;
 							InitializeSimuCar(m_SimParams.startPose);
@@ -702,11 +733,12 @@ void OpenPlannerCarSimulator::MainLoop()
 				{
 					PlannerHNS::PlanningHelpers::FixPathDensity(generatedTotalPaths.at(i), m_PlanningParams.pathDensity);
 					PlannerHNS::PlanningHelpers::SmoothPath(generatedTotalPaths.at(i), 0.4, 0.25);
-					PlannerHNS::PlanningHelpers::CalcAngleAndCost(generatedTotalPaths.at(i));
+					PlannerHNS::PlanningHelpers::GenerateRecommendedSpeed(generatedTotalPaths.at(i), m_CarInfo.max_speed_forward, m_PlanningParams.speedProfileFactor);
+					generatedTotalPaths.at(i).at(generatedTotalPaths.at(i).size()-1).v = 0;
 				}
 
-				m_LocalPlanner->m_TotalOriginalPath = generatedTotalPaths;
-				m_LocalPlanner->m_pCurrentBehaviorState->GetCalcParams()->bNewGlobalPath = true;
+				m_GlobalPaths = generatedTotalPaths;
+				m_LocalPlanner->SetNewGlobalPath(m_GlobalPaths);
 			}
 
 			if(bNewLightSignal)
@@ -720,17 +752,19 @@ void OpenPlannerCarSimulator::MainLoop()
 				/**
 				 *  Local Planning
 				 */
-				m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+				m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, 1, m_CurrTrafficLight, m_PredictedObjects, false);
 
 				/**
 				 * Localization, Odometry Simulation and Update
 				 */
-				m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
-				m_LocalPlanner->UpdateState(desiredStatus, false);
-				m_LocalPlanner->LocalizeMe(dt);
-				currStatus.shift = desiredStatus.shift;
-				currStatus.steer = m_LocalPlanner->m_CurrentSteering;
-				currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
+				currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
+
+//				m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
+//				m_LocalPlanner->UpdateState(desiredStatus, false);
+//				m_LocalPlanner->LocalizeMe(dt);
+//				currStatus.shift = desiredStatus.shift;
+//				currStatus.steer = m_LocalPlanner->m_CurrentSteering;
+//				currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
 
 
 				/**
@@ -748,17 +782,18 @@ void OpenPlannerCarSimulator::MainLoop()
 					/**
 					 *  Local Planning
 					 */
-					m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, m_PredictedObjects, 1, m_Map, 0, m_PrevTrafficLight, true);
+					m_CurrBehavior = m_LocalPlanner->DoOneStep(dt, currStatus, 1, m_CurrTrafficLight, m_PredictedObjects, false);
 
 					/**
 					 * Localization, Odometry Simulation and Update
 					 */
-					m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
-					m_LocalPlanner->UpdateState(desiredStatus, false);
-					m_LocalPlanner->LocalizeMe(dt);
-					currStatus.shift = desiredStatus.shift;
-					currStatus.steer = m_LocalPlanner->m_CurrentSteering;
-					currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
+					currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
+//					m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
+//					m_LocalPlanner->UpdateState(desiredStatus, false);
+//					m_LocalPlanner->LocalizeMe(dt);
+//					currStatus.shift = desiredStatus.shift;
+//					currStatus.steer = m_LocalPlanner->m_CurrentSteering;
+//					currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
 
 
 					/**
@@ -767,7 +802,7 @@ void OpenPlannerCarSimulator::MainLoop()
 					desiredStatus = m_PredControl.DoOneStep(dt, m_CurrBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, m_CurrBehavior.bNewPlan);
 				}
 			}
-			displayFollowingInfo(m_LocalPlanner->m_TrajectoryCostsCalculatotor.m_SafetyBorder.points, m_LocalPlanner->state);
+			displayFollowingInfo(m_LocalPlanner->m_TrajectoryCostsCalculator.m_SafetyBorder.points, m_LocalPlanner->state);
 			visualizePath(m_LocalPlanner->m_Path);
 			visualizeBehaviors();
 
@@ -813,6 +848,12 @@ void OpenPlannerCarSimulator::MainLoop()
 
 			if(m_SimParams.bLooper && m_CurrBehavior.state == PlannerHNS::FINISH_STATE)
 			{
+				m_GlobalPaths.clear();
+				delete m_LocalPlanner;
+				m_LocalPlanner = 0;
+				m_LocalPlanner = new  PlannerHNS::SimuDecisionMaker();
+				m_LocalPlanner->Init(m_ControlParams, m_PlanningParams, m_CarInfo);
+				m_LocalPlanner->m_SimulationSteeringDelayFactor = m_ControlParams.SimulationSteeringDelay;
 				InitializeSimuCar(m_SimParams.startPose);
 			}
 		}

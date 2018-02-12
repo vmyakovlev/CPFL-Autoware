@@ -23,7 +23,7 @@ BehaviorStateMachine::BehaviorStateMachine(PlanningParams* pParams, PreCalculate
 	m_currentTrafficLightID	= -1;
 	decisionMakingTime		= 0.0;
 	decisionMakingCount		= 1;
-	m_zero_velocity 		= 0.2;
+	m_zero_velocity 		= 0.1;
 
 	if(!pPreCalcVal)
 		m_pCalculatedValues = new PreCalculatedConditions();
@@ -474,17 +474,17 @@ BehaviorStateMachine* TrafficLightStopStateII::GetNextState()
 {
 	PreCalculatedConditions* pCParams = GetCalcParams();
 
-	std::cout << "Stopping for trafficLight "  << std::endl;
+	//std::cout << "Stopping for trafficLight "  << std::endl;
 	if(!pCParams->bTrafficIsRed)
 	{
-		std::cout << "Color Changed Stopping for trafficLight "  << std::endl;
+		//std::cout << "Color Changed Stopping for trafficLight "  << std::endl;
 		pCParams->prevTrafficLightID = pCParams->currentTrafficLightID;
 		return FindBehaviorState(FORWARD_STATE);
 	}
 
 	else if(pCParams->bTrafficIsRed && pCParams->currentVelocity <= m_zero_velocity)
 	{
-		std::cout << "Velocity Changed Stopping for trafficLight ("  <<pCParams->currentVelocity << ", " << m_zero_velocity << ")" <<  std::endl;
+		//std::cout << "Velocity Changed Stopping for trafficLight ("  <<pCParams->currentVelocity << ", " << m_zero_velocity << ")" <<  std::endl;
 		return FindBehaviorState(TRAFFIC_LIGHT_WAIT_STATE);
 	}
 
@@ -498,7 +498,7 @@ BehaviorStateMachine* TrafficLightWaitStateII::GetNextState()
 {
 	PreCalculatedConditions* pCParams = GetCalcParams();
 
-	std::cout << "Wait for trafficLight "  << std::endl;
+	//std::cout << "Wait for trafficLight "  << std::endl;
 
 	if(!pCParams->bTrafficIsRed)
 	{

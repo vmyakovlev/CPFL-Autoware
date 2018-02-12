@@ -177,10 +177,10 @@ TrajectoryCost TrajectoryCosts::DoOneStepStatic(const vector<vector<WayPoint> >&
 	double smallestDistance = DBL_MAX;
 	double velo_of_next = 0;
 
-	//cout << "Trajectory Costs Log : CurrIndex: " << currIndex << " --------------------- " << endl;
+	cout << "Trajectory Costs Log : CurrIndex: " << currIndex << " --------------------- " << endl;
 	for(unsigned int ic = 0; ic < m_TrajectoryCosts.size(); ic++)
 	{
-		//cout << m_TrajectoryCosts.at(ic).ToString();
+		cout << m_TrajectoryCosts.at(ic).ToString();
 		if(!m_TrajectoryCosts.at(ic).bBlocked && m_TrajectoryCosts.at(ic).cost < smallestCost)
 		{
 			smallestCost = m_TrajectoryCosts.at(ic).cost;
@@ -193,7 +193,7 @@ TrajectoryCost TrajectoryCosts::DoOneStepStatic(const vector<vector<WayPoint> >&
 			velo_of_next = m_TrajectoryCosts.at(ic).closest_obj_velocity;
 		}
 	}
-	//cout << "Smallest Distance: " <<  smallestDistance << "------------------------------------------------------------- " << endl;
+	cout << "Smallest Distance: " <<  smallestDistance << "------------------------------------------------------------- " << endl;
 
 	if(smallestIndex == -1)
 	{

@@ -82,8 +82,8 @@ void BehaviorPrediction::DoOneStep(const std::vector<DetectedObject>& obj_list, 
 
 	ExtractTrajectoriesFromMapII(obj_list, map, m_ParticleInfo_II);
 	CalculateCollisionTimes(minSpeed);
-	PredictionStepII(m_ParticleInfo_II);
-	CorrectionStepII(m_ParticleInfo_II);
+	//PredictionStepII(m_ParticleInfo_II);
+	//CorrectionStepII(m_ParticleInfo_II);
 
 	//ExtractTrajectoriesFromMap(obj_list, map, m_ParticleInfo);
 	//CalculateCollisionTimes(minSpeed);
