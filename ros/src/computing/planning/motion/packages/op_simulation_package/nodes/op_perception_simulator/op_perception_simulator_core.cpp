@@ -99,9 +99,8 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 
 //	ROS_INFO("Obj ID = %d", obj_id);
 
-	std::cout<<"ObjID: " << obj_id << std::endl;
 
-	if(obj_id <= 0)
+	if(obj_id < 0)
 		return;
 
 	int index = -1;
@@ -131,6 +130,7 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 		m_keepTime.push_back(std::make_pair(c.id, OBJECT_KEEP_TIME));
 	//	ROS_INFO("Insert Obj ID = %d", c.id);
 	}
+
 }
 
 

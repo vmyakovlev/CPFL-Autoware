@@ -43,7 +43,6 @@ namespace CarSimulatorNS
 
 OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 {
-
 	m_bMap = false;
 	bPredictedObjects = false;
 	m_bStepByStep = false;
@@ -83,7 +82,8 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	str_s6 << "simu_local_trajectory_";
 	str_s6 << m_SimParams.id;
 
-
+	str_s7 << "simu_internal_info";
+	str_s7 << m_SimParams.id;
 
 	pub_CurrPoseRviz				= nh.advertise<visualization_msgs::Marker>(str_s1.str() , 100);
 	pub_SimuBoxPose					= nh.advertise<geometry_msgs::PoseArray>(str_s5.str(), 100);
@@ -91,7 +91,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	pub_LocalTrajectoriesRviz   	= nh.advertise<visualization_msgs::MarkerArray>(str_s6.str(), 1);
 	pub_BehaviorStateRviz			= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 	pub_PointerBehaviorStateRviz	= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
-
+	pub_InternalInfoRviz			= nh.advertise<visualization_msgs::MarkerArray>(str_s7.str(), 1);
 
 	sub_StepSignal = nh.subscribe("/simu_step_signal", 		1, &OpenPlannerCarSimulator::callbackGetStepForwardSignals, 		this);
 
@@ -303,29 +303,16 @@ void OpenPlannerCarSimulator::callbackGetPredictedObjects(const autoware_msgs::D
 
 	for(unsigned int i = 0 ; i <msg->objects.size(); i++)
 	{
-		PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
-		m_PredictedObjects.push_back(obj);
+		if(msg->objects.at(i).id != m_SimParams.id)
+		{
+			PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
+			m_PredictedObjects.push_back(obj);
+		}
+//		else
+//		{
+//			std::cout << " Simulated Car avoid detecting itself, ID=" << msg->objects.at(i).id <<  std::endl;
+//		}
 	}
-}
-
-PlannerHNS::WayPoint OpenPlannerCarSimulator::GetRealCenter(const PlannerHNS::WayPoint& currState)
-{
-	PlannerHNS::WayPoint pose_center = currState;
-	PlannerHNS::Mat3 rotationMat(-currState.pos.a);
-	PlannerHNS::Mat3 translationMat(-currState.pos.x, -currState.pos.y);
-
-	PlannerHNS::Mat3 rotationMatInv(currState.pos.a);
-	PlannerHNS::Mat3 translationMatInv(currState.pos.x, currState.pos.y);
-
-	pose_center.pos = translationMat*pose_center.pos;
-	pose_center.pos = rotationMat*pose_center.pos;
-
-	pose_center.pos.x += m_CarInfo.wheel_base/3.0;
-
-	pose_center.pos = rotationMatInv*pose_center.pos;
-	pose_center.pos = translationMatInv*pose_center.pos;
-
-	return pose_center;
 }
 
 void OpenPlannerCarSimulator::displayFollowingInfo(const std::vector<PlannerHNS::GPSPoint>& safety_rect, PlannerHNS::WayPoint& curr_pose)
@@ -339,7 +326,7 @@ void OpenPlannerCarSimulator::displayFollowingInfo(const std::vector<PlannerHNS:
   m1.mesh_use_embedded_materials = true;
   m1.action = visualization_msgs::Marker::ADD;
 
-  PlannerHNS::WayPoint pose_center = GetRealCenter(curr_pose);
+  PlannerHNS::WayPoint pose_center = PlannerHNS::PlanningHelpers::GetRealCenter(curr_pose, m_CarInfo.wheel_base);
 
   m1.pose.position.x = pose_center.pos.x;
   m1.pose.position.y = pose_center.pos.y;
@@ -596,8 +583,16 @@ void OpenPlannerCarSimulator::visualizeBehaviors()
 	str_out << "(" << speed_str << ")"  << "(" << beh_out.str() << ")";
 	behaviorMarker.text = str_out.str();
 
-	pub_BehaviorStateRviz.publish(behaviorMarker);
-	pub_PointerBehaviorStateRviz.publish(pointerMarker);
+	visualization_msgs::MarkerArray markerArray;
+	PlannerHNS::RosHelpers::GetIndicatorArrows(m_LocalPlanner->state, m_CarInfo.width, m_CarInfo.length, m_CurrBehavior.indicator, m_SimParams.id, markerArray);
+
+	markerArray.markers.push_back(behaviorMarker);
+	markerArray.markers.push_back(pointerMarker);
+
+	pub_InternalInfoRviz.publish(markerArray);
+
+//	pub_BehaviorStateRviz.publish(behaviorMarker);
+//	pub_PointerBehaviorStateRviz.publish(pointerMarker);
 }
 
 void OpenPlannerCarSimulator::SaveSimulationData()
@@ -818,7 +813,7 @@ void OpenPlannerCarSimulator::MainLoop()
 			p_id.position.y = currStatus.speed; // send actual calculated velocity after sensing delay
 			p_id.position.z = currStatus.steer; // send actual calculated steering after sensing delay
 
-			PlannerHNS::WayPoint pose_center = GetRealCenter(m_LocalPlanner->state);
+			PlannerHNS::WayPoint pose_center = PlannerHNS::PlanningHelpers::GetRealCenter(m_LocalPlanner->state, m_CarInfo.wheel_base);
 
 			p_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, UtilityHNS::UtilityH::SplitPositiveAngle(pose_center.pos.a));
 			p_pose.position.x = pose_center.pos.x;

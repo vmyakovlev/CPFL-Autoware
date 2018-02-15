@@ -2536,6 +2536,26 @@ LIGHT_INDICATOR PlanningHelpers::GetIndicatorsFromPath(const std::vector<WayPoin
 	return ind;
 }
 
+PlannerHNS::WayPoint PlanningHelpers::GetRealCenter(const PlannerHNS::WayPoint& currState, const double& wheel_base)
+{
+	PlannerHNS::WayPoint pose_center = currState;
+	PlannerHNS::Mat3 rotationMat(-currState.pos.a);
+	PlannerHNS::Mat3 translationMat(-currState.pos.x, -currState.pos.y);
+
+	PlannerHNS::Mat3 rotationMatInv(currState.pos.a);
+	PlannerHNS::Mat3 translationMatInv(currState.pos.x, currState.pos.y);
+
+	pose_center.pos = translationMat*pose_center.pos;
+	pose_center.pos = rotationMat*pose_center.pos;
+
+	pose_center.pos.x += wheel_base/3.0;
+
+	pose_center.pos = rotationMatInv*pose_center.pos;
+	pose_center.pos = translationMatInv*pose_center.pos;
+
+	return pose_center;
+}
+
 void PlanningHelpers::TestQuadraticSpline (const std::vector<WayPoint>& center_line, std::vector<WayPoint>& path)
 {
 

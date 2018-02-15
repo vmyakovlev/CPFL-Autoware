@@ -59,9 +59,8 @@ BehaviorGen::BehaviorGen()
 	pub_ClosestIndex = nh.advertise<std_msgs::Int32>("closest_waypoint", 1,true);
 	pub_BehaviorState = nh.advertise<geometry_msgs::TwistStamped>("current_behavior", 1);
 	pub_SimuBoxPose	  = nh.advertise<geometry_msgs::PoseArray>("sim_box_pose_ego", 1);
-	pub_BehaviorStateRviz = nh.advertise<visualization_msgs::Marker>("behavior_state", 1);
+	pub_BehaviorStateRviz = nh.advertise<visualization_msgs::MarkerArray>("behavior_state", 1);
 	pub_SelectedPathRviz = nh.advertise<visualization_msgs::MarkerArray>("local_selected_trajectory_rviz", 1);
-	pub_TrafficLightsRviz = nh.advertise<visualization_msgs::MarkerArray>("op_traffic_lights_rviz", 1);
 
 	sub_current_pose = nh.subscribe("/current_pose", 10,	&BehaviorGen::callbackGetCurrentPose, this);
 
@@ -379,11 +378,6 @@ void BehaviorGen::callbackGetTrafficLightSignals(const autoware_msgs::Signals& m
 		simulatedLights.push_back(tl);
 	}
 
-	//visualize traffic light
-	visualization_msgs::MarkerArray lights;
-	PlannerHNS::RosHelpers::GetTrafficLightForVisualization(simulatedLights, lights);
-	pub_TrafficLightsRviz.publish(lights);
-
 	//std::cout << "Received Traffic Lights : " << lights.markers.size() << std::endl;
 
 	m_CurrTrafficLight = simulatedLights;
@@ -412,7 +406,15 @@ void BehaviorGen::VisualizeLocalPlanner()
 	else if(m_BehaviorGenerator.m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory < m_BehaviorGenerator.m_pCurrentBehaviorState->GetCalcParams()->iCentralTrajectory)
 		iDirection = -1;
 	PlannerHNS::RosHelpers::VisualizeBehaviorState(m_CurrentPos, m_CurrentBehavior, !m_BehaviorGenerator.m_pCurrentBehaviorState->GetCalcParams()->bTrafficIsRed , iDirection, behavior_rviz, "beh_state");
-	pub_BehaviorStateRviz.publish(behavior_rviz);
+	//pub_BehaviorStateRviz.publish(behavior_rviz);
+
+	visualization_msgs::MarkerArray markerArray;
+
+	//PlannerHNS::RosHelpers::GetIndicatorArrows(m_CurrentPos, m_CarInfo.width, m_CarInfo.length, m_CurrentBehavior.indicator, 0, markerArray);
+
+	markerArray.markers.push_back(behavior_rviz);
+
+	pub_BehaviorStateRviz.publish(markerArray);
 
 	//To Test Synchronization Problem
 //	visualization_msgs::MarkerArray selected_path;
@@ -448,9 +450,12 @@ void BehaviorGen::SendLocalPlanningTopics()
 	sim_data.header.stamp = ros::Time();
 	p_id.position.x = 0;
 	p_pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, UtilityHNS::UtilityH::SplitPositiveAngle(m_BehaviorGenerator.state.pos.a));
-	p_pose.position.x = m_BehaviorGenerator.state.pos.x;
-	p_pose.position.y = m_BehaviorGenerator.state.pos.y;
-	p_pose.position.z = m_BehaviorGenerator.state.pos.z;
+
+	PlannerHNS::WayPoint pose_center = PlannerHNS::PlanningHelpers::GetRealCenter(m_BehaviorGenerator.state, m_CarInfo.wheel_base);
+
+	p_pose.position.x = pose_center.pos.x;
+	p_pose.position.y = pose_center.pos.y;
+	p_pose.position.z = pose_center.pos.z;
 	p_box.position.x = m_BehaviorGenerator.m_CarInfo.width;
 	p_box.position.y = m_BehaviorGenerator.m_CarInfo.length;
 	p_box.position.z = 2.2;

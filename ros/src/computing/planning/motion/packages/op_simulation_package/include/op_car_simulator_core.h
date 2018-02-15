@@ -133,6 +133,7 @@ protected:
 	ros::Publisher pub_LocalTrajectoriesRviz;
 	ros::Publisher pub_BehaviorStateRviz;
 	ros::Publisher pub_PointerBehaviorStateRviz;
+	ros::Publisher pub_InternalInfoRviz;
 
 	// define subscribers.
 	ros::Subscriber sub_initialpose;
@@ -162,8 +163,6 @@ public:
 
   void displayFollowingInfo(const std::vector<PlannerHNS::GPSPoint>& safety_rect, PlannerHNS::WayPoint& curr_pose);
   void visualizePath(const std::vector<PlannerHNS::WayPoint>& path);
-
-  PlannerHNS::WayPoint GetRealCenter(const PlannerHNS::WayPoint& currState);
 
   void visualizeBehaviors();
 

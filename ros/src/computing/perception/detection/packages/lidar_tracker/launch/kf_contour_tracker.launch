@@ -14,6 +14,8 @@
 	<arg name="trust_counter" default="4" />
 	<arg name="contours_circle_resolutions" default="4.0" />
 	
+	<arg name="enableSimulationMode" default="true" />
+	
 	
 	<node pkg="lidar_tracker" type="kf_contour_tracker" name="kf_contour_tracker">
        
@@ -31,6 +33,8 @@
 		<param name="max_remeber_time" value="$(arg max_remeber_time)" />
 		<param name="trust_counter" value="$(arg trust_counter)" />
 		<param name="contours_circle_resolutions" value="$(arg contours_circle_resolutions)" />
+		
+		<param name="enableSimulationMode" value="$(arg enableSimulationMode)" />
     
   </node>
 

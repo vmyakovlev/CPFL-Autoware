@@ -727,6 +727,7 @@ class DetectedObject
 {
 public:
 	int id;
+	int originalID;
 	std::string label;
 	OBSTACLE_TYPE t;
 	WayPoint center;
@@ -758,6 +759,7 @@ public:
 		bVelocity = false;
 		acceleration = 0;
 		id = 0;
+		originalID = -1;
 		w = 0;
 		l = 0;
 		h = 0;
@@ -810,6 +812,8 @@ public:
 	bool 	enableTrafficLightBehavior;
 	bool 	enableStopSignBehavior;
 
+	double minIndicationDistance;
+
 	PlanningParams()
 	{
 		maxSpeed 						= 3;
@@ -846,6 +850,8 @@ public:
 		enableTrafficLightBehavior		= false;
 		enableLaneChange 				= false;
 		enableStopSignBehavior			= false;
+
+		minIndicationDistance			= 15;
 	}
 };
 

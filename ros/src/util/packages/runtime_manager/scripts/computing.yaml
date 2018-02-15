@@ -1388,6 +1388,14 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
+    - name : enableSimulationMode
+      desc : Enable Representing Ego vehicle and simulated vehicles by special IDs
+      label: Enable OpenPlanner Perception Simulation
+      kind : checkbox
+      v    : True
+      cmd_param:
+        dash     : ''
+        delim    : ':='
 
   - name  : gnss
     vars  :
@@ -3302,6 +3310,81 @@ params :
         dash     : ''
         delim    : ':='
 
+  - name  : op_signs_simulator
+    vars  :
+    - name : mapSource
+      desc : select map source
+      label: Map Source
+      kind : radio_box
+      choices:
+      - Folder
+      - KML
+      descs :
+      - custom read from folder
+      - custom read from kml file
+      v   : 0
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : mapFileName
+      desc : select kml map file if applicable
+      label: Map File
+      kind : path
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : first_signs_list_ids
+      desc : First Traffic Light Ids
+      label: First Light Ids
+      kind : str
+      v    : ',9,10,'
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : first_green_time
+      desc : Time for 1st Traffic Light
+      label: First Light Timer
+      min  : 1
+      max  : 100
+      v    : 10
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : first_yellow_time
+      desc : Time for 1st Yellow Traffic Light
+      label: First Yellow Light Timer
+      min  : 1
+      max  : 20
+      v    : 5
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : second_signs_list_ids
+      desc : Second Traffic Light Ids
+      label: Second Light Ids
+      kind : str
+      v    : ',7,8,'
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : second_green_time
+      desc : Time for 2nd Traffic Light
+      label: Second Light Timer
+      min  : 1
+      max  : 100
+      v    : 10
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : second_yellow_time
+      desc : Time for 2nd Yellow Traffic Light
+      label: Second Yellow Light Timer
+      min  : 1
+      max  : 20
+      v    : 5
+      cmd_param:
+        dash     : ''
+        delim    : ':='
 
   - name  : op_motion_predictor
     vars  :
@@ -3404,6 +3487,24 @@ params :
       min  : -1.0
       max  : 20.0
       v    : 3.0
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : maxAcceleration
+      desc : maximum allowed acceleration meter/second second
+      label: Max Acceleration
+      min  : 0.1
+      max  : 20.0
+      v    : 3.0
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : maxDeceleration
+      desc : maximum allowed deceleration in meter/second second
+      label: Max Deceleration
+      min  : -20.0
+      max  : -0.1
+      v    : -3.0
       cmd_param:
         dash     : ''
         delim    : ':='
@@ -3539,6 +3640,14 @@ params :
       desc : select kml map file if applicable
       label: Map File
       kind : path
+      cmd_param:
+        dash     : ''
+        delim    : ':='
+    - name : enableStepByStepSignal
+      desc : Enable Step by Step simulation motion (Testing App Required)
+      label: Enable Frame by Frame
+      kind : checkbox
+      v    : False
       cmd_param:
         dash     : ''
         delim    : ':='

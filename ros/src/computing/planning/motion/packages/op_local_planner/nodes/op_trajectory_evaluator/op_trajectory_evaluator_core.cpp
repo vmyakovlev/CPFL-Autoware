@@ -239,8 +239,15 @@ void TrajectoryEval::callbackGetPredictedObjects(const autoware_msgs::DetectedOb
 	PlannerHNS::DetectedObject obj;
 	for(unsigned int i = 0 ; i <msg->objects.size(); i++)
 	{
-		PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
-		m_PredictedObjects.push_back(obj);
+		if(msg->objects.at(i).id > 0)
+		{
+			PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
+			m_PredictedObjects.push_back(obj);
+		}
+//		else
+//		{
+//			std::cout << " Ego Car avoid detecting itself in trajectory evaluator node! ID: " << msg->objects.at(i).id << std::endl;
+//		}
 	}
 }
 

@@ -56,9 +56,11 @@ public:
 	double  nQuarters;
 	double 	PolygonRes;
 	SimulationNS::TRACKING_TYPE	trackingType; // 0 association only , 1 simple tracking, 2 contour based tracking
+	bool    bEnableSimulation;
 
 	PerceptionParams()
 	{
+		bEnableSimulation = false;
 		VehicleWidth =0;
 		VehicleLength =0;
 		DetectionRadius =0;

@@ -45,6 +45,7 @@ ContourTracker::ContourTracker()
 	_nh.getParam("/kf_contour_tracker/max_object_size" 			, m_Params.MaxObjSize);
 	_nh.getParam("/kf_contour_tracker/polygon_quarters" 		, m_Params.nQuarters);
 	_nh.getParam("/kf_contour_tracker/polygon_resolution" 		, m_Params.PolygonRes);
+	_nh.getParam("/kf_contour_tracker/enableSimulationMode" 	, m_Params.bEnableSimulation);
 	_nh.getParam("/kf_contour_tracker/max_association_distance" , m_ObstacleTracking.m_MAX_ASSOCIATION_DISTANCE);
 	_nh.getParam("/kf_contour_tracker/max_association_size_diff" , m_ObstacleTracking.m_MAX_ASSOCIATION_SIZE_DIFF);
 
@@ -89,7 +90,6 @@ ContourTracker::~ContourTracker()
 {
 }
 
-
 void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
 {
 	if(bNewCurrentPos)
@@ -99,7 +99,7 @@ void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterA
 		int nContourPoints = 0;
 
 		PlannerHNS::RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(m_CurrentPos, m_Params.VehicleWidth, m_Params.VehicleLength, *msg,
-				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, nOriginalPoints, nContourPoints);
+				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, !m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
 
 		bNewClusters = true;
 	}
@@ -189,7 +189,7 @@ void ContourTracker::MainLoop()
 			autoware_msgs::DetectedObject obj;
 			for(unsigned int i = 0 ; i <m_ObstacleTracking.m_DetectedObjects.size(); i++)
 			{
-				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_ObstacleTracking.m_DetectedObjects.at(i), obj);
+				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_ObstacleTracking.m_DetectedObjects.at(i), m_Params.bEnableSimulation, obj);
 				m_OutPutResults.objects.push_back(obj);
 			}
 

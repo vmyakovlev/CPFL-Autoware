@@ -204,8 +204,16 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 
 	for(unsigned int i = 0 ; i <msg->objects.size(); i++)
 	{
-		PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
-		m_TrackedObjects.push_back(obj);
+		if(msg->objects.at(i).id > 0)
+		{
+			PlannerHNS::RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(msg->objects.at(i), obj);
+			m_TrackedObjects.push_back(obj);
+		}
+//		else
+//		{
+//			std::cout << " Ego Car avoid detecting itself from motion prediction node! ID: " << msg->objects.at(i).id << std::endl;
+//		}
+
 	}
 
 	if(bMap)
@@ -226,7 +234,7 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 		autoware_msgs::DetectedObject pred_obj;
 		for(unsigned int i = 0 ; i <m_PredictBeh.m_PredictedObjects.size(); i++)
 		{
-			PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_PredictBeh.m_PredictedObjects.at(i), pred_obj);
+			PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_PredictBeh.m_PredictedObjects.at(i), false, pred_obj);
 			m_PredictedResultsResults.objects.push_back(pred_obj);
 		}
 
@@ -236,7 +244,7 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 			GenerateCurbsObstacles(curr_curbs_obstacles);
 			for(unsigned int i = 0 ; i <curr_curbs_obstacles.size(); i++)
 			{
-				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(curr_curbs_obstacles.at(i), pred_obj);
+				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(curr_curbs_obstacles.at(i), false, pred_obj);
 				m_PredictedResultsResults.objects.push_back(pred_obj);
 			}
 		}

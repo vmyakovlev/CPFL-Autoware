@@ -61,7 +61,7 @@ visualization_msgs::Marker RosHelpers::CreateGenMarker(const double& x, const do
 	mkr.scale.x = scale;
 	mkr.scale.y = scale;
 	mkr.scale.z = scale;
-	mkr.color.a = 0.8;
+	mkr.color.a = 0.9;
 	mkr.color.r = r;
 	mkr.color.g = g;
 	mkr.color.b = b;
@@ -572,7 +572,6 @@ void RosHelpers::GetTrafficLightForVisualization(std::vector<PlannerHNS::Traffic
 			visualization_msgs::Marker mkr = CreateGenMarker(lights.at(i).pos.x,lights.at(i).pos.y,lights.at(i).pos.z,0,0,1,0,3,i,"traffic_light_visualize", visualization_msgs::Marker::SPHERE);
 			markerArray.markers.push_back(mkr);
 		}
-
 	}
 }
 
@@ -615,9 +614,13 @@ void RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(co
 	}
 }
 
-void RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(const PlannerHNS::DetectedObject& det_obj, autoware_msgs::DetectedObject& obj)
+void RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(const PlannerHNS::DetectedObject& det_obj, const bool& bSimulationMode, autoware_msgs::DetectedObject& obj)
 {
-	obj.id = det_obj.id;
+	if(bSimulationMode)
+		obj.id = det_obj.originalID;
+	else
+		obj.id = det_obj.id;
+
 	obj.label = det_obj.label;
 	obj.indicator_state = det_obj.indicator_state;
 	obj.dimensions.x = det_obj.l;
@@ -1466,7 +1469,7 @@ void RosHelpers::ConvertFromAutowareBoundingBoxObstaclesToPlannerH(const jsk_rec
 void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const PlannerHNS::WayPoint& currState, const double& car_width,
 		const double& car_length, const autoware_msgs::CloudClusterArray& clusters, vector<PlannerHNS::DetectedObject>& obstacles_list,
 		const double max_obj_size, const double& min_obj_size, const double& detection_radius,
-		const int& n_poly_quarters,const double& poly_resolution, int& nOriginalPoints, int& nContourPoints)
+		const int& n_poly_quarters,const double& poly_resolution, const bool& bDetectMyself, int& nOriginalPoints, int& nContourPoints)
 {
 	PlannerHNS::Mat3 rotationMat(-currState.pos.a);
 	PlannerHNS::Mat3 translationMat(-currState.pos.x, -currState.pos.y);
@@ -1482,6 +1485,7 @@ void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const Planne
 	for(unsigned int i =0; i < clusters.clusters.size(); i++)
 	{
 		obj.id = clusters.clusters.at(i).id;
+		obj.originalID = clusters.clusters.at(i).id;
 		obj.label = clusters.clusters.at(i).label;
 
 
@@ -1524,7 +1528,7 @@ void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const Planne
 		double distance_x = fabs(relative_point.x - car_length/3.0);
 		double distance_y = fabs(relative_point.y);
 
-		if(distance_x  <= car_length*0.5 && distance_y <= car_width*0.5) // don't detect yourself
+		if(bDetectMyself && distance_x  <= car_length*0.5 && distance_y <= car_width*0.5) // don't detect yourself
 			continue;
 
 		//obj.center.pos = avg_center;
@@ -1718,6 +1722,52 @@ void RosHelpers::UpdateRoadMap(const AutowareRoadNetwork& src_map, PlannerHNS::R
 
 	PlannerHNS::GPSPoint origin;//(m_OriginPos.position.x, m_OriginPos.position.y, m_OriginPos.position.z, 0);
 	PlannerHNS::MappingHelpers::ConstructRoadNetworkFromRosMessage(lanes, points, dts, inters, areas, line_data, stop_line_data, signal_data, vector_data, curb_data, roadedge_data, conn_data, origin, out_map);
+}
+
+void RosHelpers::GetIndicatorArrows(const PlannerHNS::WayPoint& center, const double& width,const double& length, const PlannerHNS::LIGHT_INDICATOR& indicator, const int& id, visualization_msgs::MarkerArray& markerArray)
+{
+	double critical_lateral_distance =  width/2.0 + 0.2;
+	//double critical_long_front_distance =  carInfo.length/2.0 ;
+	PlannerHNS::GPSPoint top_right(critical_lateral_distance, length, center.pos.z, 0);
+	PlannerHNS::GPSPoint top_left(-critical_lateral_distance, length, center.pos.z, 0);
+
+	PlannerHNS::Mat3 invRotationMat(center.pos.a-M_PI_2);
+	PlannerHNS::Mat3 invTranslationMat(center.pos.x, center.pos.y);
+
+	top_right = invRotationMat*top_right;
+	top_right = invTranslationMat*top_right;
+	top_left = invRotationMat*top_left;
+	top_left = invTranslationMat*top_left;
+
+	top_right.a = center.pos.a - M_PI_2;
+	top_left.a = center.pos.a + M_PI_2;
+
+	std_msgs::ColorRGBA color_l, color_r;
+	color_l.r = 1; color_l.g = 1;color_l.b = 1;
+	color_r.r = 1; color_r.g = 1;color_r.b = 1;
+
+	if(indicator == PlannerHNS::INDICATOR_LEFT)
+	{
+		color_l.b = 0;
+	}
+	else if(indicator == PlannerHNS::INDICATOR_RIGHT )
+	{
+		color_r.b = 0;
+	}
+	else if(indicator == PlannerHNS::INDICATOR_BOTH)
+	{
+		color_l.b = 0;
+		color_r.b = 0;
+	}
+
+	visualization_msgs::Marker mkr_l = PlannerHNS::RosHelpers::CreateGenMarker(top_left.x,top_left.y,top_left.z,top_left.a,color_l.r,color_l.g,color_l.b,1.0, id,"simu_car_indicator_left", visualization_msgs::Marker::ARROW);
+	mkr_l.scale.y = 0.4;
+	mkr_l.scale.z = 0.4;
+	visualization_msgs::Marker mkr_r = PlannerHNS::RosHelpers::CreateGenMarker(top_right.x,top_right.y,top_right.z,top_right.a,color_r.r,color_r.g,color_r.b,1.0, id,"simu_car_indicator_right", visualization_msgs::Marker::ARROW);
+	mkr_r.scale.y = 0.4;
+	mkr_r.scale.z = 0.4;
+	markerArray.markers.push_back(mkr_l);
+	markerArray.markers.push_back(mkr_r);
 }
 
 }

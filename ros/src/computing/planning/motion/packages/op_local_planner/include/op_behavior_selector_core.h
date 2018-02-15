@@ -115,7 +115,6 @@ protected: //Planning Related variables
 	ros::Publisher pub_BehaviorState;
 	ros::Publisher pub_SimuBoxPose;
 	ros::Publisher pub_SelectedPathRviz;
-	ros::Publisher pub_TrafficLightsRviz;
 
 	// define subscribers.
 	ros::Subscriber sub_current_pose;

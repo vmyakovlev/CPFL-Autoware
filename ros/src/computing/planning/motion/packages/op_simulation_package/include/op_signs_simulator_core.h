@@ -53,6 +53,7 @@
 #include <geometry_msgs/PoseArray.h>
 #include <RoadNetwork.h>
 #include <MappingHelpers.h>
+#include "PlannerCommonDef.h"
 
 
 namespace SignsSimulatorNS
@@ -109,9 +110,17 @@ protected:
 	PlannerHNS::TrafficLightState m_CurrLightState;
 	SignsCommandParams m_Params;
 
+	PlannerHNS::MAP_SOURCE_TYPE m_MapType;
+	std::string m_MapPath;
+	PlannerHNS::RoadNetwork m_Map;
+	bool bMap;
 
 
+
+	ros::Publisher pub_TrafficLightsRviz;
 	ros::Publisher pub_trafficLights;
+
+	void VisualizeTrafficLight(autoware_msgs::Signals& _signals);
 
 public:
 	OpenPlannerSimulatorSigns();

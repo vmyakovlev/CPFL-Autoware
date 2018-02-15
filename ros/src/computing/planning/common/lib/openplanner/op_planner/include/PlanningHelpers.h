@@ -187,6 +187,8 @@ public:
 
 	static LIGHT_INDICATOR GetIndicatorsFromPath(const std::vector<WayPoint>& path, const WayPoint& pose, const double& seachDistance);
 
+	static PlannerHNS::WayPoint GetRealCenter(const PlannerHNS::WayPoint& currState, const double& wheel_base);
+
 	static void TestQuadraticSpline(const std::vector<WayPoint>& center_line, std::vector<WayPoint>& path);
 	static double frunge ( double x );
 	static double fprunge ( double x );
