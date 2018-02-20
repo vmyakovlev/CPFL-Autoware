@@ -97,6 +97,18 @@ void RosRoadOccupancyProcessorApp::PublishGridMap(grid_map::GridMap &in_grid_map
 		                                               grid_max_value_,
 		                                               ros_occupancygrid_message);
 		publisher_grid_map_.publish(ros_gridmap_message);
+
+		tf::Transform sensor2map_transform = FindTransform(occupancy_grid_output_frame_id, ros_occupancygrid_message.header.frame_id);
+		tf::Pose tf_point;
+		tf::poseMsgToTF(ros_occupancygrid_message.info.origin, tf_point);
+		tf_point = sensor2map_transform * tf_point;
+		tf::poseTFToMsg(tf_point, ros_occupancygrid_message.info.origin);
+		ros_occupancygrid_message.header.frame_id = occupancy_grid_output_frame_id;
+//		if(ros_occupancygrid_message.data.size() > 0)
+//		{
+//			int center = ros_occupancygrid_message.info.width * (ros_occupancygrid_message.info.height/2.0 - 1) + ros_occupancygrid_message.info.height;
+//			ros_occupancygrid_message.data.at(center) = 0;
+//		}
 		publisher_occupancy_grid_.publish(ros_occupancygrid_message);
 	}
 	else
@@ -334,6 +346,10 @@ void RosRoadOccupancyProcessorApp::InitializeRosIo(ros::NodeHandle &in_private_h
 
 	in_private_handle.param<int>("no_road_value", OCCUPANCY_NO_ROAD, 255);
 	ROS_INFO("[%s] no_road_value: %d",__APP_NAME__, OCCUPANCY_NO_ROAD);
+
+	in_private_handle.param<std::string>("occupancy_grid_target_frame", occupancy_grid_output_frame_id, "velodyne");
+	ROS_INFO("[%s] occupancy_grid_target_frame: %s",__APP_NAME__, occupancy_grid_output_frame_id.c_str());
+
 
 	//generate subscribers and sychronizers
 	cloud_ground_subscriber_ = new message_filters::Subscriber<sensor_msgs::PointCloud2>(node_handle_,

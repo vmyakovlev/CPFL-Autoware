@@ -53,6 +53,8 @@
 #include <geometry_msgs/PoseArray.h>
 
 #define OBJECT_KEEP_TIME 1
+#define POINT_CLOUD_ADDTIONAL_ERR_NUM 25
+#define CONTOUR_DISTANCE_ERROR 0.5
 
 namespace PerceptionSimulatorNS
 {
@@ -62,11 +64,13 @@ class DetectionCommandParams
 public:
 	int 	nSimuObjs;
 	double 	errFactor;
+	double  nPointsPerObj;
 
 	DetectionCommandParams()
 	{
 		nSimuObjs = 3;
 		errFactor = 0;
+		nPointsPerObj = 50;
 	}
 };
 

@@ -41,6 +41,7 @@ GlobalPlanner::GlobalPlanner()
 	m_bKmlMap = false;
 	m_bFirstStart = false;
 	m_GlobalPathID = 1;
+	UtilityHNS::UtilityH::GetTickCount(m_ReplnningTimer);
 
 	nh.getParam("/op_global_planner/pathDensity" , m_params.pathDensity);
 	nh.getParam("/op_global_planner/enableSmoothing" , m_params.bEnableSmoothing);
@@ -95,12 +96,78 @@ GlobalPlanner::GlobalPlanner()
 	else if(bVelSource == 2)
 		sub_can_info = nh.subscribe("/can_info", 10, &GlobalPlanner::callbackGetCanInfo, this);
 
+	sub_road_status_occupancy = nh.subscribe<>("/occupancy_road_status", 1, &GlobalPlanner::callbackGetRoadStatusOccupancyGrid, this);
+
 }
 
 GlobalPlanner::~GlobalPlanner()
 {
 	if(m_params.bEnableRvizInput)
 		SaveSimulationData();
+}
+
+void GlobalPlanner::callbackGetRoadStatusOccupancyGrid(const nav_msgs::OccupancyGridConstPtr& msg)
+{
+//	std::cout << "Occupancy Grid Origin (" << msg->info.origin.position.x << ", " << msg->info.origin.position.x << ") , " << msg->header.frame_id << ", Res: " << msg->info.resolution <<  std::endl;
+
+	m_GridMapIntType.clear();
+
+	//std::cout << "Found Map Data: Zero " <<  std::endl;
+	for(unsigned int i=0; i < msg->data.size(); i++)
+	{
+		if((int8_t)msg->data.at(i) == 0)
+			m_GridMapIntType.push_back(0);
+		else if((int8_t)msg->data.at(i) == 50)
+			m_GridMapIntType.push_back(75);
+		else if((int8_t)msg->data.at(i) == 100)
+			m_GridMapIntType.push_back(255);
+		else
+			m_GridMapIntType.push_back(128);
+
+			//std::cout << msg->data.at(i) << ",";
+	}
+	//std::cout << std::endl << "--------------------------------------------------------" << std::endl;
+
+	//std::cout << "Found Map Data: Zero : " << m_GridMapIntType.size() <<  std::endl;
+	PlannerHNS::WayPoint center(msg->info.origin.position.x, msg->info.origin.position.y, msg->info.origin.position.z, tf::getYaw(msg->info.origin.orientation));
+	PlannerHNS::OccupancyToGridMap grid(msg->info.width,msg->info.height, msg->info.resolution, center);
+	std::vector<PlannerHNS::WayPoint*> modified_nodes;
+	timespec t;
+	UtilityHNS::UtilityH::GetTickCount(t);
+	PlannerHNS::MappingHelpers::UpdateMapWithOccupancyGrid(grid, m_GridMapIntType, m_Map, modified_nodes);
+	m_ModifiedMapItemsTimes.push_back(std::make_pair(modified_nodes, t));
+
+	visualization_msgs::MarkerArray map_marker_array;
+	PlannerHNS::RosHelpers::ConvertFromRoadNetworkToAutowareVisualizeMapFormat(m_Map, map_marker_array);
+
+//	visualization_msgs::Marker mkr = PlannerHNS::RosHelpers::CreateGenMarker(center.pos.x, center.pos.y, center.pos.z, 0, 0,0,1,0.5, 1000, "TestCenter", visualization_msgs::Marker::SPHERE);
+//
+//	map_marker_array.markers.push_back(mkr);
+
+	pub_MapRviz.publish(map_marker_array);
+}
+
+void GlobalPlanner::ClearOldCostFromMap()
+{
+	for(int i=0; i < (int)m_ModifiedMapItemsTimes.size(); i++)
+	{
+		if(UtilityHNS::UtilityH::GetTimeDiffNow(m_ModifiedMapItemsTimes.at(i).second) > CLEAR_COSTS_TIME)
+		{
+			for(unsigned int j= 0 ; j < m_ModifiedMapItemsTimes.at(i).first.size(); j++)
+			{
+				for(unsigned int i_action=0; i_action < m_ModifiedMapItemsTimes.at(i).first.at(j)->actionCost.size(); i_action++)
+				{
+					if(m_ModifiedMapItemsTimes.at(i).first.at(j)->actionCost.at(i_action).first == PlannerHNS::FORWARD_ACTION)
+					{
+						m_ModifiedMapItemsTimes.at(i).first.at(j)->actionCost.at(i_action).second = 0;
+					}
+				}
+			}
+
+			m_ModifiedMapItemsTimes.erase(m_ModifiedMapItemsTimes.begin()+i);
+			i--;
+		}
+	}
 }
 
 void GlobalPlanner::callbackGetGoalPose(const geometry_msgs::PoseStampedConstPtr &msg)
@@ -360,6 +427,8 @@ void GlobalPlanner::MainLoop()
 
 		}
 
+		ClearOldCostFromMap();
+
 		if(m_GoalsPos.size() > 0)
 		{
 			if(m_GeneratedTotalPaths.size() > 0 && m_GeneratedTotalPaths.at(0).size() > 3)
@@ -384,8 +453,9 @@ void GlobalPlanner::MainLoop()
 			else
 				bMakeNewPlan = true;
 
-			if(bMakeNewPlan)
+			if(bMakeNewPlan || UtilityHNS::UtilityH::GetTimeDiffNow(m_ReplnningTimer) > REPLANNING_TIME)
 			{
+				UtilityHNS::UtilityH::GetTickCount(m_ReplnningTimer);
 				PlannerHNS::WayPoint goalPoint = m_GoalsPos.at(m_iCurrentGoalIndex);
 				bool bNewPlan = GenerateGlobalPlan(m_CurrentPose, goalPoint, m_GeneratedTotalPaths);
 

@@ -50,6 +50,7 @@
 #include <std_msgs/Float32.h>
 #include "autoware_msgs/Signals.h"
 #include "autoware_msgs/DetectedObjectArray.h"
+#include "autoware_msgs/CloudClusterArray.h"
 
 #include "TrajectoryFollower.h"
 #include "LocalPlannerH.h"
@@ -100,7 +101,12 @@ protected:
 	timespec m_PlanningTimer;
 	geometry_msgs::Pose m_OriginPos;
 
-	bool m_bStepByStep         ;
+
+	std::string m_BaseLinkFrameID;
+	std::string m_VelodyneFrameID;
+
+	bool m_bStepByStep;
+	bool m_bSimulatedVelodyne;
 	bool m_bGoNextStep;
 	bool 						m_bMap;
 	PlannerHNS::RoadNetwork		m_Map;
@@ -127,6 +133,8 @@ protected:
 
 	ros::NodeHandle nh;
 
+	tf::TransformListener m_Listener;
+
 	ros::Publisher pub_SafetyBorderRviz;
 	ros::Publisher pub_SimuBoxPose;
 	ros::Publisher pub_CurrPoseRviz;
@@ -134,6 +142,7 @@ protected:
 	ros::Publisher pub_BehaviorStateRviz;
 	ros::Publisher pub_PointerBehaviorStateRviz;
 	ros::Publisher pub_InternalInfoRviz;
+	ros::Publisher pub_SimulatedVelodyne;
 
 	// define subscribers.
 	ros::Subscriber sub_initialpose;
@@ -141,6 +150,7 @@ protected:
 	ros::Subscriber sub_predicted_objects;
 	ros::Subscriber sub_TrafficLightSignals	;
 	ros::Subscriber sub_StepSignal;
+	ros::Subscriber sub_cloud_clusters;
 
 	// Callback function for subscriber.
 	void callbackGetInitPose(const geometry_msgs::PoseWithCovarianceStampedConstPtr &msg);
@@ -148,6 +158,7 @@ protected:
 	void callbackGetPredictedObjects(const autoware_msgs::DetectedObjectArrayConstPtr& msg);
 	void callbackGetTrafficLightSignals(const autoware_msgs::Signals& msg);
 	void callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg);
+	void callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg);
 
 public:
 	OpenPlannerCarSimulator();
@@ -169,6 +180,7 @@ public:
   void SaveSimulationData();
   int LoadSimulationData(PlannerHNS::WayPoint& start_p, PlannerHNS::WayPoint& goal_p);
   void InitializeSimuCar(PlannerHNS::WayPoint start_pose);
+  void PublishSpecialTF(const PlannerHNS::WayPoint& pose);
 };
 
 }

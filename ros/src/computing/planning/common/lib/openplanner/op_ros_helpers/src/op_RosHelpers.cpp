@@ -350,10 +350,14 @@ void RosHelpers::ConvertFromLocalLaneToAutowareLane(const std::vector<PlannerHNS
 
 		wp.gid = path.at(i).gid;
 
-		if(path.at(i).actionCost.size()>0)
-			wp.direction = path.at(i).actionCost.at(0).first;
+		//wp.cost = path.at(i).cost;
+		wp.cost = 0;
 
-		wp.cost = path.at(i).cost;
+		if(path.at(i).actionCost.size()>0)
+		{
+			wp.direction = path.at(i).actionCost.at(0).first;
+			wp.cost += path.at(i).actionCost.at(0).second;
+		}
 
 		trajectory.waypoints.push_back(wp);
 	}
@@ -506,11 +510,11 @@ void RosHelpers::createGlobalLaneArrayOrientationMarker(const autoware_msgs::Lan
   lane_waypoint_marker.header.stamp = ros::Time();
   lane_waypoint_marker.type = visualization_msgs::Marker::ARROW;
   lane_waypoint_marker.action = visualization_msgs::Marker::ADD;
-  lane_waypoint_marker.scale.x = 0.3;
-  lane_waypoint_marker.scale.y = 0.1;
+  lane_waypoint_marker.scale.x = 0.6;
+  lane_waypoint_marker.scale.y = 0.2;
   lane_waypoint_marker.scale.z = 0.1;
   lane_waypoint_marker.color.r = 1.0;
-  lane_waypoint_marker.color.a = 0.8;
+  lane_waypoint_marker.color.a = 1.0;
   //lane_waypoint_marker.frame_locked = false;
 
   lane_waypoint_marker.ns = "global_lane_waypoint_orientation_marker";
@@ -544,11 +548,24 @@ void RosHelpers::createGlobalLaneArrayOrientationMarker(const autoware_msgs::Lan
     	}
     	else
     	{
-    		lane_waypoint_marker.color.r = 1.0;
-			lane_waypoint_marker.color.g = 0.0;
-			lane_waypoint_marker.color.b = 1.0;
-			tmp_marker_array.markers.push_back(lane_waypoint_marker);
+
+    		if(lane_waypoints_array.lanes.at(i).waypoints.at(j).cost >= 100)
+    		{
+    			lane_waypoint_marker.color.r = 1.0;
+				lane_waypoint_marker.color.g = 0.0;
+				lane_waypoint_marker.color.b = 0.0;
+				tmp_marker_array.markers.push_back(lane_waypoint_marker);
+    		}
+    		else
+    		{
+				lane_waypoint_marker.color.r = 0.0;
+				lane_waypoint_marker.color.g = 0.8;
+				lane_waypoint_marker.color.b = 0.0;
+				tmp_marker_array.markers.push_back(lane_waypoint_marker);
+    		}
     	}
+
+
       count++;
     }
   }

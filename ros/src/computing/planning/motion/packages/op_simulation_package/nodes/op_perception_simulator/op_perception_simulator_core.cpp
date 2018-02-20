@@ -51,6 +51,7 @@ OpenPlannerSimulatorPerception::OpenPlannerSimulatorPerception()
 {
 	nh.getParam("/op_perception_simulator/simObjNumber" , m_DecParams.nSimuObjs);
 	nh.getParam("/op_perception_simulator/GuassianErrorFactor" , m_DecParams.errFactor);
+	nh.getParam("/op_perception_simulator/pointCloudPointsNumber" , m_DecParams.nPointsPerObj);
 
 	pub_DetectedObjects = nh.advertise<autoware_msgs::CloudClusterArray>("cloud_clusters",1);
 
@@ -113,7 +114,12 @@ void OpenPlannerSimulatorPerception::callbackGetSimuData(const geometry_msgs::Po
 		}
 	}
 
-	autoware_msgs::CloudCluster c = GenerateSimulatedObstacleCluster(msg.poses.at(2).position.y, msg.poses.at(2).position.x, msg.poses.at(2).position.z, 50, msg.poses.at(1));
+	timespec t;
+	UtilityHNS::UtilityH::GetTickCount(t);
+	srand(t.tv_nsec);
+	int nPoints = m_DecParams.nPointsPerObj + (rand()%POINT_CLOUD_ADDTIONAL_ERR_NUM - POINT_CLOUD_ADDTIONAL_ERR_NUM/2);
+
+	autoware_msgs::CloudCluster c = GenerateSimulatedObstacleCluster(msg.poses.at(2).position.y, msg.poses.at(2).position.x, msg.poses.at(2).position.z, nPoints, msg.poses.at(1));
 	c.id = obj_id;
 	c.score = actual_speed;
 	c.indicator_state = indicator;
@@ -160,7 +166,7 @@ autoware_msgs::CloudCluster OpenPlannerSimulatorPerception::GenerateSimulatedObs
 	cluster.dimensions.x = width;
 	cluster.dimensions.y = length;
 	cluster.dimensions.z = height;
-	pcl::PointCloud<pcl::PointXYZ> point_cloud;
+	pcl::PointCloud<pcl::PointXYZI> point_cloud;
 
 	PlannerHNS::Mat3 rotationMat(yaw_angle);
 	PlannerHNS::Mat3 translationMat(cluster.avg_point.point.x, cluster.avg_point.point.y);
@@ -171,31 +177,31 @@ autoware_msgs::CloudCluster OpenPlannerSimulatorPerception::GenerateSimulatedObs
 		PlannerHNS::WayPoint center_p;
 		srand(t.tv_nsec);
 
-		center_p.pos.x = ((double)(rand()%100)/100.0 - 0.5);
-		if(center_p.pos.x >=0 && center_p.pos.x <= 0.3)
-			center_p.pos.x += 0.3;
-		else if(center_p.pos.x < 0 && center_p.pos.x >= -0.3)
-			center_p.pos.x -= 0.3;
+		center_p.pos.x = ((double)(rand()%100)/100.0 - CONTOUR_DISTANCE_ERROR);
+//		if(center_p.pos.x >=0 && center_p.pos.x <= CONTOUR_DISTANCE_ERROR)
+//			center_p.pos.x += CONTOUR_DISTANCE_ERROR;
+//		else if(center_p.pos.x < 0 && center_p.pos.x >= -CONTOUR_DISTANCE_ERROR)
+//			center_p.pos.x -= CONTOUR_DISTANCE_ERROR;
 
 		center_p.pos.x *= width;
 
 		srand(t.tv_nsec/i);
-		center_p.pos.y = ((double)(rand()%100)/100.0 - 0.5);
+		center_p.pos.y = ((double)(rand()%100)/100.0 - CONTOUR_DISTANCE_ERROR);
 
-		if(center_p.pos.y >=0 && center_p.pos.y <= 0.3)
-			center_p.pos.y += 0.3;
-		else if(center_p.pos.y < 0 && center_p.pos.y >= -0.3)
-			center_p.pos.y -= 0.3;
+//		if(center_p.pos.y >=0 && center_p.pos.y <= CONTOUR_DISTANCE_ERROR)
+//			center_p.pos.y += CONTOUR_DISTANCE_ERROR;
+//		else if(center_p.pos.y < 0 && center_p.pos.y >= -CONTOUR_DISTANCE_ERROR)
+//			center_p.pos.y -= CONTOUR_DISTANCE_ERROR;
 
 		center_p.pos.y *= length;
 
 		srand(t.tv_nsec/i*i);
-		center_p.pos.z = ((double)(rand()%100)/100.0 - 0.5)* height;
+		center_p.pos.z = ((double)(rand()%100)/100.0 - CONTOUR_DISTANCE_ERROR)* height;
 
 		center_p.pos = rotationMat*center_p.pos;
 		center_p.pos = translationMat*center_p.pos;
 
-		pcl::PointXYZ p;
+		pcl::PointXYZI p;
 		p.x = center_p.pos.x;
 		p.y = center_p.pos.y;
 		p.z = center_p.pos.z;
@@ -218,8 +224,6 @@ void OpenPlannerSimulatorPerception::MainLoop()
 		ros::spinOnce();
 
 		//if(m_ObjClustersArray.clusters.size()>0)
-		pub_DetectedObjects.publish(m_ObjClustersArray);
-
 		//clean old data
 		for(unsigned int i = 0 ; i < m_keepTime.size(); i++)
 		{
@@ -232,6 +236,8 @@ void OpenPlannerSimulatorPerception::MainLoop()
 			else
 				m_keepTime.at(i).second -= 1;
 		}
+
+		pub_DetectedObjects.publish(m_ObjClustersArray);
 
 	//	std::cout << "Number of Obstacles: (" << m_keepTime.size() << ", " << m_ObjClustersArray.clusters.size() << ") "<< std::endl;
 

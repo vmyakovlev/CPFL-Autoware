@@ -1806,45 +1806,89 @@ void MappingHelpers::LinkTrafficLightsAndStopLinesConData(const std::vector<Util
 		const std::vector<std::pair<int,int> >& id_replace_list, RoadNetwork& map)
 {
 	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
+	{
+		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
 		{
-			for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
+
+			for(unsigned int ic = 0; ic < conn_data.size(); ic++)
 			{
+				UtilityHNS::AisanDataConnFileReader::DataConn data_conn = conn_data.at(ic);
+				ReplaceMyID(data_conn.LID , id_replace_list);
 
-				for(unsigned int ic = 0; ic < conn_data.size(); ic++)
+				if(map.roadSegments.at(rs).Lanes.at(i).id == data_conn.LID)
 				{
-					UtilityHNS::AisanDataConnFileReader::DataConn data_conn = conn_data.at(ic);
-					ReplaceMyID(data_conn.LID , id_replace_list);
-
-					if(map.roadSegments.at(rs).Lanes.at(i).id == data_conn.LID)
+					for(unsigned int itl = 0; itl < map.trafficLights.size(); itl++)
 					{
-						for(unsigned int itl = 0; itl < map.trafficLights.size(); itl++)
+						if(map.trafficLights.at(itl).id == data_conn.SID)
 						{
-							if(map.trafficLights.at(itl).id == data_conn.SID)
-							{
-								map.trafficLights.at(itl).laneIds.push_back(map.roadSegments.at(rs).Lanes.at(i).id);
-								map.trafficLights.at(itl).pLanes.push_back(&map.roadSegments.at(rs).Lanes.at(i));
-								map.roadSegments.at(rs).Lanes.at(i).trafficlights.push_back(map.trafficLights.at(itl));
-							}
+							map.trafficLights.at(itl).laneIds.push_back(map.roadSegments.at(rs).Lanes.at(i).id);
+							map.trafficLights.at(itl).pLanes.push_back(&map.roadSegments.at(rs).Lanes.at(i));
+							map.roadSegments.at(rs).Lanes.at(i).trafficlights.push_back(map.trafficLights.at(itl));
 						}
+					}
 
-						for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
+					for(unsigned int isl = 0; isl < map.stopLines.size(); isl++)
+					{
+						if(map.stopLines.at(isl).id == data_conn.SLID)
 						{
-							if(map.stopLines.at(isl).id == data_conn.SLID)
-							{
-								map.stopLines.at(isl).laneId = map.roadSegments.at(rs).Lanes.at(i).id;
-								map.stopLines.at(isl).pLane = &map.roadSegments.at(rs).Lanes.at(i);
-								map.stopLines.at(isl).trafficLightID = data_conn.SID;
-								map.stopLines.at(isl).stopSignID = data_conn.SSID;
-								map.roadSegments.at(rs).Lanes.at(i).stopLines.push_back(map.stopLines.at(isl));
-								WayPoint wp((map.stopLines.at(isl).points.at(0).x+map.stopLines.at(isl).points.at(1).x)/2.0, (map.stopLines.at(isl).points.at(0).y+map.stopLines.at(isl).points.at(1).y)/2.0, (map.stopLines.at(isl).points.at(0).z+map.stopLines.at(isl).points.at(1).z)/2.0, (map.stopLines.at(isl).points.at(0).a+map.stopLines.at(isl).points.at(1).a)/2.0);
-								map.roadSegments.at(rs).Lanes.at(i).points.at(PlanningHelpers::GetClosestNextPointIndexFast(map.roadSegments.at(rs).Lanes.at(i).points, wp)).stopLineID = map.stopLines.at(isl).id;
-							}
+							map.stopLines.at(isl).laneId = map.roadSegments.at(rs).Lanes.at(i).id;
+							map.stopLines.at(isl).pLane = &map.roadSegments.at(rs).Lanes.at(i);
+							map.stopLines.at(isl).trafficLightID = data_conn.SID;
+							map.stopLines.at(isl).stopSignID = data_conn.SSID;
+							map.roadSegments.at(rs).Lanes.at(i).stopLines.push_back(map.stopLines.at(isl));
+							WayPoint wp((map.stopLines.at(isl).points.at(0).x+map.stopLines.at(isl).points.at(1).x)/2.0, (map.stopLines.at(isl).points.at(0).y+map.stopLines.at(isl).points.at(1).y)/2.0, (map.stopLines.at(isl).points.at(0).z+map.stopLines.at(isl).points.at(1).z)/2.0, (map.stopLines.at(isl).points.at(0).a+map.stopLines.at(isl).points.at(1).a)/2.0);
+							map.roadSegments.at(rs).Lanes.at(i).points.at(PlanningHelpers::GetClosestNextPointIndexFast(map.roadSegments.at(rs).Lanes.at(i).points, wp)).stopLineID = map.stopLines.at(isl).id;
 						}
 					}
 				}
+			}
 
+		}
+	}
+}
+
+void MappingHelpers::UpdateMapWithOccupancyGrid(OccupancyToGridMap& map_info, const std::vector<int>& data, RoadNetwork& map, std::vector<WayPoint*>& updated_list)
+{
+	PlannerHNS::Mat3 rotationMat(- map_info.center.pos.a);
+	PlannerHNS::Mat3 translationMat(-map_info.center.pos.x, -map_info.center.pos.y);
+	updated_list.clear();
+
+	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
+	{
+		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
+		{
+			for(unsigned int p= 0; p < map.roadSegments.at(rs).Lanes.at(i).points.size(); p++)
+			{
+				WayPoint* pWP = &map.roadSegments.at(rs).Lanes.at(i).points.at(p);
+
+				GPSPoint relative_point = pWP->pos;
+				relative_point = translationMat * relative_point;
+				relative_point = rotationMat *relative_point;
+
+				int cell_value = 0;
+				if(map_info.GetCellIndexFromPoint(relative_point, data, cell_value) == true)
+				{
+					if(cell_value == 0)
+					{
+						bool bFound = false;
+						for(unsigned int i_action=0; i_action < pWP->actionCost.size(); i_action++)
+						{
+							if(pWP->actionCost.at(i_action).first == FORWARD_ACTION)
+							{
+								pWP->actionCost.at(i_action).second = 100;
+								bFound = true;
+							}
+						}
+
+						if(!bFound)
+							pWP->actionCost.push_back(make_pair(FORWARD_ACTION, 100));
+
+						updated_list.push_back(pWP);
+					}
+				}
 			}
 		}
-
+	}
 }
+
 } /* namespace PlannerHNS */

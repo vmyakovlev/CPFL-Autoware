@@ -91,6 +91,8 @@ class RosRoadOccupancyProcessorApp
 	std::string                         wayarea_layer_name_;
 	std::string                         output_layer_name_;//desired name to be published in the layer of the GridMap
 
+	std::string 						occupancy_grid_output_frame_id;
+
 	std::string                         input_gridmap_frame_;
 	double                              input_gridmap_resolution_;
 	grid_map::Length                    input_gridmap_length_;

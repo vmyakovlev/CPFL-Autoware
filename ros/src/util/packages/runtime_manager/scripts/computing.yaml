@@ -3667,6 +3667,14 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
+    - name : enableSimulatedVelodyne
+      desc : Enable broadcasting velodyne point cloud and TF from simulated car base_link
+      label: Enable Simulated Velodyne
+      kind : checkbox
+      v    : False
+      cmd_param:
+        dash     : ''
+        delim    : ':='
   - name  : ff_waypoint_follower
     vars  :
     - name : maxVelocity

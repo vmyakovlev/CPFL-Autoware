@@ -4,15 +4,17 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /TF1/Frames1
+        - /TF1/Tree1
         - /Vector Map1/Namespaces1
         - /Camera1/Visibility1
         - /Local Waypoints1/Status1
-        - /Vector Map CenterLines1/Namespaces1
         - /Global Path1/Namespaces1
         - /Local Rollouts1/Namespaces1
         - /Tracked Contours1/Namespaces1
         - /GlobalPathAnimation1/Status1
         - /SimCarInfo51/Status1
+        - /Map1
       Splitter Ratio: 0.704194
     Tree Height: 1080
   - Class: rviz/Selection
@@ -100,32 +102,13 @@ Visualization Manager:
       Use rainbow: true
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /vector_map
       Name: Vector Map
       Namespaces:
-        cross_road: true
-        cross_walk: true
-        curb: true
-        curve_mirror: true
-        fence: true
-        guard_rail: true
-        gutter: true
-        rail_crossing: true
-        road_edge: true
-        road_mark: true
-        road_pole: true
-        road_sign: true
-        side_walk: true
-        signal: true
-        stop_line: true
-        street_light: true
-        utility_pole: true
-        wall: true
-        white_line: true
-        zebra_zone: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Camera
       Enabled: false
       Image Rendering: overlay
@@ -137,12 +120,12 @@ Visualization Manager:
       Unreliable: false
       Value: false
       Visibility:
-        "": true
         Collision Points: true
         Control Pose: true
         Current Pose: true
         Destinations: true
         Detection Range: true
+        EgoVehicleInfo: true
         Global Path: true
         Global Waypoints: true
         GlobalPathAnimation: true
@@ -151,6 +134,7 @@ Visualization Manager:
         Laserscan Costmap: true
         Local Rollouts: true
         Local Waypoints: true
+        Map: true
         Map Curbs: true
         MarkerArray: true
         Next Waypoint Mark: true
@@ -167,6 +151,7 @@ Visualization Manager:
         SimCarInfo2: true
         SimCarInfo3: true
         SimCarInfo4: true
+        SimCarInfo5: true
         SimPath1: true
         SimPath2: true
         SimPath3: true
@@ -294,7 +279,7 @@ Visualization Manager:
       Marker Topic: /next_target_mark
       Name: Next Waypoint Mark
       Namespaces:
-        next_target_marker: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -302,7 +287,7 @@ Visualization Manager:
       Marker Topic: /trajectory_circle_mark
       Name: PP Trajectory Mark
       Namespaces:
-        trajectory_circle_marker: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -316,23 +301,18 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: Vehicle Model
       Robot Description: robot_description
       TF Prefix: ""
       Update Interval: 0
-      Value: true
+      Value: false
       Visual Enabled: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -406,20 +386,59 @@ Visualization Manager:
       Unreliable: false
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: false
+      Enabled: true
       Marker Topic: /vector_map_center_lines_rviz
       Name: Vector Map CenterLines
       Namespaces:
-        {}
+        MapItemsIds: false
+        TestCenter: true
+        global_lane_waypoint_orientation_marker: true
+        stop_lines_rviz_1: true
+        stop_lines_rviz_10: true
+        stop_lines_rviz_11: true
+        stop_lines_rviz_12: true
+        stop_lines_rviz_13: true
+        stop_lines_rviz_14: true
+        stop_lines_rviz_15: true
+        stop_lines_rviz_16: true
+        stop_lines_rviz_17: true
+        stop_lines_rviz_18: true
+        stop_lines_rviz_19: true
+        stop_lines_rviz_2: true
+        stop_lines_rviz_20: true
+        stop_lines_rviz_21: true
+        stop_lines_rviz_22: true
+        stop_lines_rviz_23: true
+        stop_lines_rviz_24: true
+        stop_lines_rviz_25: true
+        stop_lines_rviz_26: true
+        stop_lines_rviz_27: true
+        stop_lines_rviz_28: true
+        stop_lines_rviz_29: true
+        stop_lines_rviz_3: true
+        stop_lines_rviz_30: true
+        stop_lines_rviz_31: true
+        stop_lines_rviz_32: true
+        stop_lines_rviz_33: true
+        stop_lines_rviz_34: true
+        stop_lines_rviz_35: true
+        stop_lines_rviz_36: true
+        stop_lines_rviz_37: true
+        stop_lines_rviz_4: true
+        stop_lines_rviz_5: true
+        stop_lines_rviz_6: true
+        stop_lines_rviz_7: true
+        stop_lines_rviz_8: true
+        stop_lines_rviz_9: true
+        vector_map_center_lines_rviz: false
       Queue Size: 100
-      Value: false
+      Value: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /global_waypoints_rviz
       Name: Global Path
       Namespaces:
         global_lane_array_marker: true
-        global_lane_waypoint_orientation_marker: false
         global_velocity_lane_1: false
       Queue Size: 100
       Value: true
@@ -489,43 +508,43 @@ Visualization Manager:
       only edge: false
       show coords: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /curr_simu_pose_1
       Name: SimuCar1
       Namespaces:
-        curr_simu_pose: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /curr_simu_pose_2
       Name: SimuCar2
       Namespaces:
-        curr_simu_pose: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /curr_simu_pose_3
       Name: SimuCar3
       Namespaces:
-        curr_simu_pose: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
-      Enabled: true
+      Enabled: false
       Marker Topic: /curr_simu_pose_4
       Name: SimuCar4
       Namespaces:
-        curr_simu_pose: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /curr_simu_pose_5
       Name: SimuCar5
       Namespaces:
-        curr_simu_pose: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -565,7 +584,7 @@ Visualization Manager:
       Marker Topic: /simu_local_trajectory_5
       Name: SimPath5
       Namespaces:
-        simu_car_path_5: true
+        {}
       Queue Size: 100
       Value: true
     - Buffer length: 100
@@ -711,8 +730,6 @@ Visualization Manager:
       Name: SimCarInfo5
       Namespaces:
         beh_state: true
-        simu_car_indicator_left: true
-        simu_car_indicator_right: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -720,11 +737,17 @@ Visualization Manager:
       Marker Topic: /simu_internal_info5
       Name: EgoVehicleInfo
       Namespaces:
-        sim_behavior_5: true
-        sim_behavior_pointer5: true
-        simu_car_indicator_left: true
-        simu_car_indicator_right: true
+        {}
       Queue Size: 100
+      Value: true
+    - Alpha: 0.5
+      Class: rviz/Map
+      Color Scheme: raw
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic: /occupancy_road_status
+      Unreliable: false
       Value: true
   Enabled: true
   Global Options:
@@ -758,11 +781,11 @@ Visualization Manager:
         Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Scale: 12.209
+      Scale: 15.5645
       Target Frame: world
       Value: TopDownOrtho (rviz)
-      X: 27.4078
-      Y: 11.4155
+      X: 29.4405
+      Y: 8.82505
     Saved: ~
 Window Geometry:
   Camera:

@@ -48,6 +48,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <nav_msgs/OccupancyGrid.h>
 
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
@@ -68,7 +69,9 @@ namespace GlobalPlanningNS
 #define MAX_GLOBAL_PLAN_DISTANCE 10000
 #define _ENABLE_VISUALIZE_PLAN
 #define REPLANNING_DISTANCE 30
+#define REPLANNING_TIME 5
 #define ARRIVE_DISTANCE 5
+#define CLEAR_COSTS_TIME 15 // seconds
 
 class WayPlannerParams
 {
@@ -108,6 +111,9 @@ protected:
 	std::vector<PlannerHNS::WayPoint> m_GoalsPos;
 	geometry_msgs::Pose m_OriginPos;
 	PlannerHNS::VehicleState m_VehicleState;
+	std::vector<int> m_GridMapIntType;
+	std::vector<std::pair<std::vector<PlannerHNS::WayPoint*> , timespec> > m_ModifiedMapItemsTimes;
+	timespec m_ReplnningTimer;
 
 	int m_GlobalPathID;
 
@@ -131,6 +137,7 @@ protected:
 	ros::Subscriber sub_current_pose;
 	ros::Subscriber sub_current_velocity;
 	ros::Subscriber sub_can_info;
+	ros::Subscriber sub_road_status_occupancy;
 
 public:
 	GlobalPlanner();
@@ -149,6 +156,7 @@ private:
   void callbackGetVehicleStatus(const geometry_msgs::TwistStampedConstPtr& msg);
   void callbackGetCanInfo(const autoware_msgs::CanInfoConstPtr &msg);
   void callbackGetRobotOdom(const nav_msgs::OdometryConstPtr& msg);
+  void callbackGetRoadStatusOccupancyGrid(const nav_msgs::OccupancyGridConstPtr& msg);
 
   protected:
   	PlannerHNS::RoadNetwork m_Map;
@@ -161,6 +169,7 @@ private:
   	void VisualizeDestinations(std::vector<PlannerHNS::WayPoint>& destinations, const int& iSelected);
   	void SaveSimulationData();
   	int LoadSimulationData();
+  	void ClearOldCostFromMap();
 };
 
 }

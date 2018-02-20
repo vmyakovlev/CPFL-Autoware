@@ -33,8 +33,10 @@
 #include "math.h"
 #include "MatrixOperations.h"
 #include <geometry_msgs/PoseArray.h>
+#include <pcl_ros/transforms.h>
 #include "PolygonGenerator.h"
 #include "op_RosHelpers.h"
+
 
 namespace CarSimulatorNS
 {
@@ -127,6 +129,22 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	if(m_PlanningParams.enableTrafficLightBehavior)
 		sub_TrafficLightSignals		= nh.subscribe("/roi_signal", 		10,	&OpenPlannerCarSimulator::callbackGetTrafficLightSignals, 	this);
 
+	if(m_bSimulatedVelodyne)
+	{
+		std::ostringstream vel_frame_id;
+		vel_frame_id << "velodyne_" << m_SimParams.id;
+		m_VelodyneFrameID = vel_frame_id.str();
+		std::ostringstream base_frame_id;
+		base_frame_id << "base_link_" << m_SimParams.id;
+		m_BaseLinkFrameID = base_frame_id.str();
+
+		std::ostringstream velodyne_special_points_raw;
+		velodyne_special_points_raw << "points_raw_" << m_SimParams.id;
+
+		pub_SimulatedVelodyne   = nh.advertise<const sensor_msgs::PointCloud2>(velodyne_special_points_raw.str(), 1);
+		sub_cloud_clusters 		= nh.subscribe("/cloud_clusters", 1, &OpenPlannerCarSimulator::callbackGetCloudClusters, this);
+	}
+
 	UtilityHNS::UtilityH::GetTickCount(m_PlanningTimer);
 	std::cout << "OpenPlannerCarSimulator initialized successfully " << std::endl;
 }
@@ -145,6 +163,7 @@ void OpenPlannerCarSimulator::ReadParamFromLaunchFile(PlannerHNS::CAR_BASIC_INFO
 	_nh.getParam("baseColorR" 			, m_SimParams.modelColor.r);
 	_nh.getParam("baseColorG" 			, m_SimParams.modelColor.g);
 	_nh.getParam("baseColorB" 			, m_SimParams.modelColor.b);
+	m_SimParams.modelColor.a = 0.9;
 	_nh.getParam("logFolder" 			, m_SimParams.logPath);
 
 
@@ -195,6 +214,7 @@ void OpenPlannerCarSimulator::ReadParamFromLaunchFile(PlannerHNS::CAR_BASIC_INFO
 	_nh.getParam("maxAcceleration", m_CarInfo.max_acceleration );
 	_nh.getParam("maxDeceleration", m_CarInfo.max_deceleration );
 	_nh.getParam("enableStepByStepSignal", m_bStepByStep );
+	_nh.getParam("enableSimulatedVelodyne", m_bSimulatedVelodyne );
 
 	//_nh.getParam("enableCurbObstacles", m_bEnableCurbObstacles);
 	int iSource = 0;
@@ -218,6 +238,36 @@ OpenPlannerCarSimulator::~OpenPlannerCarSimulator()
 {
 	if(bInitPos && bGoalPos)
 		SaveSimulationData();
+}
+
+void OpenPlannerCarSimulator::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
+{
+	sensor_msgs::PointCloud2 others_cloud;
+	for(unsigned int i=0; i < msg->clusters.size(); i++)
+	{
+		pcl::concatenatePointCloud(others_cloud,msg->clusters.at(i).cloud, others_cloud);
+	}
+
+	if(others_cloud.data.size() <= 0)
+		return;
+
+	try
+	{
+		tf::StampedTransform transform;
+		m_Listener.lookupTransform(m_VelodyneFrameID, "map",ros::Time(0), transform);
+		sensor_msgs::PointCloud2 others_cloud_transformed;
+		pcl_ros::transformPointCloud(m_VelodyneFrameID, transform, others_cloud, others_cloud_transformed);
+
+
+		others_cloud_transformed.header.frame_id = m_VelodyneFrameID;
+		others_cloud_transformed.header.stamp = ros::Time();
+		pub_SimulatedVelodyne.publish(others_cloud_transformed);
+		//std::cout << "Successful Transformation ! " << std::endl;
+	}
+	catch (tf::TransformException& ex)
+	{
+		//ROS_ERROR("Transformation Failed %s", ex.what());
+	}
 }
 
 void OpenPlannerCarSimulator::callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg)
@@ -652,6 +702,35 @@ int OpenPlannerCarSimulator::LoadSimulationData(PlannerHNS::WayPoint& start_p, P
 	return nData;
 }
 
+void OpenPlannerCarSimulator::PublishSpecialTF(const PlannerHNS::WayPoint& pose)
+{
+	static tf::TransformBroadcaster map_base_link_broadcaster;
+	geometry_msgs::TransformStamped base_link_trans;
+	base_link_trans.header.stamp = ros::Time::now();
+	base_link_trans.header.frame_id = "map";
+	base_link_trans.child_frame_id = m_BaseLinkFrameID;
+	base_link_trans.transform.translation.x = pose.pos.x;
+	base_link_trans.transform.translation.y = pose.pos.y;
+	base_link_trans.transform.translation.z = pose.pos.z;
+	base_link_trans.transform.rotation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, UtilityHNS::UtilityH::SplitPositiveAngle(pose.pos.a));
+
+	// send the transform
+	map_base_link_broadcaster.sendTransform(base_link_trans);
+
+	static tf::TransformBroadcaster velodyne_base_link_broadcaster;
+	geometry_msgs::TransformStamped vel_trans;
+	vel_trans.header.stamp = ros::Time::now();
+	vel_trans.header.frame_id = m_BaseLinkFrameID;
+	vel_trans.child_frame_id = m_VelodyneFrameID;
+	vel_trans.transform.translation.x = 0;
+	vel_trans.transform.translation.y = 0;
+	vel_trans.transform.translation.z = 0;
+	vel_trans.transform.rotation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, 0);
+
+	// send the transform
+	velodyne_base_link_broadcaster.sendTransform(vel_trans);
+}
+
 void OpenPlannerCarSimulator::MainLoop()
 {
 
@@ -832,6 +911,9 @@ void OpenPlannerCarSimulator::MainLoop()
 			sim_data.poses.push_back(p_indicator);
 
 			pub_SimuBoxPose.publish(sim_data);
+
+			if(m_bSimulatedVelodyne)
+				PublishSpecialTF(pose_center);
 
 			if(m_CurrBehavior.bNewPlan && m_SimParams.bEnableLogs)
 			{

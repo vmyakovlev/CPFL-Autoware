@@ -4,9 +4,9 @@
 	<arg name="enableRvizPoseSelect"		default="true"   />	
 	<arg name="enableLooper"				default="true"   />	
 	<arg name="meshPath" 					default="package://model_publisher/../../../.config/model/default.dae" />
-	<arg name="baseColorR"					default="1" />
-	<arg name="baseColorG"					default="0.5" />
-	<arg name="baseColorB"					default="0.5" />
+	<arg name="baseColorR"					default="0" />
+	<arg name="baseColorG"					default="0" />
+	<arg name="baseColorB"					default="0.8" />
 	<arg name="logFolder" 					default="/home/hatem/SimuLogs/SimulatedCar1/" />	
 	
 	<arg name="maxVelocity" 				default="5" />
@@ -51,7 +51,8 @@
 	<arg name="enableObjectTracking" 		default="true" /> <!-- use internal kalman filter for track obstacles " -->
 	<arg name="enableOutsideControl" 		default="false" /> <!-- use internal kalman filter for track obstacles " -->		
 	
-	<arg name="enableStepByStepSignal" 		default="false" /> 
+	<arg name="enableStepByStepSignal" 		default="false" />
+	<arg name="enableSimulatedVelodyne" 	default="false" />  
 	
 	<arg name="mapSource" 					default="0" /> <!-- Vector Map Folder=0, kml=1 -->
 	<arg name="mapFileName" 				default="/media/hatem/8ac0c5d5-8793-4b98-8728-55f8d67ec0f4/data/ToyotaCity2/map/vector_map/" /> 
@@ -111,6 +112,7 @@
 		<param name="enableOutsideControl" 			value="$(arg enableOutsideControl)" />
 
 		<param name="enableStepByStepSignal" 		value="$(arg enableStepByStepSignal)" />
+		<param name="enableSimulatedVelodyne" 		value="$(arg enableSimulatedVelodyne)" />
 								
 		<param name="mapSource" 					value="$(arg mapSource)" />
 		<param name="mapFileName" 					value="$(arg mapFileName)" />

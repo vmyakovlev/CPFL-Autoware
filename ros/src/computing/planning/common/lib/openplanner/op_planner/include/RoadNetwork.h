@@ -336,8 +336,6 @@ public:
 
 };
 
-
-
 class Rotation
 {
 public:
@@ -1084,6 +1082,139 @@ public:
 		return str.str();
 
 	}
+};
+
+class OccupancyToGridMap
+{
+public:
+	int width;
+	int length;
+	double res;
+	WayPoint center;
+
+	OccupancyToGridMap(const int& _width, const int& _length, const double& _res, const WayPoint& _center)
+	{
+		width = _width;
+		length = _length;
+		res = _res;
+		center = _center;
+	}
+
+	OccupancyToGridMap()
+	{
+		width = 0;
+		length  = 0;
+		res = 0.0;
+	}
+
+	bool GetCellIndexFromPoint(const GPSPoint& p, const std::vector<int>& data, int& _cell)
+	{
+		int col = floor(p.x / res);
+		int row = floor(p.y / res);
+
+		int index = -1;
+		if(row >= 0 && row < length && col >=0 && col < width)
+		{
+			index = get2dIndex(row,col);
+
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				//printf("Cell Info: P(%f,%f) , D(%f,%f), G(%d,%d), index = %d \n", p.x, p.y, p.x-center.pos.x, p.y-center.pos.y, col, row , index);
+				return true;
+			}
+		}
+
+		if(row+1 >= 0 && row+1 < length && col >=0 && col < width)
+		{
+			index = get2dIndex(row+1,col);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row >= 0 && row < length && col+1 >=0 && col+1 < width)
+		{
+			index = get2dIndex(row,col+1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row-1 >= 0 && row-1 < length && col >=0 && col < width)
+		{
+			index = get2dIndex(row-1,col);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row >= 0 && row < length && col-1 >=0 && col-1 < width)
+		{
+			index = get2dIndex(row,col-1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row+1 >= 0 && row+1 < length && col+1 >=0 && col+1 < width)
+		{
+			index = get2dIndex(row+1,col+1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row-1 >= 0 && row-1 < length && col-1 >=0 && col-1 < width)
+		{
+			index = get2dIndex(row-1,col-1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row-1 >= 0 && row-1 < length && col+1 >=0 && col+1 < width)
+		{
+			index = get2dIndex(row-1,col+1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		if(row+1 >= 0 && row+1 < length && col-1 >=0 && col-1 < width)
+		{
+			index = get2dIndex(row+1,col-1);
+			if(index >= 0 && index < (int)data.size())
+			{
+				_cell = data.at((unsigned int)index);
+				return true;
+			}
+		}
+
+		//printf("Error Getting Cell with Info: P(%f,%f) , C(%d,%d), index = %d \n", p.x, p.y, row, col, index);
+		return false;
+	}
+private:
+
+	int get2dIndex(const int& r,const int& c)
+	{
+		return ((r*width) + c);
+	}
+
 };
 
 }
