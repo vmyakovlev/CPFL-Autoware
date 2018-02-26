@@ -84,10 +84,12 @@ public:
 	bool bEnableReplanning;
 	double pathDensity;
 	PlannerHNS::MAP_SOURCE_TYPE	mapSource;
+	bool bEnableDynamicMapUpdate;
 
 
 	WayPlannerParams()
 	{
+	    bEnableDynamicMapUpdate = false;
 		bEnableReplanning = false;
 		bEnableHMI = false;
 		bEnableSmoothing = false;

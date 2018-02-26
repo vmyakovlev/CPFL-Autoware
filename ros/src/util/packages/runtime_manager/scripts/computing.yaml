@@ -3438,7 +3438,14 @@ params :
       cmd_param:
         dash     : ''
         delim    : ':='
-
+    - name : enableStepByStepSignal
+      desc : Enable Step by Step Prediction Test
+      label: Enable Step by Step Test
+      kind : checkbox
+      v    : False
+      cmd_param:
+        dash     : ''
+        delim    : ':='
   - name  : op_car_simulator
     vars  :
     - name : enableRvizPoseSelect

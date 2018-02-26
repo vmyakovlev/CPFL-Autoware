@@ -48,6 +48,7 @@ GlobalPlanner::GlobalPlanner()
 	nh.getParam("/op_global_planner/enableLaneChange" , m_params.bEnableLaneChange);
 	nh.getParam("/op_global_planner/enableRvizInput" , m_params.bEnableRvizInput);
 	nh.getParam("/op_global_planner/enableReplan" , m_params.bEnableReplanning);
+	nh.getParam("/op_global_planner/enableDynamicMapUpdate" , m_params.bEnableDynamicMapUpdate);
 	nh.getParam("/op_global_planner/mapFileName" , m_params.KmlMapPath);
 
 	int iSource = 0;
@@ -58,7 +59,6 @@ GlobalPlanner::GlobalPlanner()
 		m_params.mapSource = PlannerHNS::MAP_FOLDER;
 	else if(iSource == 2)
 		m_params.mapSource = PlannerHNS::MAP_KML_FILE;
-
 
 	tf::StampedTransform transform;
 	PlannerHNS::RosHelpers::GetTransformFromTF("map", "world", transform);
@@ -96,7 +96,8 @@ GlobalPlanner::GlobalPlanner()
 	else if(bVelSource == 2)
 		sub_can_info = nh.subscribe("/can_info", 10, &GlobalPlanner::callbackGetCanInfo, this);
 
-	sub_road_status_occupancy = nh.subscribe<>("/occupancy_road_status", 1, &GlobalPlanner::callbackGetRoadStatusOccupancyGrid, this);
+	if(m_params.bEnableDynamicMapUpdate)
+	  sub_road_status_occupancy = nh.subscribe<>("/occupancy_road_status", 1, &GlobalPlanner::callbackGetRoadStatusOccupancyGrid, this);
 
 }
 
@@ -453,7 +454,7 @@ void GlobalPlanner::MainLoop()
 			else
 				bMakeNewPlan = true;
 
-			if(bMakeNewPlan || UtilityHNS::UtilityH::GetTimeDiffNow(m_ReplnningTimer) > REPLANNING_TIME)
+			if(bMakeNewPlan || (m_params.bEnableDynamicMapUpdate && UtilityHNS::UtilityH::GetTimeDiffNow(m_ReplnningTimer) > REPLANNING_TIME))
 			{
 				UtilityHNS::UtilityH::GetTickCount(m_ReplnningTimer);
 				PlannerHNS::WayPoint goalPoint = m_GoalsPos.at(m_iCurrentGoalIndex);

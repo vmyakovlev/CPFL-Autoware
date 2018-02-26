@@ -164,6 +164,10 @@ PassiveDecisionMaker::PassiveDecisionMaker(const PassiveDecisionMaker& obj)
 	m_pidStopping.Init(0.05, 0.05, 0.1);
 	m_pidStopping.Setlimit(m_params.horizonDistance, 0);
 
+
+	m_pidSteer.Init(m_ControlParams.Steering_Gain.kP, m_ControlParams.Steering_Gain.kI, m_ControlParams.Steering_Gain.kD); // for 3 m/s
+	m_pidSteer.Setlimit(m_CarInfo.max_steer_angle, -m_CarInfo.max_steer_angle);
+
 	BehaviorState start_beh;
 	start_beh.state = obj.m_pCurrentBehaviorState->m_Behavior;
 	InitBehaviorStates(start_beh);
@@ -258,6 +262,10 @@ void PassiveDecisionMaker::Init(const ControllerParams& ctrlParams, const Planne
 
 		m_pidStopping.Init(0.05, 0.05, 0.1);
 		m_pidStopping.Setlimit(m_params.horizonDistance, 0);
+
+
+		m_pidSteer.Init(m_ControlParams.Steering_Gain.kP, m_ControlParams.Steering_Gain.kI, m_ControlParams.Steering_Gain.kD); // for 3 m/s
+		m_pidSteer.Setlimit(m_CarInfo.max_steer_angle, -m_CarInfo.max_steer_angle);
 
 		InitBehaviorStates(start_beh);
 
@@ -476,7 +484,7 @@ void PassiveDecisionMaker::InitBehaviorStates(const BehaviorState& start_beh)
 	PlanningHelpers::GetRelativeInfo(m_Path, state, total_info);
 	PlanningHelpers::GetRelativeInfo(m_Path, state, info);
 	double average_braking_distance = -pow(vel, 2)/(m_CarInfo.max_deceleration) + m_params.additionalBrakingDistance;
-	double max_velocity	= PlannerHNS::PlanningHelpers::GetVelocityAhead(m_Path, total_info, total_info.iBack, average_braking_distance);
+	double max_velocity = PlannerHNS::PlanningHelpers::GetVelocityAhead(m_Path, total_info, total_info.iBack, average_braking_distance);
 
 	unsigned int point_index = 0;
 	double critical_long_front_distance = m_CarInfo.length/2.0;
@@ -502,7 +510,7 @@ void PassiveDecisionMaker::InitBehaviorStates(const BehaviorState& start_beh)
 
 		if(desiredVelocity > max_velocity)
 			desiredVelocity = max_velocity;
-		else if(desiredVelocity < 0.25)
+		else if(desiredVelocity <= m_params.minSpeed)
 			desiredVelocity = 0;
 
 			//std::cout << "Acc: V: " << desiredVelocity << ", Object V: " <<  target_velocity << ", Accel: " << targe_acceleration << std::endl;
@@ -510,28 +518,47 @@ void PassiveDecisionMaker::InitBehaviorStates(const BehaviorState& start_beh)
 	else if(beh.state == FORWARD_STATE || beh.state == OBSTACLE_AVOIDANCE_STATE )
 	{
 		double target_velocity = max_velocity;
-		double e = target_velocity - vel;
-		desiredVelocity = m_pidVelocity.getPID(e);
+	//	double e = target_velocity - vel;
+	//	desiredVelocity = m_pidVelocity.getPID(e);
+
+		desiredVelocity = target_velocity;
+
+		//std::cout << "Target Velocity: " << vel << ", e: " << e << ", Max Vel: " << max_velocity << std::endl;
 
 		if(desiredVelocity>max_velocity)
 			desiredVelocity = max_velocity;
-		else if(desiredVelocity < 0.25)
+		else if(desiredVelocity <= m_params.minSpeed)
 			desiredVelocity = 0;
-		//std::cout << "Target Velocity: " << desiredVelocity << ", Change Slowdown: " << bSlowBecauseChange  << std::endl;
-
 	}
 
 	return desiredVelocity;
  }
 
- PlannerHNS::BehaviorState PassiveDecisionMaker::DoOneStep(const double& dt, const PlannerHNS::WayPoint currPose, const std::vector<WayPoint>& path, const std::vector<TrafficLight>& trafficLight)
+ double PassiveDecisionMaker::GetSteerAngle()
+ {
+   RelativeInfo info;
+    PlanningHelpers::GetRelativeInfo(m_Path, state, info);
+    unsigned int point_index = 0;
+    PlannerHNS::WayPoint pursuite_point = PlanningHelpers::GetFollowPointOnTrajectory(m_Path, info, 2, point_index);
+
+    double current_a = UtilityHNS::UtilityH::SplitPositiveAngle(state.pos.a);
+    double target_a = atan2(pursuite_point.pos.y - state.pos.y, pursuite_point.pos.x - state.pos.x);
+    double e =  UtilityHNS::UtilityH::SplitPositiveAngle(target_a - current_a);
+    double before_lowpass = e;//m_pidSteer.getPID(e);
+    //std::cout << "CurrA: " << current_a << ", targetA: " << target_a << ", e: " << e << std::endl;
+    return before_lowpass;
+
+ }
+
+ PlannerHNS::BehaviorState PassiveDecisionMaker::DoOneStep(const double& dt, const PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const std::vector<TrafficLight>& trafficLight, PlannerHNS::VehicleState& u_control_status)
 {
 	 PlannerHNS::BehaviorState beh;
 	 state = currPose;
 	 m_Path = path;
+
 	 PlanningHelpers::FixPathDensity(m_Path, m_params.pathDensity);
 	 PlanningHelpers::CalcAngleAndCost(m_Path);
-
+	 //PlanningHelpers::GenerateRecommendedSpeed(m_Path, 5, 0.5);
 	//UpdateCurrentLane(m_MaxLaneSearchDistance);
 
 	CalculateImportantParameterForDecisionMaking(currPose.v, trafficLight);
@@ -540,6 +567,11 @@ void PassiveDecisionMaker::InitBehaviorStates(const BehaviorState& start_beh)
 
 	beh.maxVelocity = UpdateVelocityDirectlyToTrajectory(beh, currPose.v, dt);
 
+	PlannerHNS::VehicleState currStatus;
+	currStatus.speed = state.v;
+	currStatus.shift = PlannerHNS::SHIFT_POS_DD;
+	u_control_status.speed = beh.maxVelocity;
+	u_control_status.steer = GetSteerAngle();
 	//std::cout << "Eval_i: " << tc.index << ", Curr_i: " <<  m_pCurrentBehaviorState->GetCalcParams()->iCurrSafeTrajectory << ", Prev_i: " << m_pCurrentBehaviorState->GetCalcParams()->iPrevSafeTrajectory << std::endl;
 
 	return beh;

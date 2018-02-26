@@ -6,7 +6,7 @@
 	<arg name="enableCurbObstacles" 	default="false" />
 	<arg name="distanceBetweenCurbs" 	default="1.5" />
 	<arg name="visualizationTime" 		default="0.25" />
-	<arg name="enableStepByStepSignal" 		default="false" />
+	<arg name="enableStepByStepSignal" 	default="true" />
 	
 	
 	<node pkg="op_local_planner" type="op_motion_predictor" name="op_motion_predictor" output="screen">		

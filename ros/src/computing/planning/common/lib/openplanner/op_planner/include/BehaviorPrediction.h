@@ -27,18 +27,20 @@ namespace PlannerHNS
 
 #define PREDICTION_DISTANCE 2 //meters
 
-#define BEH_PARTICLES_NUM 5
+#define BEH_PARTICLES_NUM 50
 #define BEH_MIN_PARTICLE_NUM 2
 
 #define POSE_FACTOR 0.33
 #define DIRECTION_FACTOR 0.33
 #define VELOCITY_FACTOR 0.33
 
-#define KEEP_PERCENTAGE 0.9
+#define KEEP_PERCENTAGE 0.1
 
 #define FIXED_PLANNING_DISTANCE 10
 
 #define MIN_PREDICTION_DISTANCE 5
+
+#define USE_OPEN_PLANNER_MOVE 1
 
 typedef boost::mt19937 ENG;
 typedef boost::normal_distribution<double> NormalDIST;

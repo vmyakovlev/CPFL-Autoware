@@ -47,6 +47,7 @@ public:
 	//For Simulation
 	UtilityHNS::PIDController 	m_pidVelocity;
 	UtilityHNS::PIDController 	m_pidStopping;
+	UtilityHNS::PIDController 	m_pidSteer;
 
 public:
 
@@ -56,13 +57,14 @@ public:
 	virtual ~PassiveDecisionMaker();
 	void Init(const ControllerParams& ctrlParams, const PlanningParams& params, const CAR_BASIC_INFO& carInfo, const BehaviorState& start_beh);
 	void CalculateImportantParameterForDecisionMaking(const double& vel, const std::vector<TrafficLight>& detectedLightsy);
-	BehaviorState DoOneStep(const double& dt, const PlannerHNS::WayPoint currPose, const std::vector<WayPoint>& path, const std::vector<TrafficLight>& trafficLight);
+	BehaviorState DoOneStep(const double& dt, const PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const std::vector<TrafficLight>& trafficLight, PlannerHNS::VehicleState& u_control_status);
 
 private:
 	bool GetNextTrafficLight(const int& prevTrafficLightId, const std::vector<TrafficLight>& trafficLights, TrafficLight& trafficL);
 	void UpdateCurrentLane(const double& search_distance);
 	BehaviorState GenerateBehaviorState();
 	double UpdateVelocityDirectlyToTrajectory(const BehaviorState& beh, const double& vel, const double& dt);
+	double  GetSteerAngle();
 
 
 private:
