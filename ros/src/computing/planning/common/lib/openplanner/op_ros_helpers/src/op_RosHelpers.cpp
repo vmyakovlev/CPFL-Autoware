@@ -264,10 +264,10 @@ void RosHelpers::ConvertPredictedTrqajectoryMarkers(std::vector<std::vector<Plan
 	for(unsigned int i = 0; i < paths.size(); i++)
 	{
 		double prop = 1.0;
-//		if(paths.at(i).size()>0)
-//			prop = paths.at(i).at(0).collisionCost;
+		if(paths.at(i).size()>0)
+			prop = paths.at(i).at(0).collisionCost;
 
-		visualization_msgs::Marker path_mkr = CreateGenMarker(0,0,0,0,0.57*prop,0.43*prop,0.85*prop,0.1,i,"Predicted_Trajectories", visualization_msgs::Marker::LINE_STRIP);
+		visualization_msgs::Marker path_mkr = CreateGenMarker(0,0,0,0,1.0*prop,0.1*prop,0.1*prop,0.1,i,"Predicted_Trajectories", visualization_msgs::Marker::LINE_STRIP);
 
 
 		for(unsigned int p = 0; p < paths.at(i).size(); p++)
@@ -608,6 +608,15 @@ void RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(co
 	obj.center.v = det_obj.velocity.linear.x;
 	obj.bVelocity = det_obj.velocity_reliable;
 	obj.bDirection = det_obj.pose_reliable;
+
+	if(det_obj.indicator_state == 0)
+		obj.indicator_state = PlannerHNS::INDICATOR_LEFT;
+	else if(det_obj.indicator_state == 1)
+		obj.indicator_state = PlannerHNS::INDICATOR_RIGHT;
+	else if(det_obj.indicator_state == 2)
+		obj.indicator_state = PlannerHNS::INDICATOR_BOTH;
+	else if(det_obj.indicator_state == 3)
+		obj.indicator_state = PlannerHNS::INDICATOR_NONE;
 
 	PlannerHNS::GPSPoint p;
 	obj.contour.clear();

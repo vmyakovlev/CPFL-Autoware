@@ -881,11 +881,11 @@ void PlanningHelpers::CreateManualBranchFromTwoPoints(WayPoint& p1,WayPoint& p2 
 	path.push_back(p2);
 	path.push_back(endWP);
 
-	PlanningHelpers::SmoothPath(path, 0.35, 0.25);
-	PlanningHelpers::FixPathDensity(path, 1.5);
-	PlanningHelpers::SmoothPath(path, 0.35, 0.25);
+	//PlanningHelpers::SmoothPath(path, 0.4, 0.1);
 	PlanningHelpers::FixPathDensity(path, 1);
-	PlanningHelpers::SmoothPath(path, 0.25, 0.35);
+	PlanningHelpers::SmoothPath(path, 0.4, 0.25);
+	PlanningHelpers::FixPathDensity(path, 0.5);
+	PlanningHelpers::SmoothPath(path, 0.25, 0.4);
 
 
 	PlanningHelpers::CalcAngleAndCost(path);

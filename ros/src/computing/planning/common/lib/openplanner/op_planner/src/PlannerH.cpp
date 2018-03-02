@@ -401,14 +401,16 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 		else
 			p2 = p1 = startPose;
 
-		p2.pos.y = p1.pos.y + maxPlanningDistance*0.5*sin(p1.pos.a);
-		p2.pos.x = p1.pos.x + maxPlanningDistance*0.5*cos(p1.pos.a);
+		double branch_length = maxPlanningDistance*0.5;
+
+		p2.pos.y = p1.pos.y + branch_length*0.4*sin(p1.pos.a);
+		p2.pos.x = p1.pos.x + branch_length*0.4*cos(p1.pos.a);
 
 		vector<WayPoint> l_branch;
 		vector<WayPoint> r_branch;
 
-		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, maxPlanningDistance*0.75, FORWARD_RIGHT_DIR,r_branch);
-		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, maxPlanningDistance*0.75, FORWARD_LEFT_DIR, l_branch);
+		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, branch_length, FORWARD_RIGHT_DIR,r_branch);
+		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, branch_length, FORWARD_LEFT_DIR, l_branch);
 
 		paths.push_back(l_branch);
 		paths.push_back(r_branch);

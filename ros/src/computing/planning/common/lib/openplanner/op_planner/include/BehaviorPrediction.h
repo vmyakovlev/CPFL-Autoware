@@ -24,17 +24,19 @@ namespace PlannerHNS
 #define MEASURE_POSE_ERROR 0.25
 #define MEASURE_ANGLE_ERROR 0.08
 #define MEASURE_VEL_ERROR 0.1
+#define MEASURE_IND_ERROR 0.1
 
-#define PREDICTION_DISTANCE 2 //meters
+#define PREDICTION_DISTANCE_PERCENTAGE 0.2
 
 #define BEH_PARTICLES_NUM 50
-#define BEH_MIN_PARTICLE_NUM 2
+#define BEH_MIN_PARTICLE_NUM 0
 
-#define POSE_FACTOR 0.33
-#define DIRECTION_FACTOR 0.33
-#define VELOCITY_FACTOR 0.33
+#define POSE_FACTOR 0.0
+#define DIRECTION_FACTOR 0.0
+#define VELOCITY_FACTOR 0.0
+#define INDICATOR_FACTOR 1
 
-#define KEEP_PERCENTAGE 0.1
+#define KEEP_PERCENTAGE 0.75
 
 #define FIXED_PLANNING_DISTANCE 10
 
@@ -55,9 +57,9 @@ public:
 	BEH_STATE_TYPE beh; //[Stop, Yielding, Forward, Branching]
 	int vel; //[0 -> Stop,1 -> moving]
 	int acc; //[-1 ->Slowing, 0, Stopping, 1 -> accelerating]
-	int indicator; //[-1 -> Left, 0 -> no, 1 -> Right ]
+	int indicator; //[0 -> No, 1 -> Left, 2 -> Right , 3 -> both]
 	WayPoint pose;
-	WayPoint op_pose;
+	bool bStopLine;
 	double w;
 	double pose_w;
 	double dir_w;
@@ -66,12 +68,15 @@ public:
 	double ind_w;
 	//BehTrajInfo* pTrajInfo;
 	TrajectoryTracker* pTraj;
+	int original_index;
 
 	Particle()
 	{
+		original_index = 0;
 		//pTrajInfo = 0;
+		bStopLine = false;
 		bDeleted = false;
-		pTraj = 0;
+		pTraj = nullptr;
 		w = 0;
 		pose_w = 0;
 		dir_w = 0;
@@ -147,29 +152,6 @@ public:
 
 	void InitDecision()
 	{
-		ControllerParams ctrl_params;
-		PlanningParams params;
-		CAR_BASIC_INFO car_info;
-		BehaviorState decision_beh;
-		if(beh == BEH_FORWARD_STATE)
-			decision_beh.state = FORWARD_STATE;
-		else if(beh == BEH_STOPPING_STATE)
-			decision_beh.state = STOPPING_STATE;
-		else if(beh == BEH_BRANCH_LEFT_STATE)
-			decision_beh.state = FORWARD_STATE;
-		else if(beh == BEH_BRANCH_RIGHT_STATE)
-			decision_beh.state = FORWARD_STATE;
-		else if(beh == BEH_YIELDING_STATE)
-			decision_beh.state = STOPPING_STATE;
-		else if(beh == BEH_ACCELERATING_STATE)
-			decision_beh.state = FORWARD_STATE;
-		else if(beh == BEH_SLOWDOWN_STATE)
-			decision_beh.state = FORWARD_STATE;
-		else
-			decision_beh.state = INITIAL_STATE;
-
-		params.maxSpeed = 10.0;
-		m_SinglePathDecisionMaker.Init(ctrl_params, params, car_info, decision_beh);
 	}
 
 	TrajectoryTracker(const TrajectoryTracker& obj)
@@ -534,12 +516,14 @@ public:
 	DetectedObject obj;
 	std::vector<TrajectoryTracker*> m_TrajectoryTracker;
 	std::vector<TrajectoryTracker*> m_TrajectoryTracker_temp;
+
+	std::vector<Particle*> m_AllParticles;
+
 	TrajectoryTracker* best_beh_track;
-	GPSPoint prev_pose;
+	int i_best_track;
 
 	PlannerHNS::BehaviorState m_beh;
 	double m_PredictionTime;
-
 
 	double all_w;
 	double max_w;
@@ -582,7 +566,8 @@ public:
 	ObjParticles()
 	{
 		m_PredictionTime = 0;
-		best_beh_track = 0;
+		best_beh_track = nullptr;
+		i_best_track = -1;
 		all_w = 0;
 		pose_w_t = 0;
 		dir_w_t = 0;
@@ -624,12 +609,18 @@ public:
 		}
 
 		if(m_TrajectoryTracker.size() > 0)
+		{
 			best_beh_track = m_TrajectoryTracker.at(0);
+			i_best_track = 0;
+		}
 
 		for(unsigned int i = 1; i < m_TrajectoryTracker.size(); i++)
 		{
 			if(m_TrajectoryTracker.at(i)->best_p > best_beh_track->best_p)
+			{
 				best_beh_track = m_TrajectoryTracker.at(i);
+				i_best_track = i;
+			}
 		}
 	}
 
@@ -648,35 +639,6 @@ public:
 
 		}
 	};
-
-//	void MatchTrajectories()
-//	{
-//		std::vector<unsigned int > add_me_index;
-//		std::vector<unsigned int > delete_me_index;
-//
-//
-//		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
-//		{
-//			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-//			{
-//				double vMatch = m_TrajectoryTracker.at(i)->CalcMatchingPercentage(obj.predTrajectories.at(t));
-//			}
-//		}
-//
-//		while(m_TrajectoryTracker.size()>0)
-//		{
-//			delete m_TrajectoryTracker.at(0);
-//			m_TrajectoryTracker.erase(m_TrajectoryTracker.begin()+0);
-//		}
-//
-//		//m_TrajectoryTracker.erase(m_TrajectoryTracker.begin(), m_TrajectoryTracker.end());
-//		//m_TrajectoryTracker.clear();
-//
-//		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
-//		{
-//			m_TrajectoryTracker.push_back(new TrajectoryTracker(obj.predTrajectories.at(t), t));
-//		}
-//	}
 
 	void DeleteFromList(std::vector<TrajectoryTracker*>& delete_me_track, TrajectoryTracker* track)
 	{
@@ -838,32 +800,46 @@ public:
 	struct timespec m_GenerationTimer;
 	timespec m_ResamplingTimer;
 
+	bool m_bCanDecide;
+
 
 protected:
+	//int GetTrajectoryPredictedDirection(const std::vector<WayPoint>& path, const PlannerHNS::WayPoint& pose, const double& pred_distance);
+	int FromIndicatorToNumber(const PlannerHNS::LIGHT_INDICATOR& ind);
+	PlannerHNS::LIGHT_INDICATOR FromNumbertoIndicator(const int& num);
+	double CalcIndicatorWeight(PlannerHNS::LIGHT_INDICATOR p_ind, PlannerHNS::LIGHT_INDICATOR obj_ind);
+
 	void CalPredictionTimeForObject(ObjParticles* pCarPart);
 	void PredictCurrentTrajectory(RoadNetwork& map, ObjParticles* pCarPart);
 	void FilterObservations(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<DetectedObject>& filtered_list);
-	void ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles>& old_list);
-	void ExtractTrajectoriesFromMapII(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles*>& old_list);
+	void ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles*>& old_list);
 	void CalculateCollisionTimes(const double& minSpeed);
 
 	void PredictionStepII(std::vector<ObjParticles*>& part_info);
-	void PredictionStep(std::vector<ObjParticles>& part_info);
 	void CorrectionStepII(std::vector<ObjParticles*>& part_info);
-	void CorrectionStep(std::vector<ObjParticles>& part_info);
 
-	void GenerateParticles(ObjParticles& parts);
-	void SamplesParticles(ObjParticles& parts);
 	void SamplesParticlesII(ObjParticles* parts);
-	void ReSamplesParticles(ObjParticles& parts);
+	void SamplesFreshParticles(ObjParticles* pParts);
 	void ReSamplesParticlesII(ObjParticles* parts);
+	void MoveParticles(ObjParticles* parts);
 	void CalculateWeightsII(ObjParticles* pParts);
-	void CalculateWeights(ObjParticles& parts);
 
-	void CalOnePartWeight(ObjParticles& parts,Particle& p);
 	void CalOnePartWeightII(ObjParticles* pParts,Particle& p);
-	void NormalizeOnePartWeight(ObjParticles& parts,Particle& p);
 	void NormalizeOnePartWeightII(ObjParticles* pParts,Particle& p);
+
+	void CollectParticles(ObjParticles* pParts);
+
+	void RemoveWeakParticles(ObjParticles* pParts);
+	void CalculateProbabilities(ObjParticles* pParts);
+	static bool sort_weights(const Particle* p1, const Particle* p2)
+	{
+		return p1->w > p2->w;
+	}
+
+	static bool sort_trajectories(const std::pair<int, double>& p1, const std::pair<int, double>& p2)
+	{
+		return p1.second > p2.second;
+	}
 
 
 public:

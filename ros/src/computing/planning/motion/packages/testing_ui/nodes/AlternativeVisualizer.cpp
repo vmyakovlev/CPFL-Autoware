@@ -215,20 +215,10 @@ void AlternativeVisualizer::DrawSimu()
 	DrawingHelpers::DrawString(0, 0, GLUT_BITMAP_TIMES_ROMAN_24, (char*)str_out.str().c_str());
 	glPopMatrix();
 
-	ros::Rate loop_rate(100);
+	ros::Rate loop_rate(15);
 
 	if(ros::ok())
 	{
-		if(m_bStepForward)
-		{
-			geometry_msgs::TwistStamped s_signal;
-			s_signal.header.frame_id = "velodyne";
-			s_signal.header.stamp = ros::Time();
-			s_signal.twist.linear.x = 1;
-			pub_SimuStepSignal.publish(s_signal);
-			m_bStepForward = false;
-		}
-
 		if(m_bPredStepForward)
 		{
 			geometry_msgs::TwistStamped s_signal;
@@ -237,6 +227,17 @@ void AlternativeVisualizer::DrawSimu()
 			s_signal.twist.linear.x = 1;
 			pub_PredStepSignal.publish(s_signal);
 			m_bPredStepForward = false;
+		}
+
+		if(m_bStepForward)
+		{
+			geometry_msgs::TwistStamped s_signal;
+			s_signal.header.frame_id = "velodyne";
+			s_signal.header.stamp = ros::Time();
+			s_signal.twist.linear.x = 1;
+			pub_SimuStepSignal.publish(s_signal);
+			m_bStepForward = false;
+			m_bPredStepForward = true;
 		}
 
 		ros::spinOnce();
@@ -418,7 +419,6 @@ void AlternativeVisualizer::OnKeyboardPress(const SPECIAL_KEYS_TYPE& sKey, const
 	break;
 	case 'v':
 	{
-		m_bPredStepForward = true;
 	}
 	break;
 	case 'l':
