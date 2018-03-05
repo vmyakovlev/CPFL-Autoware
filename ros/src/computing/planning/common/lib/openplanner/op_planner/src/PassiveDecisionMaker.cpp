@@ -99,6 +99,7 @@ PassiveDecisionMaker::~PassiveDecisionMaker()
 		average_braking_distance = 10;
 
 	beh.indicator = PlanningHelpers::GetIndicatorsFromPath(path, currPose, average_braking_distance);
+
 	currPose.v = beh.maxVelocity = GetVelocity(currPose, path, carInfo, info);
 
 	double steer = GetSteerAngle(currPose, path, info);

@@ -392,6 +392,31 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 		}
 	}
 
+	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
+	{
+		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
+		{
+			Lane* pL = &map.roadSegments.at(rs).Lanes.at(i);
+			for(unsigned int j = 0 ; j < pL->points.size(); j++)
+			{
+			    if(pL->points.at(j).actionCost.size() > 0)
+			      {
+				  if(pL->points.at(j).actionCost.at(0).first == LEFT_TURN_ACTION)
+				    {
+				      AssignActionCostToLane(pL, LEFT_TURN_ACTION, LEFT_INITIAL_TURNS_COST);
+				      break;
+				    }
+				  else if(pL->points.at(j).actionCost.at(0).first == RIGHT_TURN_ACTION)
+				    {
+				      AssignActionCostToLane(pL, RIGHT_TURN_ACTION, RIGHT_INITIAL_TURNS_COST);
+				    break;
+
+				    }
+			      }
+			}
+		}
+	}
+
 #ifdef FIND_LEFT_RIGHT_LANES
 	FindAdjacentLanes(map);
 #endif
@@ -417,6 +442,15 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 
 
 	cout << "Map loaded from data with " << roadLanes.size()  << " lanes" << endl;
+}
+
+void MappingHelpers::AssignActionCostToLane(Lane* pL, ACTION_TYPE action, double cost)
+{
+  for(unsigned int j = 0 ; j < pL->points.size(); j++)
+  {
+      pL->points.at(j).actionCost.clear();
+      pL->points.at(j).actionCost.push_back(make_pair(action, cost));
+  }
 }
 
 WayPoint* MappingHelpers::FindWaypoint(const int& id, RoadNetwork& map)
@@ -946,7 +980,7 @@ vector<Lane*> MappingHelpers::GetClosestLanesListFromMap(const WayPoint& pos, Ro
 		if(info.perp_distance == 0 && laneLinksList.at(i).first != 0)
 			continue;
 
-		if(bDirectionBased && fabs(info.perp_distance) < distance && fabs(info.angle_diff) < 45)
+		if(bDirectionBased && fabs(info.perp_distance) < distance && fabs(info.angle_diff) < 20)
 		{
 			closest_lanes.push_back(laneLinksList.at(i).second);
 		}

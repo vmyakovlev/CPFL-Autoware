@@ -887,9 +887,6 @@ void PlanningHelpers::CreateManualBranchFromTwoPoints(WayPoint& p1,WayPoint& p2 
 	PlanningHelpers::FixPathDensity(path, 0.5);
 	PlanningHelpers::SmoothPath(path, 0.25, 0.4);
 
-
-	PlanningHelpers::CalcAngleAndCost(path);
-
 	for(unsigned int i=0; i < path.size(); i++)
 	{
 		if(direction == FORWARD_LEFT_DIR)
@@ -2519,8 +2516,8 @@ LIGHT_INDICATOR PlanningHelpers::GetIndicatorsFromPath(const std::vector<WayPoin
 	double total_d = 0;
 	for(unsigned int i=info.iFront; i < path.size()-2; i++)
 	{
-		total_d+= hypot(path.at(i+1).pos.y - path.at(i).pos.y, path.at(i+1).pos.x - path.at(i).pos.x);
 
+		total_d+= hypot(path.at(i+1).pos.y - path.at(i).pos.y, path.at(i+1).pos.x - path.at(i).pos.x);
 		if(path.at(i).actionCost.size() > 0)
 		{
 			if(path.at(i).actionCost.at(0).first == LEFT_TURN_ACTION)

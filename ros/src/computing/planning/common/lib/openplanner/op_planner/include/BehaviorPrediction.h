@@ -28,15 +28,15 @@ namespace PlannerHNS
 
 #define PREDICTION_DISTANCE_PERCENTAGE 0.2
 
-#define BEH_PARTICLES_NUM 50
+#define BEH_PARTICLES_NUM 1
 #define BEH_MIN_PARTICLE_NUM 0
 
 #define POSE_FACTOR 0.0
 #define DIRECTION_FACTOR 0.0
-#define VELOCITY_FACTOR 0.0
-#define INDICATOR_FACTOR 1
+#define VELOCITY_FACTOR 1.0
+#define INDICATOR_FACTOR 0.0
 
-#define KEEP_PERCENTAGE 0.75
+#define KEEP_PERCENTAGE 0.85
 
 #define FIXED_PLANNING_DISTANCE 10
 
@@ -66,14 +66,12 @@ public:
 	double vel_w;
 	double acl_w;
 	double ind_w;
-	//BehTrajInfo* pTrajInfo;
 	TrajectoryTracker* pTraj;
 	int original_index;
 
 	Particle()
 	{
 		original_index = 0;
-		//pTrajInfo = 0;
 		bStopLine = false;
 		bDeleted = false;
 		pTraj = nullptr;
@@ -93,15 +91,15 @@ public:
 class TrajectoryTracker
 {
 public:
-//	unsigned int index;
-//	unsigned int prev_index;
+	unsigned int index;
 	BEH_STATE_TYPE beh;
 	BEH_STATE_TYPE best_beh;
 	double best_p;
 	std::vector<int> ids;
 	std::vector<int> path_ids;
 	WayPoint path_last_pose;
-	std::vector<WayPoint>* trajectory;
+	double rms_error;
+	std::vector<WayPoint> trajectory;
 
 	std::vector<Particle> m_ForwardPart;
 	std::vector<Particle> m_StopPart;
@@ -127,9 +125,8 @@ public:
 	TrajectoryTracker()
 	{
 		beh = BEH_STOPPING_STATE;
-		//prev_index = 0;
-		trajectory = 0;
-		//index = 0;
+		rms_error = 0;
+		index = 0;
 		nAliveStop = 0;
 		nAliveYield = 0;
 		nAliveForward = 0;
@@ -147,7 +144,6 @@ public:
 
 	virtual ~TrajectoryTracker()
 	{
-		//std::cout << "TrajectoryTracker::Destructor:" << this << std::endl;
 	}
 
 	void InitDecision()
@@ -157,12 +153,12 @@ public:
 	TrajectoryTracker(const TrajectoryTracker& obj)
 	{
 
+	  rms_error = 0;
 		ids = obj.ids;
 		path_ids = obj.path_ids;
 		path_last_pose = obj.path_last_pose;
 		beh = obj.beh;
-		//prev_index = obj.prev_index;
-		//index = obj.index;
+		index = obj.index;
 		trajectory = obj.trajectory;
 		nAliveStop = obj.nAliveStop;
 		nAliveYield = obj.nAliveYield;
@@ -193,12 +189,11 @@ public:
 		if(path.size()>0)
 		{
 			beh = path.at(0).beh_state;
-			//std::cout << "New Path: Beh: " << beh << ", index: " << _index << ", LaneID_0: " << path.at(0).laneId << ", LaneID_1: "<< path.at(1).laneId << std::endl;
+			std::cout << "New Path: Beh: " << beh << ", index: " << _index << ", LaneID_0: " << path.at(0).laneId << ", LaneID_1: "<< path.at(1).laneId << std::endl;
 		}
 
-		//prev_index = _index;
-		//index = _index;
-		trajectory = &path;
+		index = _index;
+		trajectory = path;
 		int prev_id = -10;
 		int curr_id = -10;
 		ids.clear();
@@ -239,9 +234,8 @@ public:
 		if(_path.size() == 0) return;
 
 		beh = _path.at(0).beh_state;
-
-		//index = _index;
-		trajectory = &_path;
+		index = _index;
+		trajectory = _path;
 		int prev_id = -10;
 		int curr_id = -10;
 		ids.clear();
@@ -301,7 +295,21 @@ public:
 			}
 		}
 
-		if(_ids.size() == ids.size() && ids.size() == nEqualities) // perfect match
+		double rms_val = 0;
+		    for(unsigned int i=0; i < _path.size(); i++)
+		      {
+			if(i < trajectory.size())
+			  {
+			    rms_val += hypot(_path.at(i).pos.y - trajectory.at(i).pos.y, _path.at(i).pos.y - trajectory.at(i).pos.y);
+			  }
+		      }
+
+		    rms_error = rms_val;
+
+		if(rms_error < 5.0)
+		  return 1;
+
+		if(_ids.size() == ids.size() && ids.size() == nEqualities && rms_error < 5.0) // perfect match
 			return 1;
 
 		WayPoint curr_last_pose = _path.at(_path.size()-1);
@@ -322,83 +330,6 @@ public:
 		double totalMatch = (nMatch + dMatch + aMatch)/3.0;
 
 		return totalMatch;
-	}
-
-	int FindMatchIndex(std::vector<PlannerHNS::WayPoint>& _path, const unsigned int& _index)
-	{
-		if(_path.size() == 0) return -1;
-
-		if(beh != _path.at(0).beh_state) return -1;
-
-		int prev_id = -10;
-		int curr_id = -10;
-		std::vector<int> _ids;
-
-		for(unsigned int i = 0; i < _path.size(); i++)
-		{
-			curr_id = _path.at(i).laneId;
-			if(curr_id != prev_id)
-			{
-				_ids.push_back(curr_id);
-				prev_id = curr_id;
-			}
-		}
-
-		int nEqualities = 0;
-		for(unsigned int i=0; i < _ids.size(); i++)
-		{
-			for(unsigned int j=0; j < ids.size(); j++)
-			{
-				if(_ids.at(i) == ids.at(j))
-				{
-					nEqualities++;
-					break;
-				}
-			}
-		}
-
-		int nTotal = (int)_ids.size() - nEqualities;
-
-		if(nTotal == 0 || (nTotal == 1 && _ids.size() > 2))
-		//if(nTotal == 0 || nEqualities >=2)
-		{
-			return _index;
-		}
-
-		return -1;
-	}
-
-	bool MatchIfEqual(const TrajectoryTracker& traj_ids)
-	{
-		if(beh != traj_ids.beh)
-			return false;
-
-		int nEqualities = 0;
-		for(unsigned int i=0; i < traj_ids.ids.size(); i++)
-		{
-			for(unsigned int j=0; j < ids.size(); j++)
-			{
-				if(traj_ids.ids.at(i) == ids.at(j))
-				{
-					nEqualities++;
-					break;
-				}
-			}
-		}
-
-		int nTotal = (int)traj_ids.ids.size() - nEqualities;
-
-		if(nTotal == 0 || (nTotal == 1 && traj_ids.ids.size() > 2))
-		//if(nTotal == 0 || nEqualities >=2)
-		{
-			//prev_index = index;
-			//index = traj_ids.index;
-			trajectory = traj_ids.trajectory;
-			ids = traj_ids.ids;
-			return true;
-		}
-
-		return false;
 	}
 
 	void InsertNewParticle(const Particle& p)
@@ -439,36 +370,26 @@ public:
 	{
 		if(p.beh == PlannerHNS::BEH_STOPPING_STATE && nAliveStop > BEH_MIN_PARTICLE_NUM)
 		{
-//			m_StopPart.at(_i).bDeleted = true;
-//			m_StopPart.at(_i).pTraj = 0;
 			m_StopPart.erase(m_StopPart.begin()+_i);
 			nAliveStop--;
 		}
 		else if(p.beh == PlannerHNS::BEH_YIELDING_STATE && nAliveYield > BEH_MIN_PARTICLE_NUM)
 		{
-//			m_YieldPart.at(_i).bDeleted = true;
-//			m_YieldPart.at(_i).pTraj = 0;
 			m_YieldPart.erase(m_YieldPart.begin()+_i);
 			nAliveYield--;
 		}
 		else if(p.beh == PlannerHNS::BEH_FORWARD_STATE && nAliveForward > BEH_MIN_PARTICLE_NUM)
 		{
-//			m_ForwardPart.at(_i).bDeleted = true;
-//			m_ForwardPart.at(_i).pTraj = 0;
 			m_ForwardPart.erase(m_ForwardPart.begin()+_i);
 			nAliveForward--;
 		}
 		else if(p.beh == PlannerHNS::BEH_BRANCH_LEFT_STATE && nAliveLeft > BEH_MIN_PARTICLE_NUM)
 		{
-//			m_LeftPart.at(_i).bDeleted = true;
-//			m_LeftPart.at(_i).pTraj = 0;
 			m_LeftPart.erase(m_LeftPart.begin()+_i);
 			nAliveLeft--;
 		}
 		else if(p.beh == PlannerHNS::BEH_BRANCH_RIGHT_STATE && nAliveRight > BEH_MIN_PARTICLE_NUM)
 		{
-//			m_RightPart.at(_i).bDeleted = true;
-//			m_RightPart.at(_i).pTraj = 0;
 			m_RightPart.erase(m_RightPart.begin()+_i);
 			nAliveRight--;
 		}
@@ -708,54 +629,54 @@ public:
 		m_TrajectoryTracker_temp.clear();
 		std::vector<LLP> matching_list;
 		std::vector<TrajectoryTracker*> delete_me_track = m_TrajectoryTracker;
-
 		for(unsigned int t = 0; t < obj.predTrajectories.size();t++)
 		{
 			bool bMatched = false;
 			LLP match_item;
 			match_item.new_index = t;
 
-			for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
+			for(int i = 0; i < m_TrajectoryTracker.size(); i++)
 			{
+			    TrajectoryTracker* pTracker = m_TrajectoryTracker.at(i);
 
-				double vMatch = m_TrajectoryTracker.at(i)->CalcMatchingPercentage(obj.predTrajectories.at(t));
+				double vMatch = pTracker->CalcMatchingPercentage(obj.predTrajectories.at(t));
 				if(vMatch == 1.0) // perfect match
 				{
-					m_TrajectoryTracker.at(i)->UpdatePathAndIndex(obj.predTrajectories.at(t), t);
-
-					bool bFound = false;
-					for(unsigned int k=0; k < m_TrajectoryTracker_temp.size(); k++)
-					{
-						if(m_TrajectoryTracker_temp.at(k) == m_TrajectoryTracker.at(i))
-						{
-							bFound = true;
-							break;
-						}
-					}
+				    pTracker->UpdatePathAndIndex(obj.predTrajectories.at(t), t);
+				    bool bFound = false;
+				    for(unsigned int k=0; k < m_TrajectoryTracker_temp.size(); k++)
+				    {
+					    if(m_TrajectoryTracker_temp.at(k) == pTracker)
+					    {
+						    bFound = true;
+						    break;
+					    }
+				    }
 
 					if(!bFound)
-						m_TrajectoryTracker_temp.push_back(m_TrajectoryTracker.at(i));
+					  m_TrajectoryTracker_temp.push_back(pTracker);
 
-
-					DeleteFromList(delete_me_track, m_TrajectoryTracker.at(i));
+					DeleteFromList(delete_me_track, pTracker);
 
 					for(unsigned int k=0; k < matching_list.size(); k++)
 					{
-						if(matching_list.at(k).pTrack == m_TrajectoryTracker.at(i))
+						if(matching_list.at(k).pTrack == pTracker)
 						{
 							matching_list.erase(matching_list.begin()+k);
 							break;
 						}
 					}
+
 					m_TrajectoryTracker.erase(m_TrajectoryTracker.begin()+i);
 					bMatched = true;
+					i--;
 					break;
 				}
 				else if(vMatch > 0.5) // any matching less than 50%, the trajectory will be considered new
 				{
 					bMatched = true;
 					match_item.match_percent = vMatch;
-					match_item.pTrack = m_TrajectoryTracker.at(i);
+					match_item.pTrack = pTracker;
 					matching_list.push_back(match_item);
 				}
 			}
@@ -767,7 +688,6 @@ public:
 		}
 
 		MatchWithMax(matching_list,delete_me_track, m_TrajectoryTracker_temp);
-//		std::cout << "Delete Trajecotyr Trackers  : " << delete_me_track.size() << ", New Ones: "  <<m_TrajectoryTracker_temp.size() << ", Extracted: " << obj.predTrajectories.size() << std::endl;
 		m_TrajectoryTracker.clear();
 		DeleteTheRest(delete_me_track);
 		m_TrajectoryTracker = m_TrajectoryTracker_temp;
@@ -815,17 +735,15 @@ protected:
 	void ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles*>& old_list);
 	void CalculateCollisionTimes(const double& minSpeed);
 
-	void PredictionStepII(std::vector<ObjParticles*>& part_info);
-	void CorrectionStepII(std::vector<ObjParticles*>& part_info);
+	void PredictionStep(std::vector<ObjParticles*>& part_info);
+	void CorrectionStep(std::vector<ObjParticles*>& part_info);
 
-	void SamplesParticlesII(ObjParticles* parts);
 	void SamplesFreshParticles(ObjParticles* pParts);
-	void ReSamplesParticlesII(ObjParticles* parts);
 	void MoveParticles(ObjParticles* parts);
-	void CalculateWeightsII(ObjParticles* pParts);
+	void CalculateWeights(ObjParticles* pParts);
 
-	void CalOnePartWeightII(ObjParticles* pParts,Particle& p);
-	void NormalizeOnePartWeightII(ObjParticles* pParts,Particle& p);
+	void CalOnePartWeight(ObjParticles* pParts,Particle& p);
+	void NormalizeOnePartWeight(ObjParticles* pParts,Particle& p);
 
 	void CollectParticles(ObjParticles* pParts);
 

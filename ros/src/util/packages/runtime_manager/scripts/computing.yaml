@@ -3425,7 +3425,7 @@ params :
       label: Distance to closest lane
       min  : 0
       max  : 5.0
-      v    : 1.0
+      v    : 2.0
       cmd_param:
         dash     : ''
         delim    : ':='

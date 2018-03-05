@@ -266,10 +266,7 @@ void RosHelpers::ConvertPredictedTrqajectoryMarkers(std::vector<std::vector<Plan
 		double prop = 1.0;
 		if(paths.at(i).size()>0)
 			prop = paths.at(i).at(0).collisionCost;
-
 		visualization_msgs::Marker path_mkr = CreateGenMarker(0,0,0,0,1.0*prop,0.1*prop,0.1*prop,0.1,i,"Predicted_Trajectories", visualization_msgs::Marker::LINE_STRIP);
-
-
 		for(unsigned int p = 0; p < paths.at(i).size(); p++)
 		{
 			geometry_msgs::Point point;

@@ -343,7 +343,7 @@ double PlannerH::PredictPlanUsingDP(PlannerHNS::Lane* l, const WayPoint& start, 
 	return totalPlanDistance;
 }
 
-double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vector<WayPoint*> closestWPs, const double& maxPlanningDistance, std::vector<std::vector<WayPoint> >& paths, const bool& bFindBranches , const bool bDirectionBased)
+double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vector<WayPoint*> closestWPs, const double& maxPlanningDistance, std::vector<std::vector<WayPoint> >& paths, const bool& bFindBranches , const bool bDirectionBased, const bool pathDensity)
 {
 	vector<vector<WayPoint> > tempCurrentForwardPathss;
 	vector<WayPoint*> all_cell_to_delete;
@@ -386,8 +386,9 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 				path.at(0).beh_state = path.at(1).beh_state = PlannerHNS::BEH_FORWARD_STATE;
 				path.at(0).laneId = path.at(1).laneId;
 
-				PlanningHelpers::FixPathDensity(path, 1.0);
-				PlanningHelpers::SmoothPath(path, 0.3 , 0.3,0.1);
+				PlanningHelpers::FixPathDensity(path, pathDensity);
+				PlanningHelpers::SmoothPath(path, 0.3 , 0.4,0.1);
+				PlanningHelpers::CalcAngleAndCost(path);
 				paths.push_back(path);
 			}
 		}
@@ -411,6 +412,12 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 
 		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, branch_length, FORWARD_RIGHT_DIR,r_branch);
 		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, branch_length, FORWARD_LEFT_DIR, l_branch);
+
+		PlanningHelpers::FixPathDensity(l_branch, pathDensity);
+		PlanningHelpers::CalcAngleAndCost(l_branch);
+
+		PlanningHelpers::FixPathDensity(r_branch, pathDensity);
+		PlanningHelpers::CalcAngleAndCost(r_branch);
 
 		paths.push_back(l_branch);
 		paths.push_back(r_branch);
