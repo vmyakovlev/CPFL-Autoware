@@ -23,6 +23,7 @@ public:
 	PassiveDecisionMaker& operator=(const PassiveDecisionMaker& obj);
 	virtual ~PassiveDecisionMaker();
 	PlannerHNS::BehaviorState MoveStep(const double& dt, PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const CAR_BASIC_INFO& carInfo);
+	PlannerHNS::ParticleInfo MoveStepSimple(const double& dt, PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const CAR_BASIC_INFO& carInfo);
 
 private:
 	double GetVelocity(PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const CAR_BASIC_INFO& carInfo, const RelativeInfo& info);

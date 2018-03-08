@@ -387,7 +387,7 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 				path.at(0).laneId = path.at(1).laneId;
 
 				PlanningHelpers::FixPathDensity(path, pathDensity);
-				PlanningHelpers::SmoothPath(path, 0.3 , 0.4,0.1);
+				PlanningHelpers::SmoothPath(path,0.4,0.3,0.1);
 				PlanningHelpers::CalcAngleAndCost(path);
 				paths.push_back(path);
 			}
@@ -414,14 +414,19 @@ double PlannerH::PredictTrajectoriesUsingDP(const WayPoint& startPose, std::vect
 		PlanningHelpers::CreateManualBranchFromTwoPoints(p1, p2, branch_length, FORWARD_LEFT_DIR, l_branch);
 
 		PlanningHelpers::FixPathDensity(l_branch, pathDensity);
+		PlanningHelpers::SmoothPath(l_branch,0.4,0.3,0.1);
 		PlanningHelpers::CalcAngleAndCost(l_branch);
 
 		PlanningHelpers::FixPathDensity(r_branch, pathDensity);
+		PlanningHelpers::SmoothPath(r_branch,0.4,0.3,0.1);
 		PlanningHelpers::CalcAngleAndCost(r_branch);
 
 		paths.push_back(l_branch);
 		paths.push_back(r_branch);
 	}
+
+
+
 
 	DeleteWaypoints(all_cell_to_delete);
 

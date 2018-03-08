@@ -286,9 +286,6 @@ int TrajectoryFollower::VeclocityControllerUpdate(const double& dt, const Planne
 		desiredVelocity = m_VehicleInfo.max_speed_forward;
 	else if (desiredVelocity < 0)
 		desiredVelocity = 0;
-	//desiredVelocity = 2.0;
-
-
 
 	desiredShift = PlannerHNS::SHIFT_POS_DD;
 	if(m_bEnableLog)

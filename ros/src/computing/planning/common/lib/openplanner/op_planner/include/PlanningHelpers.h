@@ -98,6 +98,7 @@ public:
 	static void SmoothPath(std::vector<WayPoint>& path, double weight_data =0.25,double weight_smooth = 0.25,double tolerance = 0.01);
 	static double CalcCircle(const GPSPoint& pt1, const GPSPoint& pt2, const GPSPoint& pt3, GPSPoint& center);
 	static double CalcAngleAndCost(std::vector<WayPoint>& path, const double& lastCost = 0, const bool& bSmooth = true );
+	static void FixAngleOnly(std::vector<WayPoint>& path);
 	//static double CalcAngleAndCostSimple(std::vector<WayPoint>& path, const double& lastCost = 0);
 	static double CalcAngleAndCostAndCurvatureAnd2D(std::vector<WayPoint>& path, const double& lastCost = 0);
 

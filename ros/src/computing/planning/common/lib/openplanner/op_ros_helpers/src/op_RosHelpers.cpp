@@ -263,16 +263,66 @@ void RosHelpers::ConvertPredictedTrqajectoryMarkers(std::vector<std::vector<Plan
 	path_markers = path_markers_d;
 	for(unsigned int i = 0; i < paths.size(); i++)
 	{
+		double additional_z = 0;
+		double basic_color = 0.5;
 		double prop = 1.0;
+		bool bCurrent = false;
 		if(paths.at(i).size()>0)
+		{
+
 			prop = paths.at(i).at(0).collisionCost;
+			if(prop < 0.5)
+				continue;
+
+			if(prop > 0.5)
+			{
+				additional_z = prop;
+				bCurrent = true;
+			}
+		}
+
+
+//		double r = 0, g = 0, b = 0;
+//		if(bCurrent == true)
+//		{
+//			r = basic_color+additional_z;
+//			g = basic_color+additional_z;
+//			b = basic_color+additional_z;
+//		}
+//		else if(i == 0)
+//		{
+//			r = basic_color+additional_z;
+//		}
+//		else if(i == 1)
+//		{
+//			g = basic_color+additional_z;
+//		}
+//		else if(i == 2)
+//		{
+//			b = basic_color+additional_z;
+//		}
+//		else if(i == 3)
+//		{
+//			r = basic_color+additional_z;
+//			b = basic_color+additional_z;
+//		}
+//		else
+//		{
+//			g = basic_color+additional_z;
+//			b = basic_color+additional_z;
+//		}
+//
+//		visualization_msgs::Marker path_mkr = CreateGenMarker(0,0,0,0,r,g,b,0.1,i,"Predicted_Trajectories", visualization_msgs::Marker::LINE_STRIP);
+
 		visualization_msgs::Marker path_mkr = CreateGenMarker(0,0,0,0,1.0*prop,0.1*prop,0.1*prop,0.1,i,"Predicted_Trajectories", visualization_msgs::Marker::LINE_STRIP);
+
+
 		for(unsigned int p = 0; p < paths.at(i).size(); p++)
 		{
 			geometry_msgs::Point point;
 			point.x = paths.at(i).at(p).pos.x;
 			point.y = paths.at(i).at(p).pos.y;
-			point.z = paths.at(i).at(p).pos.z;
+			point.z = paths.at(i).at(p).pos.z + additional_z;
 			path_mkr.points.push_back(point);
 		}
 
@@ -603,6 +653,8 @@ void RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(co
 	obj.center.pos.a = tf::getYaw(det_obj.pose.orientation);
 
 	obj.center.v = det_obj.velocity.linear.x;
+	obj.acceleration_raw = det_obj.velocity.linear.y;
+	obj.acceleration_desc = det_obj.velocity.linear.z;
 	obj.bVelocity = det_obj.velocity_reliable;
 	obj.bDirection = det_obj.pose_reliable;
 
@@ -656,6 +708,8 @@ void RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(co
 	obj.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, UtilityHNS::UtilityH::SplitPositiveAngle(det_obj.center.pos.a));
 
 	obj.velocity.linear.x = det_obj.center.v;
+	obj.velocity.linear.y = det_obj.acceleration_raw;
+	obj.velocity.linear.z = det_obj.acceleration_desc;
 	obj.velocity_reliable = det_obj.bVelocity;
 	obj.pose_reliable = det_obj.bDirection;
 

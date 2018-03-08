@@ -1088,6 +1088,26 @@ void PlanningHelpers::PredictConstantTimeCostForTrajectory(std::vector<PlannerHN
 	}
 }
 
+void PlanningHelpers::FixAngleOnly(std::vector<WayPoint>& path)
+{
+	if(path.size() <= 2) return;
+
+	path[0].pos.a = UtilityH::FixNegativeAngle(atan2(path[1].pos.y - path[0].pos.y, path[1].pos.x - path[0].pos.x ));
+
+	for(int j = 1; j < path.size()-1; j++)
+		path[j].pos.a 		= UtilityH::FixNegativeAngle(atan2(path[j+1].pos.y - path[j].pos.y, path[j+1].pos.x - path[j].pos.x ));
+
+	int j = (int)path.size()-1;
+
+	path[j].pos.a = path[j-1].pos.a;
+
+	for(int j = 0; j < path.size()-1; j++)
+	{
+		if(path.at(j).pos.x == path.at(j+1).pos.x && path.at(j).pos.y == path.at(j+1).pos.y)
+			path.at(j).pos.a = path.at(j+1).pos.a;
+	}
+}
+
 double PlanningHelpers::CalcAngleAndCost(vector<WayPoint>& path, const double& lastCost, const bool& bSmooth)
 {
 	if(path.size() <= 2) return 0;

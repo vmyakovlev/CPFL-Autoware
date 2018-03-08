@@ -747,7 +747,9 @@ public:
 
 	bool bDirection;
 	bool bVelocity;
-	int acceleration;
+	int acceleration_desc;
+	double acceleration_raw;
+
 	LIGHT_INDICATOR indicator_state;
 
 	DetectedObject()
@@ -755,7 +757,8 @@ public:
 		indicator_state = INDICATOR_NONE;
 		bDirection = false;
 		bVelocity = false;
-		acceleration = 0;
+		acceleration_desc = 0;
+		acceleration_raw = 0.0;
 		id = 0;
 		originalID = -1;
 		w = 0;
@@ -1215,6 +1218,23 @@ private:
 		return ((r*width) + c);
 	}
 
+};
+
+class ParticleInfo
+{
+public:
+	double vel;
+	int acl; //slow down -1 braking , 0 cruising , 1 accelerating
+	PlannerHNS::LIGHT_INDICATOR indicator;
+	PlannerHNS::STATE_TYPE state;
+
+	ParticleInfo()
+	{
+		vel = 0;
+		acl = 0;
+		indicator = PlannerHNS::INDICATOR_NONE;
+		state = PlannerHNS::FORWARD_STATE;
+	}
 };
 
 }

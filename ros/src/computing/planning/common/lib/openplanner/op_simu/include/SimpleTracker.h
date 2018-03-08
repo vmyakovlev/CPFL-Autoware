@@ -20,6 +20,8 @@ namespace SimulationNS
 
 #define DEBUG_TRACKER 0
 #define NEVER_GORGET_TIME -1000
+#define ACCELERATION_CALC_TIME 0.25
+#define ACCELERATION_DECISION_VALUE 0.5
 
 enum TRACKING_TYPE {ASSOCIATE_ONLY = 0, SIMPLE_TRACKER = 1, CONTOUR_TRACKER = 2};
 
@@ -68,11 +70,14 @@ class KFTrackV
 {
 private:
 	cv::KalmanFilter m_filter;
-	double prev_x, prev_y, prev_v, prev_a;
+	double prev_x, prev_y, prev_v, prev_a, prev_accel;
+	double prev_big_v;
+	double prev_big_a;
 	long m_id;
 	int nStates;
 	int nMeasure;
 	int MinAppearanceCount;
+	double time_diff;
 
 public:
 	int m_bUpdated;
@@ -80,6 +85,7 @@ public:
 	double forget_time;
 	int m_iLife;
 	PlannerHNS::DetectedObject obj; // Used for associate only , don't remove
+
 	//kalmanFilter1D errorSmoother;
 
 	long GetTrackID()
@@ -93,12 +99,16 @@ public:
 //		errorSmoother.result.MeasureCov = 0.1;
 //		errorSmoother.result.p = 1;
 //		errorSmoother.result.x = 0;
+		time_diff = 0;
 		region_id = -1;
 		forget_time = NEVER_GORGET_TIME; // this is very bad , dangerous
 		m_iLife = 0;
 		prev_x = x;
 		prev_y = y;
 		prev_v = 0;
+		prev_accel = 0;
+		prev_big_v = 0;
+		prev_big_a = 0;
 		prev_a = a;
 		nStates = 4;
 		nMeasure = 2;
@@ -142,6 +152,7 @@ public:
 	void UpdateTracking(double _dt, const PlannerHNS::DetectedObject& oldObj, PlannerHNS::DetectedObject& predObj)
 	{
 
+
 #if (CV_MAJOR_VERSION == 2)
 		m_filter.transitionMatrix = *(cv::Mat_<float>(nStates, nStates) << 1	,0	,_dt	,0  ,
 				0	,1	,0	,_dt	,
@@ -169,6 +180,7 @@ public:
 
 		double currA = 0;
 		double currV = 0;
+		double currAccel = 0;
 
 		if(m_iLife > 1)
 		{
@@ -192,7 +204,29 @@ public:
 			predObj.center.pos.a = currA;
 			predObj.center.v = currV;
 			predObj.bVelocity = true;
-			predObj.acceleration = UtilityHNS::UtilityH::GetSign(predObj.center.v - prev_v);
+//			predObj.acceleration_raw = (currV - prev_v)/_dt;
+			if(time_diff > ACCELERATION_CALC_TIME)
+			{
+				currAccel = (currV - prev_big_v)/time_diff;
+				prev_big_v = currV;
+				time_diff = 0;
+			}
+			else
+			{
+				time_diff += _dt;
+				currAccel = prev_accel;
+			}
+
+			predObj.acceleration_raw = currAccel;
+			if(fabs(predObj.acceleration_raw) < ACCELERATION_DECISION_VALUE)
+				predObj.acceleration_desc = 0;
+			else if(predObj.acceleration_raw > ACCELERATION_DECISION_VALUE)
+				predObj.acceleration_desc = 1;
+			else if(predObj.acceleration_raw < -ACCELERATION_DECISION_VALUE)
+				predObj.acceleration_desc = -1;
+
+			//predObj.acceleration_desc = UtilityHNS::UtilityH::GetSign(predObj.acceleration_raw - prev_big_a);
+			//std::cout << "Acceleraaaaaaaaaaaaaaate : " << predObj.acceleration << ", BigV:" << prev_big_v << std::endl;
 		}
 		else
 		{
@@ -240,6 +274,8 @@ public:
 		prev_y = predObj.center.pos.y;
 		prev_x = predObj.center.pos.x;
 		prev_v = currV;
+		prev_accel = currAccel;
+
 		forget_time -= _dt;
 		m_iLife++;
 	}
@@ -309,7 +345,7 @@ public:
 			predObj.center.v = currV;
 
 			predObj.bVelocity = true;
-			predObj.acceleration = UtilityHNS::UtilityH::GetSign(predObj.center.v - oldObj.center.v);
+			predObj.acceleration_desc = UtilityHNS::UtilityH::GetSign(predObj.center.v - oldObj.center.v);
 		}
 		else
 		{

@@ -18,31 +18,36 @@
 namespace PlannerHNS
 {
 
-#define MOTION_POSE_ERROR 0.25 // 50 cm pose error
-#define MOTION_ANGLE_ERROR 0.08 // 0.05 rad angle error
-#define MOTION_VEL_ERROR 0.1
-#define MEASURE_POSE_ERROR 0.25
-#define MEASURE_ANGLE_ERROR 0.08
+#define MOTION_POSE_ERROR 0.2 // 50 cm pose error
+#define MOTION_ANGLE_ERROR 0.01 // 0.05 rad angle error
+#define MOTION_VEL_ERROR 0.2
+#define MEASURE_POSE_ERROR 0.1
+#define MEASURE_ANGLE_ERROR 0.01
 #define MEASURE_VEL_ERROR 0.1
 #define MEASURE_IND_ERROR 0.1
 
-#define PREDICTION_DISTANCE_PERCENTAGE 0.2
+#define PREDICTION_DISTANCE_PERCENTAGE 0.25
 
-#define BEH_PARTICLES_NUM 1
+#define BEH_PARTICLES_NUM 25
 #define BEH_MIN_PARTICLE_NUM 0
+#define KEEP_PERCENTAGE 0.75
 
-#define POSE_FACTOR 0.0
-#define DIRECTION_FACTOR 0.0
-#define VELOCITY_FACTOR 1.0
-#define INDICATOR_FACTOR 0.0
+#define MAX_PREDICTION_SPEED 10.0
 
-#define KEEP_PERCENTAGE 0.85
+#define POSE_FACTOR 0.15
+#define DIRECTION_FACTOR 0.15
+#define VELOCITY_FACTOR 0.0
+#define ACCELERATE_FACTOR 0.2
+#define INDICATOR_FACTOR 0.5
 
 #define FIXED_PLANNING_DISTANCE 10
 
-#define MIN_PREDICTION_DISTANCE 5
+#define MIN_PREDICTION_TIME 5
+#define USE_OPEN_PLANNER_MOVE 0
 
-#define USE_OPEN_PLANNER_MOVE 1
+
+#define ACCELERATION_CALC_TIME 0.25
+#define ACCELERATION_DECISION_VALUE 0.5
 
 typedef boost::mt19937 ENG;
 typedef boost::normal_distribution<double> NormalDIST;
@@ -55,12 +60,16 @@ class Particle
 public:
 	bool bDeleted;
 	BEH_STATE_TYPE beh; //[Stop, Yielding, Forward, Branching]
-	int vel; //[0 -> Stop,1 -> moving]
+	double vel; //[0 -> Stop,1 -> moving]
+	double vel_prev_big;
+	double prev_time_diff;
 	int acc; //[-1 ->Slowing, 0, Stopping, 1 -> accelerating]
+	double acc_raw;
 	int indicator; //[0 -> No, 1 -> Left, 2 -> Right , 3 -> both]
 	WayPoint pose;
 	bool bStopLine;
 	double w;
+	double w_raw;
 	double pose_w;
 	double dir_w;
 	double vel_w;
@@ -71,11 +80,14 @@ public:
 
 	Particle()
 	{
+		prev_time_diff = 0;
+		vel_prev_big = 0;
 		original_index = 0;
 		bStopLine = false;
 		bDeleted = false;
 		pTraj = nullptr;
 		w = 0;
+		w_raw = 0;
 		pose_w = 0;
 		dir_w = 0;
 		vel_w = 0;
@@ -84,6 +96,7 @@ public:
 		beh = BEH_STOPPING_STATE;
 		vel = 0;
 		acc = 0;
+		acc_raw = 0;
 		indicator = 0;
 	}
 };
@@ -120,6 +133,12 @@ public:
 	double pLeft;
 	double pRight;
 
+	double w_avg_forward;
+	double w_avg_stop;
+	double w_avg_yield;
+	double w_avg_left;
+	double w_avg_right;
+
 	PassiveDecisionMaker m_SinglePathDecisionMaker;
 
 	TrajectoryTracker()
@@ -140,6 +159,12 @@ public:
 		pRight = 0;
 		best_beh = PlannerHNS::BEH_STOPPING_STATE;
 		best_p = 0;
+
+		w_avg_forward = 0;
+		w_avg_stop = 0;
+		w_avg_yield = 0;
+		w_avg_left = 0;
+		w_avg_right = 0;
 	}
 
 	virtual ~TrajectoryTracker()
@@ -181,6 +206,12 @@ public:
 		m_LeftPart = obj.m_LeftPart;
 		m_RightPart = obj.m_RightPart;
 		m_CurrBehavior = obj.m_CurrBehavior;
+
+		w_avg_forward = obj.w_avg_forward;
+		w_avg_stop = obj.w_avg_stop;
+		w_avg_yield = obj.w_avg_yield;
+		w_avg_left = obj.w_avg_left;
+		w_avg_right = obj.w_avg_right;
 	}
 
 	TrajectoryTracker(std::vector<PlannerHNS::WayPoint>& path, const unsigned int& _index)
@@ -189,7 +220,7 @@ public:
 		if(path.size()>0)
 		{
 			beh = path.at(0).beh_state;
-			std::cout << "New Path: Beh: " << beh << ", index: " << _index << ", LaneID_0: " << path.at(0).laneId << ", LaneID_1: "<< path.at(1).laneId << std::endl;
+			//std::cout << "New Path: Beh: " << beh << ", index: " << _index << ", LaneID_0: " << path.at(0).laneId << ", LaneID_1: "<< path.at(1).laneId << std::endl;
 		}
 
 		index = _index;
@@ -395,6 +426,54 @@ public:
 		}
 	}
 
+	void CalcAverages()
+	{
+		w_avg_forward = 0;
+		double avg_sum = 0;
+		for(unsigned int i = 0; i < m_ForwardPart.size(); i++)
+		{
+			avg_sum += m_ForwardPart.at(i).w;
+		}
+		if(m_ForwardPart.size() > 0)
+			w_avg_forward = avg_sum/(double)m_ForwardPart.size();
+
+		w_avg_left = 0;
+		avg_sum = 0;
+		for(unsigned int i = 0; i < m_LeftPart.size(); i++)
+		{
+			avg_sum += m_LeftPart.at(i).w;
+		}
+		if(m_LeftPart.size() > 0)
+			w_avg_left = avg_sum/(double)m_LeftPart.size();
+
+		w_avg_right = 0;
+		avg_sum = 0;
+		for(unsigned int i = 0; i < m_RightPart.size(); i++)
+		{
+			avg_sum += m_RightPart.at(i).w;
+		}
+		if(m_RightPart.size() > 0)
+			w_avg_right = avg_sum/(double)m_RightPart.size();
+
+		w_avg_stop = 0;
+		avg_sum = 0;
+		for(unsigned int i = 0; i < m_StopPart.size(); i++)
+		{
+			avg_sum += m_StopPart.at(i).w;
+		}
+		if(m_StopPart.size() > 0)
+			w_avg_stop = avg_sum/(double)m_StopPart.size();
+
+		w_avg_yield = 0;
+		avg_sum = 0;
+		for(unsigned int i = 0; i < m_YieldPart.size(); i++)
+		{
+			avg_sum += m_YieldPart.at(i).w;
+		}
+		if(m_YieldPart.size() > 0)
+			w_avg_yield = avg_sum/(double)m_YieldPart.size();
+	}
+
 	void CalcProbabilities()
 	{
 		best_beh = PlannerHNS::BEH_STOPPING_STATE;
@@ -449,6 +528,8 @@ public:
 	double all_w;
 	double max_w;
 	double min_w;
+	double max_w_raw;
+	double min_w_raw;
 	double avg_w;
 	double pose_w_t;
 	double dir_w_t;
@@ -495,8 +576,10 @@ public:
 		vel_w_t = 0;
 		acl_w_t = 0;
 		ind_w_t = 0;
-		max_w = -100;
-		min_w = 100;
+		max_w = DBL_MIN;
+		min_w = DBL_MAX;
+		max_w_raw = DBL_MIN;
+		min_w_raw = DBL_MAX;
 		avg_w = 0;
 
 		pose_w_max = -999999;
@@ -522,28 +605,28 @@ public:
 		p_right_branch = 0;
 	}
 
-	void CalculateProbabilities()
-	{
-		for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
-		{
-			m_TrajectoryTracker.at(i)->CalcProbabilities();
-		}
-
-		if(m_TrajectoryTracker.size() > 0)
-		{
-			best_beh_track = m_TrajectoryTracker.at(0);
-			i_best_track = 0;
-		}
-
-		for(unsigned int i = 1; i < m_TrajectoryTracker.size(); i++)
-		{
-			if(m_TrajectoryTracker.at(i)->best_p > best_beh_track->best_p)
-			{
-				best_beh_track = m_TrajectoryTracker.at(i);
-				i_best_track = i;
-			}
-		}
-	}
+//	void CalculateProbabilities()
+//	{
+//		for(unsigned int i = 0; i < m_TrajectoryTracker.size(); i++)
+//		{
+//			m_TrajectoryTracker.at(i)->CalcProbabilities();
+//		}
+//
+//		if(m_TrajectoryTracker.size() > 0)
+//		{
+//			best_beh_track = m_TrajectoryTracker.at(0);
+//			i_best_track = 0;
+//		}
+//
+//		for(unsigned int i = 1; i < m_TrajectoryTracker.size(); i++)
+//		{
+//			if(m_TrajectoryTracker.at(i)->best_p > best_beh_track->best_p)
+//			{
+//				best_beh_track = m_TrajectoryTracker.at(i);
+//				i_best_track = i;
+//			}
+//		}
+//	}
 
 	class LLP
 	{
@@ -721,6 +804,7 @@ public:
 	timespec m_ResamplingTimer;
 
 	bool m_bCanDecide;
+	bool m_bFirstMove;
 
 
 protected:
@@ -728,6 +812,7 @@ protected:
 	int FromIndicatorToNumber(const PlannerHNS::LIGHT_INDICATOR& ind);
 	PlannerHNS::LIGHT_INDICATOR FromNumbertoIndicator(const int& num);
 	double CalcIndicatorWeight(PlannerHNS::LIGHT_INDICATOR p_ind, PlannerHNS::LIGHT_INDICATOR obj_ind);
+	double CalcAccelerationWeight(int p_acl, int obj_acl);
 
 	void CalPredictionTimeForObject(ObjParticles* pCarPart);
 	void PredictCurrentTrajectory(RoadNetwork& map, ObjParticles* pCarPart);
@@ -735,8 +820,7 @@ protected:
 	void ExtractTrajectoriesFromMap(const std::vector<DetectedObject>& obj_list, RoadNetwork& map, std::vector<ObjParticles*>& old_list);
 	void CalculateCollisionTimes(const double& minSpeed);
 
-	void PredictionStep(std::vector<ObjParticles*>& part_info);
-	void CorrectionStep(std::vector<ObjParticles*>& part_info);
+	void ParticleFilterSteps(std::vector<ObjParticles*>& part_info);
 
 	void SamplesFreshParticles(ObjParticles* pParts);
 	void MoveParticles(ObjParticles* parts);
@@ -748,7 +832,9 @@ protected:
 	void CollectParticles(ObjParticles* pParts);
 
 	void RemoveWeakParticles(ObjParticles* pParts);
-	void CalculateProbabilities(ObjParticles* pParts);
+	void FindBest(ObjParticles* pParts);
+	void CalculateAveragesAndProbabilities(ObjParticles* pParts);
+
 	static bool sort_weights(const Particle* p1, const Particle* p2)
 	{
 		return p1->w > p2->w;

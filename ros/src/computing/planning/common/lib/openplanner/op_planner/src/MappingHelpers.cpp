@@ -440,6 +440,15 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 	//Curbs
 	ExtractCurbData(curb_data, line_data, points_data, origin, map);
 
+	//Fix angle for lanes
+	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
+	{
+		for(unsigned int i =0; i < map.roadSegments.at(rs).Lanes.size(); i++)
+		{
+			Lane* pL = &map.roadSegments.at(rs).Lanes.at(i);
+			PlannerHNS::PlanningHelpers::FixAngleOnly(pL->points);
+		}
+	}
 
 	cout << "Map loaded from data with " << roadLanes.size()  << " lanes" << endl;
 }
@@ -980,7 +989,7 @@ vector<Lane*> MappingHelpers::GetClosestLanesListFromMap(const WayPoint& pos, Ro
 		if(info.perp_distance == 0 && laneLinksList.at(i).first != 0)
 			continue;
 
-		if(bDirectionBased && fabs(info.perp_distance) < distance && fabs(info.angle_diff) < 20)
+		if(bDirectionBased && fabs(info.perp_distance) < distance && fabs(info.angle_diff) < 30)
 		{
 			closest_lanes.push_back(laneLinksList.at(i).second);
 		}

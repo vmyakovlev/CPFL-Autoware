@@ -336,8 +336,8 @@ void DecisionMaker::InitBehaviorStates()
 
 	double average_braking_distance = -pow(vehicleState.speed, 2)/(m_CarInfo.max_deceleration) + m_params.additionalBrakingDistance;
 
-		if(average_braking_distance  < m_params.minIndicationDistance)
-			average_braking_distance = m_params.minIndicationDistance;
+	if(average_braking_distance  < m_params.minIndicationDistance)
+		average_braking_distance = m_params.minIndicationDistance;
 
 	currentBehavior.indicator = PlanningHelpers::GetIndicatorsFromPath(m_Path, state, average_braking_distance );
 

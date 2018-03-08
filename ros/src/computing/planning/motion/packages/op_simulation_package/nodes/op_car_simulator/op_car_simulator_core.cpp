@@ -41,7 +41,7 @@
 namespace CarSimulatorNS
 {
 
-#define REPLANNING_DISTANCE 5
+#define REPLANNING_DISTANCE 7.5
 
 OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 {
@@ -113,7 +113,6 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 		{
 			m_SimParams.startPose.pos = start_p.pos;
 			m_SimParams.goalPose.pos = goal_p.pos;
-			m_CarInfo.max_speed_forward = start_p.v;
 		}
 		else
 		{
@@ -227,7 +226,7 @@ void OpenPlannerCarSimulator::ReadParamFromLaunchFile(PlannerHNS::CAR_BASIC_INFO
 	_nh.getParam("mapFileName" 		, m_SimParams.KmlMapPath);
 
 	//m_SimParams.KmlMapPath = "/media/hatem/8ac0c5d5-8793-4b98-8728-55f8d67ec0f4/data/ToyotaCity2/map/vector_map/";
-	m_PlanningParams.additionalBrakingDistance = 0;
+	m_PlanningParams.additionalBrakingDistance = 5;
 
 
 	m_ControlParams.Steering_Gain = PlannerHNS::PID_CONST(0.07, 0.02, 0.01); // for 3 m/s
@@ -833,14 +832,6 @@ void OpenPlannerCarSimulator::MainLoop()
 				 */
 				currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
 
-//				m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
-//				m_LocalPlanner->UpdateState(desiredStatus, false);
-//				m_LocalPlanner->LocalizeMe(dt);
-//				currStatus.shift = desiredStatus.shift;
-//				currStatus.steer = m_LocalPlanner->m_CurrentSteering;
-//				currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
-
-
 				/**
 				 * Control, Path Following
 				 */
@@ -862,13 +853,6 @@ void OpenPlannerCarSimulator::MainLoop()
 					 * Localization, Odometry Simulation and Update
 					 */
 					currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
-//					m_LocalPlanner->SetSimulatedTargetOdometryReadings(desiredStatus.speed, desiredStatus.steer, desiredStatus.shift);
-//					m_LocalPlanner->UpdateState(desiredStatus, false);
-//					m_LocalPlanner->LocalizeMe(dt);
-//					currStatus.shift = desiredStatus.shift;
-//					currStatus.steer = m_LocalPlanner->m_CurrentSteering;
-//					currStatus.speed = m_LocalPlanner->m_CurrentVelocity;
-
 
 					/**
 					 * Control, Path Following

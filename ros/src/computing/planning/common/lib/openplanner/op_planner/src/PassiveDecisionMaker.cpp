@@ -112,4 +112,43 @@ PassiveDecisionMaker::~PassiveDecisionMaker()
 
  }
 
+ PlannerHNS::ParticleInfo PassiveDecisionMaker::MoveStepSimple(const double& dt, PlannerHNS::WayPoint& currPose, const std::vector<WayPoint>& path, const CAR_BASIC_INFO& carInfo)
+  {
+ 	 PlannerHNS::ParticleInfo beh;
+ 	 if(path.size() == 0) return beh;
+
+ 	 RelativeInfo info;
+ 	 PlanningHelpers::GetRelativeInfo(path, currPose, info);
+
+ 	 bool bStopLine = CheckForStopLine(currPose, path, carInfo);
+ 	 if(bStopLine)
+ 		 beh.state = PlannerHNS::STOPPING_STATE;
+ 	 else
+ 		 beh.state = PlannerHNS::FORWARD_STATE;
+
+ 	 double average_braking_distance = -pow(currPose.v, 2)/(carInfo.max_deceleration) + 15.0;
+
+
+ 	PlannerHNS::WayPoint startPose = path.at(0);
+ 	beh.indicator = PlanningHelpers::GetIndicatorsFromPath(path, startPose, average_braking_distance);
+
+
+ 	double speed = 0;
+ 	if(info.iFront < path.size())
+ 	{
+ 		beh.vel = path.at(info.iFront).v;
+ 	}
+ 	else
+ 		beh.vel = 0;
+
+ 	double steer = GetSteerAngle(currPose, path, info);
+
+ 	currPose.pos.x += currPose.v * dt * cos(currPose.pos.a);
+ 	currPose.pos.y += currPose.v * dt * sin(currPose.pos.a);
+ 	currPose.pos.a += currPose.v * dt * tan(steer)  / carInfo.wheel_base;
+
+ 	return beh;
+
+  }
+
 } /* namespace PlannerHNS */
