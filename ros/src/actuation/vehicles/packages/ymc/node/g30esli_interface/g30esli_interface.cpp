@@ -33,6 +33,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <sensor_msgs/Joy.h>
 
 #include "g30esli_interface_util.h"
 #include "can_utils/cansend.h"
@@ -53,9 +54,13 @@ ros::Publisher g_current_twist_pub;
 
 // variables
 uint16_t g_target_velocity_ui16;
+uint16_t g_manual_target_velocity_ui16;
 int16_t g_steering_angle_deg_i16;
+int16_t g_manual_steering_angle_deg_i16;
 double g_current_vel_kmph = 0.0;
 bool g_terminate_thread = false;
+bool g_automode = false;
+unsigned char g_shift = 0;
 
 // cansend tool
 mycansend::CanSender g_cansender;
@@ -64,7 +69,7 @@ void twist_cmd_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
   double target_velocity = msg->twist.linear.x * 3.6; // [m/s] -> [km/h]
   double target_steering_angle_deg = ymc::computeTargetSteeringAngleDegree(msg->twist.angular.z, msg->twist.linear.x, g_wheel_base);
-
+  target_steering_angle_deg += 8.0;
   // factor
   target_velocity           *= 10.0;
   target_steering_angle_deg *= 10.0;
@@ -78,6 +83,42 @@ void current_vel_callback(const geometry_msgs::TwistStampedConstPtr &msg)
   g_current_vel_kmph = msg->twist.linear.x * 3.6;
 }
 
+void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
+{
+  if (msg->buttons[0] == 1 || msg->axes[1] != 0.0 || msg->axes[2] != 0.0)
+  {
+    g_automode = false;
+  }
+
+  double target_velocity = 0.0;
+  if (msg->axes[1] >= 0.0)
+  {
+    g_shift = 0;
+    target_velocity = 5.0 * msg->axes[1]; // L stick vertical [km/h]
+  }
+  else
+  {
+    g_shift = 1;
+    target_velocity = -3.0 * msg->axes[1]; // L stick vertical [km/h]
+  }
+
+  double target_steering_angle_deg = 20.0 * msg->axes[2]; // R stick horizontal [deg]
+  target_steering_angle_deg += 8.0;
+
+  // factor
+  target_velocity           *= 10.0;
+  target_steering_angle_deg *= 10.0;
+
+  g_manual_target_velocity_ui16    = target_velocity;
+  g_manual_steering_angle_deg_i16  = target_steering_angle_deg * -1.0;
+
+  if (msg->buttons[12] == 1)
+  {
+    g_automode = true;
+    g_shift = 0;
+  }
+}
+
 // receive input from keyboard
 // change the mode to manual mode or auto drive mode
 void changeMode()
@@ -88,10 +129,8 @@ void changeMode()
     {
       char c = getchar();
 
-      /*
       if (c == ' ')
         g_mode = 3;
-      */
 
       if (c == 's')
         g_mode = 8;
@@ -107,7 +146,7 @@ void readCanData(FILE* fp)
   while (fgets(buf, sizeof(buf), fp) != NULL && !g_terminate_thread)
   {
     std::string raw_data = std::string(buf);
-    std::cout << "received data: " << raw_data << std::endl;
+    // std::cout << "received data: " << raw_data << std::endl;
 
     // check if the data is valid
     if (raw_data.size() > 0)
@@ -126,10 +165,12 @@ void readCanData(FILE* fp)
       if(_current_vel_mps != RET_NO_PUBLISH )
       {
 	      geometry_msgs::TwistStamped ts;
+        ts.header.frame_id = "base_link";
+        ts.header.stamp = ros::Time::now();
 	      ts.twist.linear.x = _current_vel_mps;
 	      g_current_twist_pub.publish(ts);
-      } 
-      
+      }
+
     }
 
   }
@@ -156,6 +197,7 @@ int main(int argc, char *argv[])
   // subscriber
   ros::Subscriber twist_cmd_sub = n.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 1, twist_cmd_callback);
   ros::Subscriber current_vel_sub = n.subscribe<geometry_msgs::TwistStamped>("current_velocity", 1, current_vel_callback);
+  ros::Subscriber current_joy_sub = n.subscribe<sensor_msgs::Joy>("joy", 1, current_joy_callback);
 
   // publisher
   g_current_twist_pub = n.advertise<geometry_msgs::TwistStamped>("ymc_current_twist", 10);
@@ -173,9 +215,10 @@ int main(int argc, char *argv[])
   {
     // data
     unsigned char mode              = static_cast<unsigned char>(g_mode);
-    unsigned char shift             = 0;
-    uint16_t target_velocity_ui16   = g_target_velocity_ui16;
-    int16_t steering_angle_deg_i16  = g_steering_angle_deg_i16;
+    unsigned char shift             = g_shift;
+;
+    uint16_t target_velocity_ui16   = (g_automode) ? g_target_velocity_ui16 : g_manual_target_velocity_ui16;
+    int16_t steering_angle_deg_i16  = (g_automode) ? g_steering_angle_deg_i16 : g_manual_steering_angle_deg_i16;
     static unsigned char brake      = 1;
     static unsigned char heart_beat = 0;
 
@@ -195,7 +238,7 @@ int main(int argc, char *argv[])
       double stopping_threshold = 1.0;
       g_current_vel_kmph < stopping_threshold ? stop_count++ : stop_count = 0;
 
-      std::cout << "stop count: " << stop_count << std::endl;
+      // std::cout << "stop count: " << stop_count << std::endl;
       // vehicle has stopped, so we can restart
       if (stop_count > g_loop_rate * g_stop_time_sec)
       {
@@ -228,6 +271,6 @@ int main(int argc, char *argv[])
   t2.join();
 
   pclose(fp);
-  
+
   return 0;
 }
