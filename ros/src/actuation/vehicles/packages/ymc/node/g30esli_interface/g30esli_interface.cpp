@@ -61,6 +61,7 @@ double g_current_vel_kmph = 0.0;
 bool g_terminate_thread = false;
 bool g_automode = false;
 unsigned char g_shift = 0;
+unsigned char g_brake = 0;
 
 // cansend tool
 mycansend::CanSender g_cansender;
@@ -91,19 +92,26 @@ void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
   }
 
   double target_velocity = 0.0;
-  if (msg->axes[1] >= 0.0)
+  if (msg->buttons[1] == 1)
   {
-    g_shift = 0;
-    target_velocity = 5.0 * msg->axes[1]; // L stick vertical [km/h]
-  }
-  else
-  {
-    g_shift = 1;
-    target_velocity = -3.0 * msg->axes[1]; // L stick vertical [km/h]
+    double r2 = (-msg->axes[4]+1.0)/2.0;  // R2
+    target_velocity = 16.0 * r2 + 3.0;
   }
 
-  double target_steering_angle_deg = 20.0 * msg->axes[2]; // R stick horizontal [deg]
+  double l2 = (-msg->axes[3]+1.0)/2.0;  // L2
+  double steering_angle_ratio_deg = 20.0 + 17.0 * l2;
+  double target_steering_angle_deg = steering_angle_ratio_deg * msg->axes[0]; // L horizontal
   target_steering_angle_deg += 8.0;
+
+  g_brake = 0;
+  if (msg->buttons[0] == 1) // square
+    g_brake = 1;
+  else if (msg->buttons[2] == 1)  //  circle
+    g_brake = 2;
+  else if (msg->buttons[3] == 1)  //  triangle
+    g_brake = 3;
+
+  g_shift = msg->buttons[5];  // R1
 
   // factor
   target_velocity           *= 10.0;
@@ -219,34 +227,34 @@ int main(int argc, char *argv[])
 ;
     uint16_t target_velocity_ui16   = (g_automode) ? g_target_velocity_ui16 : g_manual_target_velocity_ui16;
     int16_t steering_angle_deg_i16  = (g_automode) ? g_steering_angle_deg_i16 : g_manual_steering_angle_deg_i16;
-    static unsigned char brake      = 1;
+    static unsigned char brake      = g_brake;
     static unsigned char heart_beat = 0;
 
-    // change to STOP MODE...
-    if (target_velocity_ui16 == 0 || g_mode == 3)
-      stopping_flag = true;
-
-    // STOPPING
-    static int stop_count = 0;
-    if (stopping_flag && g_mode == 8)
-    {
-      // TODO: change steering angle according to current velocity ?
-      target_velocity_ui16 = 0;
-      brake = 1;
-
-      // vehicle is stopping or not
-      double stopping_threshold = 1.0;
-      g_current_vel_kmph < stopping_threshold ? stop_count++ : stop_count = 0;
-
-      // std::cout << "stop count: " << stop_count << std::endl;
-      // vehicle has stopped, so we can restart
-      if (stop_count > g_loop_rate * g_stop_time_sec)
-      {
-        brake = 0;
-        stop_count = 0;
-        stopping_flag = false;
-      }
-    }
+    // // change to STOP MODE...
+    // if (target_velocity_ui16 == 0 || g_mode == 3)
+    //   stopping_flag = true;
+    //
+    // // STOPPING
+    // static int stop_count = 0;
+    // if (stopping_flag && g_mode == 8)
+    // {
+    //   // TODO: change steering angle according to current velocity ?
+    //   target_velocity_ui16 = 0;
+    //   brake = 1;
+    //
+    //   // vehicle is stopping or not
+    //   double stopping_threshold = 1.0;
+    //   g_current_vel_kmph < stopping_threshold ? stop_count++ : stop_count = 0;
+    //
+    //   // std::cout << "stop count: " << stop_count << std::endl;
+    //   // vehicle has stopped, so we can restart
+    //   if (stop_count > g_loop_rate * g_stop_time_sec)
+    //   {
+    //     brake = 0;
+    //     stop_count = 0;
+    //     stopping_flag = false;
+    //   }
+    // }
 
     // Insert data to 8 byte array
     unsigned char data[8] = {};
