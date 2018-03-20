@@ -30,14 +30,14 @@ namespace PlannerHNS
 
 #define BEH_PARTICLES_NUM 25
 #define BEH_MIN_PARTICLE_NUM 0
-#define KEEP_PERCENTAGE 0.75
+#define KEEP_PERCENTAGE 0.85
 
 #define MAX_PREDICTION_SPEED 10.0
 
-#define POSE_FACTOR 0.15
-#define DIRECTION_FACTOR 0.15
-#define VELOCITY_FACTOR 0.0
-#define ACCELERATE_FACTOR 0.2
+#define POSE_FACTOR 0.1
+#define DIRECTION_FACTOR 0.1
+#define VELOCITY_FACTOR 0.2
+#define ACCELERATE_FACTOR 0.1
 #define INDICATOR_FACTOR 0.5
 
 #define FIXED_PLANNING_DISTANCE 10
@@ -48,6 +48,8 @@ namespace PlannerHNS
 
 #define ACCELERATION_CALC_TIME 0.25
 #define ACCELERATION_DECISION_VALUE 0.5
+
+#define ENABLE_STOP_BEHAVIOR_GEN 1
 
 typedef boost::mt19937 ENG;
 typedef boost::normal_distribution<double> NormalDIST;

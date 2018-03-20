@@ -47,6 +47,8 @@ endif()
 
 include_directories(  
 	include
+	/usr/include/pcl-1.7
+	${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
 

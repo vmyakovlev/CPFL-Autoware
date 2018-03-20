@@ -271,13 +271,13 @@ void BehaviorPrediction::CalOnePartWeight(ObjParticles* pParts,Particle& p)
 	p.pose_w = 1.0/hypot(0.5*(p.pose.pos.y - pParts->obj.center.pos.y), 0.5*(p.pose.pos.x - pParts->obj.center.pos.x));
 	//p.dir_w  = exp(-(pow(fabs(UtilityHNS::UtilityH::AngleBetweenTwoAnglesPositive(p.pose.pos.a,  pParts->obj.center.pos.a)),2)/(2*MEASURE_ANGLE_ERROR*MEASURE_ANGLE_ERROR)));
 	p.dir_w  = M_PI_2 - fabs(UtilityHNS::UtilityH::AngleBetweenTwoAnglesPositive(p.pose.pos.a,  pParts->obj.center.pos.a));
-	//p.vel_w  = exp(-(pow(p.vel - pParts->obj.center.v,2)/(2*MEASURE_VEL_ERROR*MEASURE_VEL_ERROR)));
-	p.vel_w = fabs(p.vel - pParts->obj.center.pos.a);
+	p.vel_w  = exp(-(pow((p.vel - pParts->obj.center.v),2)/(2*MEASURE_VEL_ERROR*MEASURE_VEL_ERROR)));
+	//p.vel_w = fabs(p.vel - pParts->obj.center.v);
 	p.ind_w  = CalcIndicatorWeight(FromNumbertoIndicator(p.indicator), pParts->obj.indicator_state);
 	p.ind_w  -= p.ind_w*MEASURE_IND_ERROR;
 	p.acl_w = CalcAccelerationWeight(p.acc, pParts->obj.acceleration_desc);
 
-	//std::cout << p.pose_w <<"|" <<p.pose.pos.a << "|" << pParts->obj.center.pos.a;
+	//std::cout << p.beh << "|" << p.vel_w <<"|" <<p.vel << "|" << pParts->obj.center.v;
 
 	pParts->pose_w_t += p.pose_w;
 	pParts->dir_w_t += p.dir_w;
@@ -407,7 +407,8 @@ void BehaviorPrediction::CalculateWeights(ObjParticles* pParts)
 	//std::cout << "Befor Normalize: Max: " <<  pParts->acl_w_max << ", Min: " << pParts->acl_w_min << std::endl;
 	//std::cout << std::endl;
 
-	if(pParts->m_TrajectoryTracker.size() > 1 && pParts->min_w_raw < 0.5 && (pParts->max_w_raw == 0 || fabs(pParts->max_w_raw - pParts->min_w_raw) < 0.1) )
+	//if((pParts->m_TrajectoryTracker.size() > 1 && pParts->min_w_raw < 0.5) || pParts->max_w_raw == 0 || fabs(pParts->max_w_raw - pParts->min_w_raw) < 0.1 )
+	if((pParts->max_w_raw == 0 || fabs(pParts->max_w_raw - pParts->min_w_raw) < 0.1 || pParts->min_w_raw > 0.5) && pParts->m_TrajectoryTracker.size() > 1)
 		m_bCanDecide = false;
 	else
 		m_bCanDecide = true;
@@ -499,12 +500,21 @@ void BehaviorPrediction::FindBest(ObjParticles* pParts)
 
 		std::cout << "Trajectory (" << pParts->i_best_track << "), P: " << pParts->best_beh_track->best_p << " , Beh (" << pParts->best_beh_track->best_beh << ", " << str_beh << ")" << std::endl;
 
-		for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size() ; t++)
-			std::cout << t << ", nParticles:" << pParts->m_TrajectoryTracker.at(t)->nAliveForward << std::endl;
-
 		if(pParts->best_beh_track->index < pParts->obj.predTrajectories.size())
 		  pParts->obj.predTrajectories.at(pParts->best_beh_track->index).at(0).collisionCost = 1;
 
+	}
+	else
+	{
+		std::cout << "Trajectory (" << -1 << "), P: " << 0 << " , Beh (" << -1 << ", " << "Can't Decide" << ")" << std::endl;
+	}
+
+	for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size() ; t++)
+	{
+		if(pParts->m_TrajectoryTracker.at(t)->nAliveForward > 0)
+			std::cout << t << ", Forward Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveForward << std::endl;
+		if(pParts->m_TrajectoryTracker.at(t)->nAliveStop > 0)
+			std::cout << t << ", Stoping Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveStop << std::endl;
 	}
 
 	std::cout << "------------------------------------------------ --------------" << std::endl<< std::endl;
@@ -565,6 +575,23 @@ void BehaviorPrediction::SamplesFreshParticles(ObjParticles* pParts)
 				p_new.pose.pos.a += gen_a();
 				p_new.vel = pParts->obj.center.v + fabs(gen_v());
 				p_new.pose.v = p_new.vel;
+				pParts->m_TrajectoryTracker.at(t)->InsertNewParticle(p_new);
+			}
+		}
+
+		if(ENABLE_STOP_BEHAVIOR_GEN == 1 && pParts->m_TrajectoryTracker.at(t)->nAliveStop < 	BEH_PARTICLES_NUM)
+		{
+			p.beh = PlannerHNS::BEH_STOPPING_STATE;
+			int nPs = BEH_PARTICLES_NUM - pParts->m_TrajectoryTracker.at(t)->nAliveStop;
+
+			for(unsigned int i=0; i < nPs; i++)
+			{
+				Particle p_new = p;
+				p_new.pose.pos.x += gen_x();
+				p_new.pose.pos.y += gen_x();
+				p_new.pose.pos.a += gen_a();
+				p_new.vel = 0;
+				p_new.pose.v = pParts->obj.center.v + fabs(gen_v());
 				pParts->m_TrajectoryTracker.at(t)->InsertNewParticle(p_new);
 			}
 		}
@@ -664,6 +691,26 @@ void BehaviorPrediction::MoveParticles(ObjParticles* pParts)
 				p->acc = -1;
 
 			p->indicator = FromIndicatorToNumber(curr_part_info.indicator);
+
+//			if(curr_behavior.state == PlannerHNS::STOPPING_STATE && p->beh == PlannerHNS::BEH_YIELDING_STATE)
+//				p->vel += 1;
+//			else if(p->beh == PlannerHNS::BEH_YIELDING_STATE)
+//				p->vel = p->vel/2.0;
+//			else if(curr_behavior.state != PlannerHNS::STOPPING_STATE && p->beh == PlannerHNS::BEH_STOPPING_STATE)
+//				p->vel += 1;
+//			else if(p->beh == PlannerHNS::BEH_STOPPING_STATE)
+//				p->vel = 0;
+
+//			if(curr_behavior.state != PlannerHNS::STOPPING_STATE && p->beh == PlannerHNS::BEH_STOPPING_STATE)
+//				p->vel += 1;
+			if(p->beh == PlannerHNS::BEH_STOPPING_STATE)
+			{
+				p->vel = 0;
+				if(p->acc == 0)
+					p->acc = -1;
+				else if(p->acc == 1)
+					p->acc = 0;
+			}
 
 		  }
 		else

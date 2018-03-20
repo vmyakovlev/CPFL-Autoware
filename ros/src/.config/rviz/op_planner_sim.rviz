@@ -310,7 +310,7 @@ Visualization Manager:
       Marker Topic: /next_target_mark
       Name: Next Waypoint Mark
       Namespaces:
-        next_target_marker: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -318,7 +318,7 @@ Visualization Manager:
       Marker Topic: /trajectory_circle_mark
       Name: PP Trajectory Mark
       Namespaces:
-        trajectory_circle_marker: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -426,23 +426,21 @@ Visualization Manager:
       Queue Size: 100
       Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /global_waypoints_rviz
       Name: Global Path
       Namespaces:
-        global_lane_array_marker: true
-        global_lane_waypoint_orientation_marker: true
-        global_velocity_lane_1: false
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /local_trajectories_eval_rviz
       Name: Local Rollouts
       Namespaces:
-        local_lane_array_marker_colored: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /detected_polygons
@@ -529,7 +527,7 @@ Visualization Manager:
       Marker Topic: /curr_simu_pose_4
       Name: SimuCar4
       Namespaces:
-        {}
+        curr_simu_pose: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -541,45 +539,45 @@ Visualization Manager:
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu_local_trajectory_1
       Name: SimPath1
       Namespaces:
-        simu_car_path_1: true
+        {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu_local_trajectory_2
       Name: SimPath2
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu_local_trajectory_3
       Name: SimPath3
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu_local_trajectory_4
       Name: SimPath4
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Class: rviz/MarkerArray
-      Enabled: true
+      Enabled: false
       Marker Topic: /simu_local_trajectory_5
       Name: SimPath5
       Namespaces:
         {}
       Queue Size: 100
-      Value: true
+      Value: false
     - Buffer length: 100
       Class: jsk_rviz_plugin/Plotter2D
       Enabled: true
@@ -678,10 +676,7 @@ Visualization Manager:
       Marker Topic: /simu_internal_info1
       Name: SimCarInfo1
       Namespaces:
-        sim_behavior_1: true
-        sim_behavior_pointer1: true
-        simu_car_indicator_left: true
-        simu_car_indicator_right: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -705,7 +700,10 @@ Visualization Manager:
       Marker Topic: /simu_internal_info4
       Name: SimCarInfo4
       Namespaces:
-        {}
+        sim_behavior_4: true
+        sim_behavior_pointer4: true
+        simu_car_indicator_left: true
+        simu_car_indicator_right: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -721,7 +719,10 @@ Visualization Manager:
       Marker Topic: /simu_internal_info5
       Name: EgoVehicleInfo
       Namespaces:
-        {}
+        sim_behavior_5: true
+        sim_behavior_pointer5: true
+        simu_car_indicator_left: true
+        simu_car_indicator_right: true
       Queue Size: 100
       Value: true
     - Alpha: 0.5
@@ -768,11 +769,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Scale: 16.2405033
+      Scale: 11.0076513
       Target Frame: world
       Value: TopDownOrtho (rviz)
-      X: 23.8493233
-      Y: -0.163169861
+      X: 26.3150291
+      Y: 12.0532522
     Saved: ~
 Window Geometry:
   Camera:
