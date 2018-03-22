@@ -560,7 +560,8 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
       if (info.type == EObstacleType::ON_WAYPOINTS || info.type == EObstacleType::ON_CROSSWALK)
       {
         // change waypoints to stop by the stop_waypoint
-          obstacle_distance = vs_info.getStopDistanceObstacle();
+          obstacle_distance = vs_info.getStopDistanceObst
+          acle();
         deceleration = vs_info.getDecelerationObstacle();
         stop_waypoint = calcWaypointIndexReverse(vs_path->getPrevWaypoints(), info.waypoint, obstacle_distance);
         vs_path->changeWaypointsForStopping(stop_waypoint, info.waypoint, info.velocity, closest_waypoint, deceleration);
@@ -597,16 +598,19 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
 //
 //    vs_path->setNewWaypoints(new_waypoints);
 
+      std::cerr << "obs_dist: " << obstacle_distance << " stplin_dist: " << stopline_distance << "\n";
       // check if obstacle or stop line is nearer
       if (obstacle_distance < stopline_distance)
       {
           // stop for obstacle
           vs_path->setNewWaypoints(obstacle_waypoints);
+          std::cerr << "waypoints set for obstacle\n";
       }
       else
       {
           // stop for stopline
           vs_path->setNewWaypoints(stopline_waypoints);
+          std::cerr << "waypoints set for stopline\n";
       }
 
     vs_path->avoidSuddenAcceleration(deceleration, closest_waypoint);

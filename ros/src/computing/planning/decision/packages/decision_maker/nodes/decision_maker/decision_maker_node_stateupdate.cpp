@@ -336,6 +336,7 @@ void DecisionMakerNode::updateStateStop(int status)
   if (status)
   {
       is_stopline_state_pending = true;
+      std::cerr << "is_stopline_state_pending is set\n";
 
     if (std::abs(current_velocity_) < STOPPING_VECLOCITY_EPSILON)
     {
@@ -343,20 +344,21 @@ void DecisionMakerNode::updateStateStop(int status)
       std_msgs::String layer_msg;
       layer_msg.data = "detectionarea";
       Pubs["filtering_gridmap_layer"].publish(layer_msg);
+        std::cerr <<"detection area published\n";
     }
 
     // obtain distance from self to stopline -> TODO: refactor!
-    geometry_msgs::Point pcw =
-      current_finalwaypoints_.waypoints[closest_waypoint_].pose.pose.position;
-    geometry_msgs::Point psw =
-      current_finalwaypoints_.waypoints[closest_stopline_waypoint_].pose.pose.position;
-    double distance_to_stopline =
-      std::hypot(std::hypot((pcw.x-psw.x), pcw.y-psw.y), pcw.z-psw.z);
-    bool inside_stopping_area = ((closest_waypoint_ < closest_stopline_waypoint_)
-      && distance_to_stopline < STOPPING_AREA_DISTANCE);
+//    geometry_msgs::Point pcw =
+//      current_finalwaypoints_.waypoints[closest_waypoint_].pose.pose.position;
+//    geometry_msgs::Point psw =
+//      current_finalwaypoints_.waypoints[closest_stopline_waypoint_].pose.pose.position;
+//    double distance_to_stopline =
+//      std::hypot(std::hypot((pcw.x-psw.x), pcw.y-psw.y), pcw.z-psw.z);
+//    bool inside_stopping_area = ((closest_waypoint_ < closest_stopline_waypoint_)
+//      && distance_to_stopline < STOPPING_AREA_DISTANCE);
 
     if (std::abs(current_velocity_) < STOPPING_VECLOCITY_EPSILON
-        && !foundOtherVehicleForIntersectionStop_ && inside_stopping_area && !timerflag)
+        && !foundOtherVehicleForIntersectionStop_ && !timerflag)
     {
       stopping_timer = nh_.createTimer(ros::Duration(param_stopline_pause_time_),
                                        [&](const ros::TimerEvent&) {
@@ -374,12 +376,15 @@ void DecisionMakerNode::updateStateStop(int status)
       {
         stopping_timer.stop();
         timerflag = false;
+          std::cerr <<"timer reset\n";
       }
+        std::cerr <<"publlsihing stpline wp\n";
       publishStoplineWaypointIdx(closest_stopline_waypoint_);
     }
   }
-    else if (is_stopline_state_pending)
+  else if (is_stopline_state_pending)
   {
+      std::cerr <<"stopline state is pending\n";
       publishStoplineWaypointIdx(closest_stopline_waypoint_);
   }
 }

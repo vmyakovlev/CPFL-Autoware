@@ -379,50 +379,54 @@ state_machine::StateFlags getStateFlags(uint8_t msg_state)
   }
 }
 
-void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane &msg)
-{
-  if (!hasvMap())
-  {
-    std::cerr << "Not found vmap subscribe" << std::endl;
-    return;
-  }
+void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane &msg) {
+    if (!hasvMap()) {
+        std::cerr << "Not found vmap subscribe" << std::endl;
+        return;
+    }
 
-  if (!ctx->isCurrentState(state_machine::DRIVE_STATE))
-  {
-    std::cerr << "State is not DRIVE_STATE[" << ctx->getCurrentStateName() << "]" << std::endl;
-    return;
-  }
-  // cached
-  current_finalwaypoints_ = msg;
+    if (!ctx->isCurrentState(state_machine::DRIVE_STATE)) {
+        std::cerr << "State is not DRIVE_STATE[" << ctx->getCurrentStateName() << "]" << std::endl;
+        return;
+    }
+    // cached
+    current_finalwaypoints_ = msg;
 
 //  static size_t previous_idx = 0;
 //
-  size_t idx = param_stopline_target_waypoint_ +  (current_velocity_ * param_stopline_target_ratio_);
-  idx = current_finalwaypoints_.waypoints.size() - 1 > idx ?
-		idx : current_finalwaypoints_.waypoints.size() - 1;
+    size_t idx = param_stopline_target_waypoint_ + (current_velocity_ * param_stopline_target_ratio_);
+    idx = current_finalwaypoints_.waypoints.size() - 1 > idx ?
+          idx : current_finalwaypoints_.waypoints.size() - 1;
 //
 //  CurrentStoplineTarget_ = current_finalwaypoints_.waypoints.at(idx);
-    CurrentStoplineTarget_ = current_finalwaypoints_.waypoints.at(param_target_waypoint_);
+   // CurrentStoplineTarget_ = current_finalwaypoints_.waypoints.at(param_stopline_target_waypoint_);
 
-    for(size_t i = 0 ; i <= current_finalwaypoints_.waypoints.size()-1; i++){
-        std::cerr << i <<":"<< ((current_finalwaypoints_.waypoints.at(i).wpstate.stopline_state == autoware_msgs::WaypointState::TYPE_STOPLINE)?"\033[1;31m1\033[0m":"0" )<< " " ;
-    }
-    std::cerr << "\n";
+//    for (size_t i = 0; i <= current_finalwaypoints_.waypoints.size() - 1; i++) {
+//        std::cerr << i << ":";
+//        if (current_finalwaypoints_.waypoints.at(i).wpstate.stopline_state == autoware_msgs::WaypointState::TYPE_STOPLINE)
+//            std::cerr << "\033[1;31m1\033[0m ";
+//        else if (current_finalwaypoints_.waypoints.at(i).wpstate.stopline_state == autoware_msgs::WaypointState::TYPE_STOP)
+//            std::cerr <<  "\033[1;32m2\033[0m ";
+//        else
+//            std::cerr << "0 " ;
+//    }
+//    std::cerr << "\n";
 
-  //for(size_t i = (previous_idx>idx)?idx:previous_idx ; i <= idx; i++){
-    for(size_t i = 0 ; i <= current_finalwaypoints_.waypoints.size()-1; i++){
-	  //if(i < current_finalwaypoints_.waypoints.size()){
-		  if (current_finalwaypoints_.waypoints.at(param_target_waypoint_).wpstate.stopline_state == autoware_msgs::WaypointState::TYPE_STOPLINE){
-			  ctx->setCurrentState(state_machine::DRIVE_ACC_STOPLINE_STATE);
-			  closest_stopline_waypoint_ = CurrentStoplineTarget_.gid;
+    //for(size_t i = (previous_idx>idx)?idx:previous_idx ; i <= idx; i++){
+    if (current_finalwaypoints_.waypoints.size() > param_stopline_target_waypoint_) {
+        if (current_finalwaypoints_.waypoints.at(param_stopline_target_waypoint_).wpstate.stopline_state ==
+            autoware_msgs::WaypointState::TYPE_STOPLINE) {
+            ctx->setCurrentState(state_machine::DRIVE_ACC_STOPLINE_STATE);
+            closest_stopline_waypoint_ = current_finalwaypoints_.waypoints.at(param_stopline_target_waypoint_).gid;
             std::cerr << "\033[1;31mDRIVE_ACC_STOPLINE_STATE\033[0m\n";
-		  }
-		  if (current_finalwaypoints_.waypoints.at(param_target_waypoint_).wpstate.stopline_state == autoware_msgs::WaypointState::TYPE_STOP) {
+        }
+        if (current_finalwaypoints_.waypoints.at(param_stopline_target_waypoint_).wpstate.stopline_state ==
+            autoware_msgs::WaypointState::TYPE_STOP) {
             ctx->setCurrentState(state_machine::DRIVE_ACC_STOP_STATE);
             std::cerr << "\033[1;31mDRIVE_ACC_STOP_STATE\033[0m\n";
-          }
-	 // }
-  }
+        }
+    }
+   //}
 //  previous_idx = idx;
 
   // steering
