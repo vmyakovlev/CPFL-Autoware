@@ -34,6 +34,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <sensor_msgs/Joy.h>
+#include <std_msgs/String.h>
 
 #include "g30esli_interface_util.h"
 #include "can_utils/cansend.h"
@@ -51,6 +52,7 @@ int g_stop_time_sec;
 
 // ros publisher
 ros::Publisher g_current_twist_pub;
+ros::Publisher g_nextremer_command_pub;
 
 // variables
 uint16_t g_target_velocity_ui16;
@@ -62,9 +64,21 @@ bool g_terminate_thread = false;
 bool g_automode = false;
 unsigned char g_shift = 0;
 unsigned char g_brake = 0;
+bool g_is_moving = false;
+bool g_mic_on = false;
 
 // cansend tool
 mycansend::CanSender g_cansender;
+
+void current_nextrimer_callback(const std_msgs::StringConstPtr &msg)
+{
+  std::cout << msg->data << std::endl;
+  if (msg->data == "go")
+  {
+    usleep(5000000); // pause 5 sec
+    g_automode = true;
+  }
+}
 
 void twist_cmd_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
@@ -82,6 +96,19 @@ void twist_cmd_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 void current_vel_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
   g_current_vel_kmph = msg->twist.linear.x * 3.6;
+
+  if (g_current_vel_kmph > 3.0)
+  {
+    g_is_moving = true;
+  }
+  else if (g_is_moving) // after stop
+  {
+    usleep(5000000); // pause 5 sec
+    g_is_moving = false;
+    std_msgs::String msg;
+    msg.data = "arrived";
+    g_nextremer_command_pub.publish(msg);
+  }
 }
 
 void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
@@ -106,12 +133,33 @@ void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
   g_brake = 0;
   if (msg->buttons[0] == 1) // square
     g_brake = 1;
-  else if (msg->buttons[2] == 1)  //  circle
-    g_brake = 2;
-  else if (msg->buttons[3] == 1)  //  triangle
-    g_brake = 3;
+  // else if (msg->buttons[2] == 1)  //  circle
+  //   g_brake = 2;
+  // else if (msg->buttons[3] == 1)  //  triangle
+  //   g_brake = 3;
 
   g_shift = msg->buttons[5];  // R1
+
+  if (msg->buttons[9] == 1) // option
+  {
+    g_mode = 8;
+  }
+
+  if (msg->buttons[2] == 1 && !g_mic_on)  //  circle
+  {
+    g_mic_on = true;
+    std_msgs::String msg;
+    msg.data = "start";
+    g_nextremer_command_pub.publish(msg);
+  }
+
+  if (msg->buttons[3] == 1 && g_mic_on)  //  triangle
+  {
+    g_mic_on = false;
+    std_msgs::String msg;
+    msg.data = "stop";
+    g_nextremer_command_pub.publish(msg);
+  }
 
   // factor
   target_velocity           *= 10.0;
@@ -206,9 +254,16 @@ int main(int argc, char *argv[])
   ros::Subscriber twist_cmd_sub = n.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 1, twist_cmd_callback);
   ros::Subscriber current_vel_sub = n.subscribe<geometry_msgs::TwistStamped>("current_velocity", 1, current_vel_callback);
   ros::Subscriber current_joy_sub = n.subscribe<sensor_msgs::Joy>("joy", 1, current_joy_callback);
+  ros::Subscriber nextremer_result_sub = n.subscribe<std_msgs::String>("/nextremer/result", 1, current_nextrimer_callback);
 
   // publisher
   g_current_twist_pub = n.advertise<geometry_msgs::TwistStamped>("ymc_current_twist", 10);
+  g_nextremer_command_pub = n.advertise<std_msgs::String>("/nextremer/command", 10);
+
+  std_msgs::String msg;
+  msg.data = "stop";
+  g_nextremer_command_pub.publish(msg);
+  g_mic_on = false;
 
   // read can data from candump
   FILE *fp = popen("candump can0", "r");
