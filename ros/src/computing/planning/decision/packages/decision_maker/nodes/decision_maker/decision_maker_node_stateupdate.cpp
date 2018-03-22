@@ -330,8 +330,13 @@ void DecisionMakerNode::updateStateStop(int status)
   const static double STOPPING_AREA_DISTANCE = 8.0;
   const static double STOPPING_VECLOCITY_EPSILON = 1e-2;
 
+    // flag to hold the stopline state
+  static bool is_stopline_state_pending = false;
+
   if (status)
   {
+      is_stopline_state_pending = true;
+
     if (std::abs(current_velocity_) < STOPPING_VECLOCITY_EPSILON)
     {
       /*temporary implementation*/
@@ -361,6 +366,7 @@ void DecisionMakerNode::updateStateStop(int status)
                                        },
                                        this, true);
       timerflag = true;
+        is_stopline_state_pending = false;
     }
     else
     {
@@ -371,6 +377,10 @@ void DecisionMakerNode::updateStateStop(int status)
       }
       publishStoplineWaypointIdx(closest_stopline_waypoint_);
     }
+  }
+    else if (is_stopline_state_pending)
+  {
+      publishStoplineWaypointIdx(closest_stopline_waypoint_);
   }
 }
 void DecisionMakerNode::callbackInStateStop(int status)

@@ -549,7 +549,8 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
   // stop_waypoint is about stop_distance meter away from obstacles/stoplines
   if (detection_result == EControl::STOP || detection_result == EControl::STOPLINE)
   {
-    int stop_distance = 0;
+    int stopline_distance = INT_MAX;
+      int obstacle_distance = INT_MAX;
     int stop_waypoint = 0;
     double deceleration = 0.0;
 
@@ -559,9 +560,9 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
       if (info.type == EObstacleType::ON_WAYPOINTS || info.type == EObstacleType::ON_CROSSWALK)
       {
         // change waypoints to stop by the stop_waypoint
-        stop_distance = vs_info.getStopDistanceObstacle();
+          obstacle_distance = vs_info.getStopDistanceObstacle();
         deceleration = vs_info.getDecelerationObstacle();
-        stop_waypoint = calcWaypointIndexReverse(vs_path->getPrevWaypoints(), info.waypoint, stop_distance);
+        stop_waypoint = calcWaypointIndexReverse(vs_path->getPrevWaypoints(), info.waypoint, obstacle_distance);
         vs_path->changeWaypointsForStopping(stop_waypoint, info.waypoint, info.velocity, closest_waypoint, deceleration);
         break;
       }
@@ -575,9 +576,9 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
       if (info.type == EObstacleType::STOPLINE)
       {
         // change waypoints to stop by the stop_waypoint
-        stop_distance = vs_info.getStopDistanceStopline();
+          stopline_distance = vs_info.getStopDistanceStopline();
         deceleration = vs_info.getDecelerationStopline();
-        stop_waypoint = calcWaypointIndexReverse(vs_path->getPrevWaypoints(), info.waypoint, stop_distance);
+        stop_waypoint = calcWaypointIndexReverse(vs_path->getPrevWaypoints(), info.waypoint, stopline_distance);
         vs_path->changeWaypointsForStopping(stop_waypoint, info.waypoint, info.velocity, closest_waypoint, deceleration);
         break;
       }
@@ -586,15 +587,27 @@ void changeWaypoints(const VelocitySetInfo& vs_info, const EControl& detection_r
     autoware_msgs::lane stopline_waypoints = vs_path->getNewWaypoints();
 
     // v = min(v_obstacle, v_stopline)
-    autoware_msgs::lane new_waypoints = obstacle_waypoints;
-    for (unsigned int i = 0; i < obstacle_waypoints.waypoints.size(); ++i)
-    {
-      double velocity_obstacle = obstacle_waypoints.waypoints[i].twist.twist.linear.x;
-      double velocity_stopline = stopline_waypoints.waypoints[i].twist.twist.linear.x;
-      new_waypoints.waypoints[i].twist.twist.linear.x = std::min(velocity_obstacle, velocity_stopline);
-    }
+//    autoware_msgs::lane new_waypoints = obstacle_waypoints;
+//    for (unsigned int i = 0; i < obstacle_waypoints.waypoints.size(); ++i)
+//    {
+//      double velocity_obstacle = obstacle_waypoints.waypoints[i].twist.twist.linear.x;
+//      double velocity_stopline = stopline_waypoints.waypoints[i].twist.twist.linear.x;
+//      new_waypoints.waypoints[i].twist.twist.linear.x = std::min(velocity_obstacle, velocity_stopline);
+//    }
+//
+//    vs_path->setNewWaypoints(new_waypoints);
 
-    vs_path->setNewWaypoints(new_waypoints);
+      // check if obstacle or stop line is nearer
+      if (obstacle_distance < stopline_distance)
+      {
+          // stop for obstacle
+          vs_path->setNewWaypoints(obstacle_waypoints);
+      }
+      else
+      {
+          // stop for stopline
+          vs_path->setNewWaypoints(stopline_waypoints);
+      }
 
     vs_path->avoidSuddenAcceleration(deceleration, closest_waypoint);
     vs_path->avoidSuddenDeceleration(vs_info.getVelocityChangeLimit(), deceleration, closest_waypoint);
