@@ -180,7 +180,7 @@ public:
 	static void ConvertFromAutowareCloudClusterObstaclesToPlannerH(const PlannerHNS::WayPoint& currState, const double& car_width,
 			const double& car_length, const autoware_msgs::CloudClusterArray& clusters,
 			std::vector<PlannerHNS::DetectedObject>& impObstacles, const double max_obj_size, const double& min_obj_size, const double& detection_radius,
-			const int& n_poly_quarters,const double& poly_resolution, const bool& bDetectMyself, int& nOriginalPoints, int& nContourPoints);
+			const int& n_poly_quarters,const double& poly_resolution, const bool& bEnableSimulation, int& nOriginalPoints, int& nContourPoints);
 
 	static visualization_msgs::Marker CreateGenMarker(const double& x, const double& y, const double& z,const double& a,
 			const double& r, const double& g, const double& b, const double& scale, const int& id, const std::string& ns, const int& type);

@@ -22,6 +22,7 @@ BehaviorPrediction::BehaviorPrediction()
 	m_bUseFixedPrediction = true;
 	m_bStepByStep = false;
 	m_bCanDecide = true;
+	m_bParticleFilter = false;
 	UtilityHNS::UtilityH::GetTickCount(m_GenerationTimer);
 	UtilityHNS::UtilityH::GetTickCount(m_ResamplingTimer);
 	m_bFirstMove = true;
@@ -84,7 +85,9 @@ void BehaviorPrediction::DoOneStep(const std::vector<DetectedObject>& obj_list, 
 
 	ExtractTrajectoriesFromMap(obj_list, map, m_ParticleInfo_II);
 	CalculateCollisionTimes(minSpeed);
-	ParticleFilterSteps(m_ParticleInfo_II);
+
+	if(m_bParticleFilter)
+		ParticleFilterSteps(m_ParticleInfo_II);
 }
 
 void BehaviorPrediction::CalculateCollisionTimes(const double& minSpeed)

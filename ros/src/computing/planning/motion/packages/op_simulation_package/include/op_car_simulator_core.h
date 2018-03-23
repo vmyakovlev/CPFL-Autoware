@@ -51,6 +51,7 @@
 #include "autoware_msgs/Signals.h"
 #include "autoware_msgs/DetectedObjectArray.h"
 #include "autoware_msgs/CloudClusterArray.h"
+#include "sensor_msgs/Joy.h"
 
 #include "TrajectoryFollower.h"
 #include "LocalPlannerH.h"
@@ -60,8 +61,15 @@
 #include "SimpleTracker.h"
 #include "SimuDecisionMaker.h"
 
+
 namespace CarSimulatorNS
 {
+
+#define STEERING_AXIS 0
+#define ACCELERATION_AXIS 1
+#define BRAKE_AXIS 2
+#define BUTTON_INDEX 0
+#define START_BUTTON_VALUE 512
 
 enum MAP_SOURCE_TYPE{MAP_AUTOWARE, MAP_FOLDER, MAP_KML_FILE};
 
@@ -115,11 +123,12 @@ protected:
 	SimulationNS::TrajectoryFollower m_PredControl;
 	std::vector<PlannerHNS::DetectedObject> m_PredictedObjects;
 	std::vector<std::vector<PlannerHNS::WayPoint> > m_GlobalPaths;
+	PlannerHNS::VehicleState  m_JoyDesiredStatus;
 	bool bPredictedObjects;
 
 	bool bInitPos;
 	bool bGoalPos;
-
+	bool bUseWheelController;
 	bool bNewLightSignal;
 	std::vector<PlannerHNS::TrafficLight> m_CurrTrafficLight;
 	std::vector<PlannerHNS::TrafficLight> m_PrevTrafficLight;
@@ -151,6 +160,7 @@ protected:
 	ros::Subscriber sub_TrafficLightSignals	;
 	ros::Subscriber sub_StepSignal;
 	ros::Subscriber sub_cloud_clusters;
+	ros::Subscriber sub_joystick;
 
 	// Callback function for subscriber.
 	void callbackGetInitPose(const geometry_msgs::PoseWithCovarianceStampedConstPtr &msg);
@@ -159,6 +169,7 @@ protected:
 	void callbackGetTrafficLightSignals(const autoware_msgs::Signals& msg);
 	void callbackGetStepForwardSignals(const geometry_msgs::TwistStampedConstPtr& msg);
 	void callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg);
+	void callbackGetJoyStickInfo(const sensor_msgs::JoyConstPtr& msg);
 
 public:
 	OpenPlannerCarSimulator();

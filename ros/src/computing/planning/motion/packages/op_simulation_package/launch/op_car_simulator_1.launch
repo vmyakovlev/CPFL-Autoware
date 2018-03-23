@@ -40,7 +40,7 @@
 	<arg name="length" 						default="4.2"  />
 	<arg name="wheelBaseLength" 			default="2.7"  />
 	<arg name="turningRadius"				default="5.2"  />
-	<arg name="maxSteerAngle" 				default="0.45" />
+	<arg name="maxSteerAngle" 				default="0.35" />
 	
 	<arg name="steeringDelay" 				default="1.2" />
 	<arg name="minPursuiteDistance" 		default="2.5"  />
@@ -56,6 +56,8 @@
 	
 	<arg name="mapSource" 					default="0" /> <!-- Vector Map Folder=0, kml=1 -->
 	<arg name="mapFileName" 				default="/media/hatem/8ac0c5d5-8793-4b98-8728-55f8d67ec0f4/data/ToyotaCity2/map/vector_map/" /> 
+	
+	<arg name="enableUsingJoyStick" 	default="false" /> 
 	
 	
 	<node pkg="op_simulation_package" type="op_car_simulator" name="op_car_simulator1" output="screen">		
@@ -116,6 +118,8 @@
 								
 		<param name="mapSource" 					value="$(arg mapSource)" />
 		<param name="mapFileName" 					value="$(arg mapFileName)" />
+		
+		<param name="enableUsingJoyStick" 		value="$(arg enableUsingJoyStick)" />
 		
 	</node>
 

@@ -1546,7 +1546,7 @@ void RosHelpers::ConvertFromAutowareBoundingBoxObstaclesToPlannerH(const jsk_rec
 void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const PlannerHNS::WayPoint& currState, const double& car_width,
 		const double& car_length, const autoware_msgs::CloudClusterArray& clusters, vector<PlannerHNS::DetectedObject>& obstacles_list,
 		const double max_obj_size, const double& min_obj_size, const double& detection_radius,
-		const int& n_poly_quarters,const double& poly_resolution, const bool& bDetectMyself, int& nOriginalPoints, int& nContourPoints)
+		const int& n_poly_quarters,const double& poly_resolution, const bool& bEnableSimulation, int& nOriginalPoints, int& nContourPoints)
 {
 	PlannerHNS::Mat3 rotationMat(-currState.pos.a);
 	PlannerHNS::Mat3 translationMat(-currState.pos.x, -currState.pos.y);
@@ -1592,21 +1592,24 @@ void RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(const Planne
 
 		obj.contour = polyGen.EstimateClusterPolygon(point_cloud ,obj.center.pos,avg_center, poly_resolution);
 
-		obj.distance_to_center = hypot(obj.center.pos.y-currState.pos.y, obj.center.pos.x-currState.pos.x);
+		if(!bEnableSimulation)
+		{
+			obj.distance_to_center = hypot(obj.center.pos.y-currState.pos.y, obj.center.pos.x-currState.pos.x);
 
-		object_size = hypot(obj.w, obj.l);
+			object_size = hypot(obj.w, obj.l);
 
-		if(obj.distance_to_center > detection_radius || object_size < min_obj_size || object_size > max_obj_size)
-			continue;
+			if(obj.distance_to_center > detection_radius || object_size < min_obj_size || object_size > max_obj_size)
+				continue;
 
-		relative_point = translationMat*obj.center.pos;
-		relative_point = rotationMat*relative_point;
+			relative_point = translationMat*obj.center.pos;
+			relative_point = rotationMat*relative_point;
 
-		double distance_x = fabs(relative_point.x - car_length/3.0);
-		double distance_y = fabs(relative_point.y);
+			double distance_x = fabs(relative_point.x - car_length/3.0);
+			double distance_y = fabs(relative_point.y);
 
-		if(bDetectMyself && distance_x  <= car_length*0.5 && distance_y <= car_width*0.5) // don't detect yourself
-			continue;
+			if(distance_x  <= car_length*0.5 && distance_y <= car_width*0.5) // don't detect yourself
+				continue;
+		}
 
 		//obj.center.pos = avg_center;
 		nOrPoints += point_cloud.points.size();

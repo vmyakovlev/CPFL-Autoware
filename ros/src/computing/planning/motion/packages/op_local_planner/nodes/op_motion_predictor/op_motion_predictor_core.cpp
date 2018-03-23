@@ -149,6 +149,7 @@ void MotionPrediction::UpdatePlanningParams(ros::NodeHandle& _nh)
 	_nh.getParam("/op_motion_predictor/distanceBetweenCurbs", m_DistanceBetweenCurbs);
 	_nh.getParam("/op_motion_predictor/visualizationTime", m_VisualizationTime);
 	_nh.getParam("/op_motion_predictor/enableStepByStepSignal", 	m_PredictBeh.m_bStepByStep );
+	_nh.getParam("/op_motion_predictor/enableParticleFilterPrediction", 	m_PredictBeh.m_bParticleFilter);
 
 
 	UtilityHNS::UtilityH::GetTickCount(m_SensingTimer);

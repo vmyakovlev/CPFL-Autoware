@@ -1280,6 +1280,14 @@ params :
 
   - name  : kf_contour_tracker
     vars  :
+    - name : enableSimulationMode
+      desc : Enable Representing Ego vehicle and simulated vehicles by special IDs
+      label: Enable OpenPlanner Perception Simulation
+      kind : checkbox
+      v    : True
+      cmd_param:
+        dash     : ''
+        delim    : ':='
     - name : tracking_type
       desc : select the type of tracking
       label: Tracking Type
@@ -1401,14 +1409,6 @@ params :
       min  : 1.0
       max  : 10
       v    : 4.0
-      cmd_param:
-        dash     : ''
-        delim    : ':='
-    - name : enableSimulationMode
-      desc : Enable Representing Ego vehicle and simulated vehicles by special IDs
-      label: Enable OpenPlanner Perception Simulation
-      kind : checkbox
-      v    : True
       cmd_param:
         dash     : ''
         delim    : ':='
@@ -3676,7 +3676,7 @@ params :
         delim    : ':='
     - name : enableSimulatedVelodyne
       desc : Enable broadcasting velodyne point cloud and TF from simulated car base_link
-      label: Enable Simulated Velodyne
+      label: Enable Dynamic Map Test
       kind : checkbox
       v    : False
       cmd_param:

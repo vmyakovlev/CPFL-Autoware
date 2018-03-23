@@ -793,6 +793,7 @@ public:
 	bool m_bGenerateBranches;
 	bool m_bUseFixedPrediction;
 	bool m_bStepByStep;
+	bool m_bParticleFilter;
 	std::vector<DetectedObject> m_PredictedObjects;
 	std::vector<DetectedObject*> m_PredictedObjectsII;
 

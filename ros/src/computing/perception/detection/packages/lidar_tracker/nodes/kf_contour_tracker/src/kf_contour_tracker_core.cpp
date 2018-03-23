@@ -92,14 +92,14 @@ ContourTracker::~ContourTracker()
 
 void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
 {
-	if(bNewCurrentPos)
+	if(bNewCurrentPos || m_Params.bEnableSimulation)
 	{
 		m_OriginalClusters.clear();
 		int nOriginalPoints = 0;
 		int nContourPoints = 0;
 
 		PlannerHNS::RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(m_CurrentPos, m_Params.VehicleWidth, m_Params.VehicleLength, *msg,
-				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, !m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
+				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
 
 		bNewClusters = true;
 	}

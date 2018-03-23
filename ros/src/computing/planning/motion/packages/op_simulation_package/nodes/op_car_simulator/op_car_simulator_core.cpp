@@ -49,6 +49,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	bPredictedObjects = false;
 	m_bStepByStep = false;
 	m_bGoNextStep = false;
+	bUseWheelController = false;
 
 	ReadParamFromLaunchFile(m_CarInfo, m_ControlParams);
 
@@ -95,6 +96,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	pub_PointerBehaviorStateRviz	= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 	pub_InternalInfoRviz			= nh.advertise<visualization_msgs::MarkerArray>(str_s7.str(), 1);
 
+	sub_joystick = nh.subscribe("/joy", 		1, &OpenPlannerCarSimulator::callbackGetJoyStickInfo, 		this);
 	sub_StepSignal = nh.subscribe("/simu_step_signal", 		1, &OpenPlannerCarSimulator::callbackGetStepForwardSignals, 		this);
 
 	// define subscribers.
@@ -128,15 +130,15 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	if(m_PlanningParams.enableTrafficLightBehavior)
 		sub_TrafficLightSignals		= nh.subscribe("/roi_signal", 		10,	&OpenPlannerCarSimulator::callbackGetTrafficLightSignals, 	this);
 
+	std::ostringstream vel_frame_id;
+	vel_frame_id << "velodyne_" << m_SimParams.id;
+	m_VelodyneFrameID = vel_frame_id.str();
+	std::ostringstream base_frame_id;
+	base_frame_id << "base_link_" << m_SimParams.id;
+	m_BaseLinkFrameID = base_frame_id.str();
+
 	if(m_bSimulatedVelodyne)
 	{
-		std::ostringstream vel_frame_id;
-		vel_frame_id << "velodyne_" << m_SimParams.id;
-		m_VelodyneFrameID = vel_frame_id.str();
-		std::ostringstream base_frame_id;
-		base_frame_id << "base_link_" << m_SimParams.id;
-		m_BaseLinkFrameID = base_frame_id.str();
-
 		std::ostringstream velodyne_special_points_raw;
 		velodyne_special_points_raw << "points_raw_" << m_SimParams.id;
 
@@ -214,6 +216,7 @@ void OpenPlannerCarSimulator::ReadParamFromLaunchFile(PlannerHNS::CAR_BASIC_INFO
 	_nh.getParam("maxDeceleration", m_CarInfo.max_deceleration );
 	_nh.getParam("enableStepByStepSignal", m_bStepByStep );
 	_nh.getParam("enableSimulatedVelodyne", m_bSimulatedVelodyne );
+	_nh.getParam("enableUsingJoyStick", bUseWheelController );
 
 	//_nh.getParam("enableCurbObstacles", m_bEnableCurbObstacles);
 	int iSource = 0;
@@ -238,6 +241,27 @@ OpenPlannerCarSimulator::~OpenPlannerCarSimulator()
 {
 	if(bInitPos && bGoalPos)
 		SaveSimulationData();
+}
+
+void OpenPlannerCarSimulator::callbackGetJoyStickInfo(const sensor_msgs::JoyConstPtr& msg)
+{
+//	if(msg->buttons[BUTTON_INDEX] == START_BUTTON_VALUE)
+//		std::cout << "Start Button Value: " << 1 << std::endl;
+//	else
+//		std::cout << "Start Button Value: " << 0 << std::endl;
+//				cout << "Steering Axis Value: " << -pAxis[STEERING_AXIS] << endl;
+//				cout << "Acceleration Axis Value: " << 1 - pAxis[ACCELERATION_AXIS] << endl;
+//				cout << "Braking Axis Value: " << 1 - pAxis[BRAKE_AXIS] << endl;
+	m_JoyDesiredStatus.steer = msg->axes[STEERING_AXIS];
+	double acceleration = (1 + msg->axes[ACCELERATION_AXIS])/2.0;
+	double braking =  (1 + msg->axes[BRAKE_AXIS])/2.0;
+
+
+	m_JoyDesiredStatus.shift = PlannerHNS::SHIFT_POS_DD;
+	m_JoyDesiredStatus.speed = m_CarInfo.max_speed_forward * acceleration;
+	m_JoyDesiredStatus.steer = m_JoyDesiredStatus.steer*m_CarInfo.max_steer_angle;
+
+	std::cout << "Steering " << m_JoyDesiredStatus.steer << ", Speed: " <<  m_JoyDesiredStatus.speed <<", acceleration " << acceleration<< ", Braking " << braking <<", MaxSpeed: " << m_CarInfo.max_speed_forward << std::endl;
 }
 
 void OpenPlannerCarSimulator::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
@@ -831,12 +855,16 @@ void OpenPlannerCarSimulator::MainLoop()
 				/**
 				 * Localization, Odometry Simulation and Update
 				 */
-				currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
+				if(!bUseWheelController)
+					currStatus = m_LocalPlanner->LocalizeStep(dt, desiredStatus);
+				else
+					currStatus = m_LocalPlanner->LocalizeStep(dt, m_JoyDesiredStatus);
 
 				/**
 				 * Control, Path Following
 				 */
-				desiredStatus = m_PredControl.DoOneStep(dt, m_CurrBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, m_CurrBehavior.bNewPlan);
+				if(!bUseWheelController)
+					desiredStatus = m_PredControl.DoOneStep(dt, m_CurrBehavior, m_LocalPlanner->m_Path, m_LocalPlanner->state, currStatus, m_CurrBehavior.bNewPlan);
 
 			}
 			else
@@ -897,7 +925,7 @@ void OpenPlannerCarSimulator::MainLoop()
 
 			pub_SimuBoxPose.publish(sim_data);
 
-			if(m_bSimulatedVelodyne)
+			//if(m_bSimulatedVelodyne)
 				PublishSpecialTF(pose_center);
 
 			if(m_CurrBehavior.bNewPlan && m_SimParams.bEnableLogs)
