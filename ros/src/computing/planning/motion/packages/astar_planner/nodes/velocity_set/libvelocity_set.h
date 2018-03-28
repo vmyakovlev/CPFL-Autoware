@@ -19,7 +19,7 @@ enum class EControl
 {
   KEEP = -1,
   STOP = 1,
-  STOPLINE = 2,
+  STOPLINE = 2, // just for vizualization
   DECELERATE = 3,
   OTHERS = 4,
 };
@@ -29,7 +29,6 @@ enum class EObstacleType
   NONE = -1,
   ON_WAYPOINTS = 1,
   ON_CROSSWALK = 2,
-  STOPLINE = 3,
 };
 
 struct CrossWalkPoints
