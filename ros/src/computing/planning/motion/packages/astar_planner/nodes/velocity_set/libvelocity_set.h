@@ -273,7 +273,7 @@ public:
 
     if (state_ == ETrackingState::INITIALIZE)
     {
-//      kf_.init(waypoint_velocity);
+     kf_.init(waypoint_velocity);
 //      waypoint_ = stop_waypoint;
 //      velocity_ = waypoint_velocity;
 
