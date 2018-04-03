@@ -463,6 +463,24 @@ public:
 	}
 };
 
+class Edge
+{
+public:
+	int id;
+	int laneId;
+	int roadId;
+	std::vector<GPSPoint> points;
+	Lane* pLane;
+
+	Edge()
+	{
+		id    = 0;
+		laneId =0;
+		roadId =0;
+		pLane = 0;
+	}
+};
+
 class Curb
 {
 public:
@@ -598,7 +616,10 @@ class RoadSegment
 {
 public:
 	int id;
+
 	RoadSegmentType roadType;
+	PolygonShape	segment_area;
+	double avgWidth;
 	std::vector<int> fromIds;
 	std::vector<int> toIds;
 	std::vector<Lane> Lanes;
@@ -610,6 +631,7 @@ public:
 	RoadSegment()
 	{
 		id = 0;
+		avgWidth = 0;
 		roadType = NORMAL_ROAD;
 	}
 
@@ -633,6 +655,7 @@ public:
 	double length;
 	double dir;
 	LaneType type;
+	double width;
 	std::vector<TrafficSign> signs;
 	std::vector<WayPoint> points;
 	std::vector<TrafficLight> trafficlights;
@@ -654,6 +677,7 @@ public:
 		length 	= 0;
 		dir		= 0;
 		type 	= NORMAL_LANE;
+		width 	= 0;
 		pLeftLane = 0;
 		pRightLane = 0;
 		pRoad	= 0;
@@ -672,7 +696,7 @@ public:
 	std::vector<TrafficLight> trafficLights;
 	std::vector<StopLine> stopLines;
 	std::vector<Curb> curbs;
-
+	std::vector<Edge> edges;
 };
 
 class VehicleState : public ObjTimeStamp
