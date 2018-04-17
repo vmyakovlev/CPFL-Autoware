@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vlg22c_cam)
 
-find_package(catkin REQUIRED COMPONENTS 
-    image_transport
+find_package(catkin REQUIRED COMPONENTS
     roscpp
     std_msgs
     sensor_msgs
-    camera_info_manager)
+    camera_info_manager
+    image_transport
+    cv_bridge
+)
 
 ## pkg-config libraries
 find_package(PkgConfig REQUIRED)
@@ -18,6 +20,7 @@ catkin_package(
     LIBRARIES ${PROJECT_NAME}
 )
 
+# vlg22_cam node based on BGAPI
 set(BAUMER_INC_DIR "$ENV{HOME}/Baumer/BaumerGAPI/Components/Dev/C_C++/Inc")
 set(BAUMER_LIB_DIR "$ENV{HOME}/Baumer/BaumerGAPI/Components/Bin/Systems/GigE")
 
@@ -51,5 +54,35 @@ add_custom_command(TARGET ${PROJECT_NAME}_node POST_BUILD
 )
 
 else()
-    message("'BGGAPI' is not installed. 'vlg22c_cam' will not be built.")
+    message("'BGAPI' is not installed. 'vlg22c_cam' will not be built.")
+endif()
+
+# vcxu24_cam node based on BGAPI2
+set(BAUMER2_INC_DIR "/usr/local/src/baumer/inc")
+set(BAUMER2_LIB_DIR "/usr/local/lib/baumer")
+
+if(EXISTS ${BAUMER2_INC_DIR} AND EXISTS ${BAUMER2_LIB_DIR})
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNULINUX")
+
+include_directories(include
+  ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  ${BAUMER2_INC_DIR}
+)
+
+link_directories(${BAUMER2_LIB_DIR})
+
+add_executable(vcxu24_node
+	nodes/vcxu24/vcxu24_node.cpp
+)
+
+target_link_libraries(vcxu24_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBS}
+  bgapi2_genicam
+)
+
+else()
+message("'BGAPI2' is not installed. 'vcxu24_cam' will not be built.")
 endif()
