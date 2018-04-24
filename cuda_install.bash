@@ -11,12 +11,12 @@ sudo dpkg -i ${CUDA_DEV}
 
 function verInt(){ echo "$1" | sed "s/\.//" ; return 0 ; }
 if [ `verInt ${CUDA_VER}` -ge `verInt 9.0` ] ; then
-apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub ;
+sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub ;
 fi
 
 sudo apt-get update
 CUDA_SFX=`echo "${CUDA_VER}" | sed "s/\./\-/"`
-apt-get install --yes -q cuda-${CUDA_SFX} 1>/dev/null
+sudo apt-get install --yes -q cuda-${CUDA_SFX} 1>/dev/null
 sudo /bin/sh -c 'echo "export PATH=/usr/local/cuda-${CUDA_VER}/bin:\${PATH}" >> ~/.bashrc'
 sudo /bin/sh -c 'echo "export LD_LIBRARY_PATH=/usr/local/cuda-${CUDA_VER}/lib64:\${LD_LIBRARY_PATH}" >> ~/.bashrc'
 source ~/.bashrc
