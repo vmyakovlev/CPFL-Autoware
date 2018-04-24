@@ -29,7 +29,7 @@ env:
 
 # Install system dependencies, and Autoware pre requisites (non-ros)
 before_install:
-  - find /usr/share -type d -name cmake* 2>/dev/null
+  - find /usr/* -type d -name cmake-* 2>/dev/null
   - sudo sh -c "echo \"deb http://packages.ros.org/ros/ubuntu $ROS_CI_DESKTOP main\" > /etc/apt/sources.list.d/ros-latest.list"
   - sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
   # Autoware pre requisites
