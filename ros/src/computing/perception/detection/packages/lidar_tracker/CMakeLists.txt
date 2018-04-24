@@ -182,7 +182,7 @@ if (EXISTS "/usr/local/cuda")
     if ("${ROS_VERSION}" MATCHES "(kinetic)")
         set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=${CUDA_ARCH})
     else ()
-        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=${CUDA_ARCH};-std=c++11)
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-arch=${CUDA_ARCH})
     endif ()
 
     INCLUDE_DIRECTORIES(${Qt5Core_INCLUDE_DIRS}
