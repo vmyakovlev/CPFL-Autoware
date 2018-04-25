@@ -51,6 +51,9 @@ void DecisionMakerNode::initROS(int argc, char **argv)
   Subs["config/decision_maker"] =
       nh_.subscribe("/config/decision_maker", 3, &DecisionMakerNode::callbackFromConfig, this);
 
+  // global report subscriber
+  Subs["/pacmod/parsed_tx/global_rpt"] = nh_.subscribe("/pacmod/parsed_tx/global_rpt", 1, &DecisionMakerNode::callbackFromPacmod, this);
+
   // pub
   //
   Pubs["state/stopline_wpidx"] = nh_.advertise<std_msgs::Int32>("/state/stopline_wpidx", 1, true);

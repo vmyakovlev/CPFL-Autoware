@@ -29,7 +29,7 @@
 #include <vector_map/vector_map.h>
 
 #include <geometry_msgs/Point.h>
-
+#include <pacmod_msgs/GlobalRpt.h>
 // lib
 #include <amathutils.hpp>
 #include <cross_road_area.hpp>
@@ -160,6 +160,9 @@ private:
   std::mutex vMap_mutex;
   bool created_shift_lane_flag_;
 
+  // autopilot mode
+  bool autopilot_enabled_;
+
   // initialization method
   void initROS(int argc, char **argv);
   void initVectorMap(void);
@@ -233,6 +236,7 @@ private:
   void callbackFromStateCmd(const std_msgs::Int32 &msg);
   void callbackFromConfig(const autoware_msgs::ConfigDecisionMaker &msg);
   void callbackFromObjectDetector(const autoware_msgs::CloudClusterArray &msg);
+  void callbackFromPacmod(const pacmod_msgs::GlobalRpt::ConstPtr & msg);
 
   void callbackFromVectorMapArea(const vector_map_msgs::AreaArray &msg);
   void callbackFromVectorMapPoint(const vector_map_msgs::PointArray &msg);

@@ -208,8 +208,29 @@ void DecisionMakerNode::update_msgs(void)
 
     state_string_msg.data = CurrentStateName;
     // state_text_msg.text = createStateMessageText();
-    state_text_msg.text = state_msg.main_state + "\n" + state_msg.acc_state + "\n" + state_msg.str_state + "\n" +
-                          state_msg.behavior_state + "\n";
+    state_text_msg.text = state_msg.main_state + "\n" + state_msg.acc_state + "\n" + state_msg.str_state + "\n";
+
+    // hack: to extract a part of the string for traffic light
+    if (state_msg.behavior_state == "\nTrafficLightRed")
+    {
+      state_text_msg.text += "Red\n";
+    }
+    else if (state_msg.behavior_state ==  "\nTrafficLightGreen")
+    {
+      state_text_msg.text += "Green\n";
+    }
+    else
+    {
+      state_text_msg.text += state_msg.behavior_state + "\n";
+    }
+
+    // add autopilot state
+    if (autopilot_enabled_)
+    {
+      state_text_msg.text += "Autonomous\n";
+    } else {
+      state_text_msg.text += "Manual\n";
+    }
 
     Pubs["states"].publish(state_msg);
     // Pubs["state"].publish(state_string_msg);
