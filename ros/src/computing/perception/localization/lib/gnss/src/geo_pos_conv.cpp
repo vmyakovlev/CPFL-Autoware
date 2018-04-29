@@ -431,3 +431,55 @@ void geo_pos_conv::correct_nmea_coor(double& lat,double& lon)
 	postcomma = (lon-(precomma)*100)/60;
 	lon = precomma + postcomma;
 }
+
+void geo_pos_conv::llaToxyz_proj_global(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out, const double& net_x_offset, const double& net_y_offset, const double& net_z_offset)
+{
+	projPJ pj_latlong, pj_utm;
+	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
+	pj_utm = pj_init_plus("+proj=utm +ellps=WGS84 +datum=WGS84");
+
+	double _intern_lat = lat;
+	double _intern_lon = lon;
+
+	double _z = alt;
+	double _x = DEG_TO_RAD*_intern_lat;
+	double _y = DEG_TO_RAD*_intern_lon;
+
+	if(pj_latlong != 0 && pj_utm !=0 )
+	{
+		pj_transform(pj_latlong, pj_utm, 1, 1, &_y, &_x, &_z);
+		x_out = _x - net_x_offset;
+		y_out = _y - net_y_offset;
+		z_out = _z - net_z_offset;
+	}
+	else
+	{
+		x_out = y_out = z_out = 0;
+	}
+}
+
+void geo_pos_conv::xyzTolla_proj_global(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt, const double& net_x_offset, const double& net_y_offset, const double& net_z_offset)
+{
+	projPJ pj_latlong, pj_utm;
+	pj_latlong = pj_init_plus("+proj=latlong +ellps=WGS84");
+	pj_utm = pj_init_plus("+proj=utm +ellps=WGS84 +datum=WGS84");
+
+	double _lat = x_in;
+	double _lon = y_in;
+	double _alt = z_in;
+
+	if(pj_latlong != 0 && pj_utm !=0)
+	{
+		pj_transform(pj_utm,pj_latlong, 1, 1, &_lon, &_lat, &_alt);
+		_lon = _lon * RAD_TO_DEG;
+		_lat = _lat * RAD_TO_DEG;
+
+		lon = _lon - net_x_offset;
+		lat = _lat - net_y_offset;
+		alt = _alt - net_z_offset;
+	}
+	else
+	{
+		lon = lat = alt = 0;
+	}
+}

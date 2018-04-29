@@ -41,10 +41,15 @@ public:
 	//Find conversion zones according to the longitude, earth has 60 zones. each 6 degrees represent a zone.
 	std::string FindZone(const double& longitude);
 
-	//lat ,lon are in Degrees
+	//lat ,lon are in Degrees japan only
 	void llaToxyz_proj(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out);
-	//out lat, lon in Degrees
+	//out lat, lon in Degrees japan only
 	void xyzTolla_proj(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt);
+
+	//lat ,lon are in Degrees .. global
+	void llaToxyz_proj_global(const double& lat, const double& lon, const double& alt, double& x_out, double& y_out, double& z_out, const double& net_x_offset = 0, const double& net_y_offset = 0, const double& net_z_offset=0);
+	//out lat, lon in Degrees .. global
+	void xyzTolla_proj_global(const double& x_in, const double& y_in, const double& z_in, double& lat, double& lon, double& alt, const double& net_x_offset = 0, const double& net_y_offset = 0, const double& net_z_offset=0);
 
 	void correct_gps_coor(double& lat,double& lon);
 	void correct_nmea_coor(double& lat,double& lon);
