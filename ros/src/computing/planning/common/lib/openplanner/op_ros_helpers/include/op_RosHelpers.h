@@ -4,8 +4,8 @@
 /// \author Hatem Darweesh
 /// \date Jun 30, 2016
 
-#ifndef ROSHELPERS_H_
-#define ROSHELPERS_H_
+#ifndef OP_ROSHELPERS_H_
+#define OP_ROSHELPERS_H_
 
 #include <ros/ros.h>
 #include "RoadNetwork.h"
@@ -278,4 +278,4 @@ public:
 };
 
 }
-#endif /* ROSHELPERS_H_ */
+#endif /* OP_ROSHELPERS_H_ */

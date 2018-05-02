@@ -233,9 +233,11 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 
 		m_PredictedResultsResults.objects.clear();
 		autoware_msgs::DetectedObject pred_obj;
-		for(unsigned int i = 0 ; i <m_PredictBeh.m_PredictedObjects.size(); i++)
+		for(unsigned int i = 0 ; i <m_PredictBeh.m_ParticleInfo_II.size(); i++)
 		{
-			PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_PredictBeh.m_PredictedObjects.at(i), false, pred_obj);
+			PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_PredictBeh.m_ParticleInfo_II.at(i)->obj, false, pred_obj);
+			if(m_PredictBeh.m_ParticleInfo_II.at(i)->best_beh_track)
+				pred_obj.behavior_state = m_PredictBeh.m_ParticleInfo_II.at(i)->best_beh_track->best_beh;
 			m_PredictedResultsResults.objects.push_back(pred_obj);
 		}
 
@@ -250,6 +252,7 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 			}
 		}
 
+		m_PredictedResultsResults.header.stamp = ros::Time().now();
 		pub_predicted_objects_trajectories.publish(m_PredictedResultsResults);
 	}
 }

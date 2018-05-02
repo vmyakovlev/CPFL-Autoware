@@ -1,5 +1,5 @@
 /*
-// *  Copyright (c) 2016, Nagoya University
+// *  Copyright (c) 2017, Nagoya University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,10 +28,10 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+
 #ifndef KF_CONTOUR_TRACKER_CORE
 #define KF_CONTOUR_TRACKER_CORE
 
-// ROS includes
 #include <ros/ros.h>
 #include "RoadNetwork.h"
 #include "SimpleTracker.h"

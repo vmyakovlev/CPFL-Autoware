@@ -26,6 +26,7 @@ BehaviorPrediction::BehaviorPrediction()
 	UtilityHNS::UtilityH::GetTickCount(m_GenerationTimer);
 	UtilityHNS::UtilityH::GetTickCount(m_ResamplingTimer);
 	m_bFirstMove = true;
+	m_bDebugOut = false;
 }
 
 BehaviorPrediction::~BehaviorPrediction()
@@ -87,16 +88,18 @@ void BehaviorPrediction::DoOneStep(const std::vector<DetectedObject>& obj_list, 
 	CalculateCollisionTimes(minSpeed);
 
 	if(m_bParticleFilter)
+	{
 		ParticleFilterSteps(m_ParticleInfo_II);
+	}
 }
 
 void BehaviorPrediction::CalculateCollisionTimes(const double& minSpeed)
 {
-	for(unsigned int i=0; i < m_PredictedObjects.size(); i++)
+	for(unsigned int i=0; i < m_ParticleInfo_II.size(); i++)
 	{
-		for(unsigned int j=0; j < m_PredictedObjects.at(i).predTrajectories.size(); j++)
+		for(unsigned int j=0; j < m_ParticleInfo_II.at(i)->obj.predTrajectories.size(); j++)
 		{
-			PlannerHNS::PlanningHelpers::PredictConstantTimeCostForTrajectory(m_PredictedObjects.at(i).predTrajectories.at(j), m_PredictedObjects.at(i).center, minSpeed, m_PredictionDistance);
+			PlannerHNS::PlanningHelpers::PredictConstantTimeCostForTrajectory(m_ParticleInfo_II.at(i)->obj.predTrajectories.at(j), m_ParticleInfo_II.at(i)->obj.center, minSpeed, m_PredictionDistance);
 //			PlannerHNS::PlanningHelpers::CalcAngleAndCost(m_PredictedObjects.at(i).predTrajectories.at(j));
 		}
 	}
@@ -152,11 +155,11 @@ void BehaviorPrediction::ExtractTrajectoriesFromMap(const std::vector<DetectedOb
 	old_obj_list.clear();
 	old_obj_list = m_temp_list_ii;
 
-	m_PredictedObjects.clear();
+	//m_PredictedObjects.clear();
 	for(unsigned int ip=0; ip < old_obj_list.size(); ip++)
 	{
 		PredictCurrentTrajectory(map, old_obj_list.at(ip));
-		m_PredictedObjects.push_back(old_obj_list.at(ip)->obj);
+		//m_PredictedObjects.push_back(old_obj_list.at(ip)->obj);
 		old_obj_list.at(ip)->MatchTrajectories();
 	}
 
@@ -481,9 +484,12 @@ void BehaviorPrediction::FindBest(ObjParticles* pParts)
 	}
 
 
-	std::cout << "Behavior Prob ------------------------------------------------ : " << pParts->m_TrajectoryTracker.size() << std::endl;
-	std::cout << "Raw  Weights: Max: " <<  pParts->max_w_raw << ", Min: " << pParts->min_w_raw << std::endl;
-	std::cout << "Norm Weights: Max: " <<  pParts->max_w << ", Min: " << pParts->min_w << std::endl;
+	if(m_bDebugOut )
+	{
+		std::cout << "Behavior Prob ------------------------------------------------ : " << pParts->m_TrajectoryTracker.size() << std::endl;
+		std::cout << "Raw  Weights: Max: " <<  pParts->max_w_raw << ", Min: " << pParts->min_w_raw << std::endl;
+		std::cout << "Norm Weights: Max: " <<  pParts->max_w << ", Min: " << pParts->min_w << std::endl;
+	}
 
 	for(unsigned int t=0; t < pParts->obj.predTrajectories.size() ; t++)
 	{
@@ -501,7 +507,8 @@ void BehaviorPrediction::FindBest(ObjParticles* pParts)
 		else if(pParts->best_beh_track->best_beh == BEH_FORWARD_STATE)
 			str_beh = "Forward";
 
-		std::cout << "Trajectory (" << pParts->i_best_track << "), P: " << pParts->best_beh_track->best_p << " , Beh (" << pParts->best_beh_track->best_beh << ", " << str_beh << ")" << std::endl;
+		if(m_bDebugOut )
+			std::cout << "Trajectory (" << pParts->i_best_track << "), P: " << pParts->best_beh_track->best_p << " , Beh (" << pParts->best_beh_track->best_beh << ", " << str_beh << ")" << std::endl;
 
 		if(pParts->best_beh_track->index < pParts->obj.predTrajectories.size())
 		  pParts->obj.predTrajectories.at(pParts->best_beh_track->index).at(0).collisionCost = 1;
@@ -509,18 +516,22 @@ void BehaviorPrediction::FindBest(ObjParticles* pParts)
 	}
 	else
 	{
-		std::cout << "Trajectory (" << -1 << "), P: " << 0 << " , Beh (" << -1 << ", " << "Can't Decide" << ")" << std::endl;
+		if(m_bDebugOut )
+			std::cout << "Trajectory (" << -1 << "), P: " << 0 << " , Beh (" << -1 << ", " << "Can't Decide" << ")" << std::endl;
 	}
 
-	for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size() ; t++)
+	if(m_bDebugOut )
 	{
-		if(pParts->m_TrajectoryTracker.at(t)->nAliveForward > 0)
-			std::cout << t << ", Forward Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveForward << std::endl;
-		if(pParts->m_TrajectoryTracker.at(t)->nAliveStop > 0)
-			std::cout << t << ", Stoping Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveStop << std::endl;
-	}
+		for(unsigned int t=0; t < pParts->m_TrajectoryTracker.size() ; t++)
+		{
+			if(pParts->m_TrajectoryTracker.at(t)->nAliveForward > 0)
+				std::cout << t << ", Forward Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveForward << std::endl;
+			if(pParts->m_TrajectoryTracker.at(t)->nAliveStop > 0)
+				std::cout << t << ", Stoping Particles:" << pParts->m_TrajectoryTracker.at(t)->nAliveStop << std::endl;
+		}
 
-	std::cout << "------------------------------------------------ --------------" << std::endl<< std::endl;
+		std::cout << "------------------------------------------------ --------------" << std::endl<< std::endl;
+	}
 }
 
 void BehaviorPrediction::SamplesFreshParticles(ObjParticles* pParts)

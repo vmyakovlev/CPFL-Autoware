@@ -1,4 +1,5 @@
 /*
+ // *  Copyright (c) 2017, Nagoya University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -89,6 +90,7 @@ ContourTracker::ContourTracker()
 ContourTracker::~ContourTracker()
 {
 }
+
 
 void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
 {

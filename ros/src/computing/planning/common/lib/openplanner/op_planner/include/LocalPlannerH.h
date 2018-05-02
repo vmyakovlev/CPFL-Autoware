@@ -1,9 +1,9 @@
-/*
- * CarState.h
- *
- *  Created on: Dec 14, 2016
- *      Author: hatem
- */
+
+/// \file LocalPlannerH.h
+/// \brief OpenPlanner's local planing functions combines in one process, used in simulation vehicle and OpenPlanner old implementation like dp_planner node.
+/// \author Hatem Darweesh
+/// \date Dec 14, 2016
+
 
 #ifndef LOCALPLANNERH_H_
 #define LOCALPLANNERH_H_

@@ -35,6 +35,8 @@ public:
 			const std::vector<UtilityHNS::AisanVectorFileReader::AisanVector>& vector_data,
 			const std::vector<UtilityHNS::AisanCurbFileReader::AisanCurb>& curb_data,
 			const std::vector<UtilityHNS::AisanRoadEdgeFileReader::AisanRoadEdge>& roadedge_data,
+			const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
+			const std::vector<UtilityHNS::AisanCrossWalkFileReader::AisanCrossWalk>& crosswalk_data,
 			const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,
 			const GPSPoint& origin, RoadNetwork& map, const bool& bSpecialFlag = false);
 
@@ -84,6 +86,12 @@ public:
 				const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points_data,
 				const GPSPoint& origin, RoadNetwork& map);
 
+	static void ExtractWayArea(const std::vector<UtilityHNS::AisanAreasFileReader::AisanArea>& area_data,
+			const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
+			const std::vector<UtilityHNS::AisanLinesFileReader::AisanLine>& line_data,
+			const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points_data,
+			const GPSPoint& origin, RoadNetwork& map);
+
 	static void LinkMissingBranchingWayPoints(RoadNetwork& map);
 	static void LinkTrafficLightsAndStopLinesConData(const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,
 			const std::vector<std::pair<int,int> >& id_replace_list, RoadNetwork& map);
@@ -101,6 +109,11 @@ public:
 	static WayPoint* FindWaypoint(const int& id, RoadNetwork& map);
 
 
+	static std::vector<Curb> GetCurbsList(TiXmlElement* pElem);
+	static std::vector<Boundary> GetBoundariesList(TiXmlElement* pElem);
+	static std::vector<Marking> GetMarkingsList(TiXmlElement* pElem);
+	static std::vector<Crossing> GetCrossingsList(TiXmlElement* pElem);
+	static std::vector<TrafficSign> GetTrafficSignsList(TiXmlElement* pElem);
 	static std::vector<TrafficLight> GetTrafficLightsList(TiXmlElement* pElem);
 	static std::vector<StopLine> GetStopLinesList(TiXmlElement* pElem);
 	static std::vector<Lane> GetLanesList(TiXmlElement* pElem);

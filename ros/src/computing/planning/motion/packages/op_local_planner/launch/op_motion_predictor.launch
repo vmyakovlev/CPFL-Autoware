@@ -6,7 +6,7 @@
 	<arg name="enableCurbObstacles" 	default="false" />
 	<arg name="distanceBetweenCurbs" 	default="1.5" />
 	<arg name="visualizationTime" 		default="0.25" />
-	<arg name="enableStepByStepSignal" 	default="true" />
+	<arg name="enableStepByStepSignal" 	default="false" />
 	<arg name="enableParticleFilterPrediction" 	default="false" />
 	
 	
@@ -19,7 +19,7 @@
 		<param name="distanceBetweenCurbs" 		value="$(arg distanceBetweenCurbs)" />
 		<param name="visualizationTime" 		value="$(arg visualizationTime)" />
 		<param name="enableStepByStepSignal" 	value="$(arg enableStepByStepSignal)" />
-		<param name="enableParticleFilterPrediction" 	value="$(arg enableStepByStepSignal)" />
+		<param name="enableParticleFilterPrediction" 	value="$(arg enableParticleFilterPrediction)" />
 				
 	</node>
 

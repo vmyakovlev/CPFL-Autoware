@@ -92,7 +92,7 @@ public:
 	SimuCommandParams()
 	{
 		id = 1;
-		bEnableLogs = false;
+		bEnableLogs = true;
 		bLooper = false;
 		bRvizPositions = true;
 		mapSource = MAP_FOLDER;
@@ -152,6 +152,7 @@ protected:
 	ros::Publisher pub_PointerBehaviorStateRviz;
 	ros::Publisher pub_InternalInfoRviz;
 	ros::Publisher pub_SimulatedVelodyne;
+	ros::Publisher pub_CurrentLocalPath;
 
 	// define subscribers.
 	ros::Subscriber sub_initialpose;

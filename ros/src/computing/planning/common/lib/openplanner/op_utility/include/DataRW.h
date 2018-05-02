@@ -29,6 +29,7 @@ public:
 	static std::string StatesLogFolderName;
 	static std::string SimulationFolderName;
 	static std::string KmlMapsFolderName;
+	static std::string PredictionFolderName;
 
 
 	static void WriteKMLFile(const std::string& fileName, const std::vector<std::string>& gps_list);
@@ -423,6 +424,44 @@ public:
 
 	bool ReadNextLine(AisanRoadEdge& data);
 	int ReadAllData(std::vector<AisanRoadEdge>& data_list);
+};
+
+class AisanCrossWalkFileReader : public SimpleReaderBase
+{
+public:
+
+	struct AisanCrossWalk
+	{
+		int 	ID;
+		int 	AID;
+		int 	Type;
+		int		BdID;
+		int 	LinkID;
+	};
+
+	AisanCrossWalkFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	~AisanCrossWalkFileReader(){}
+
+	bool ReadNextLine(AisanCrossWalk& data);
+	int ReadAllData(std::vector<AisanCrossWalk>& data_list);
+};
+
+class AisanWayareaFileReader : public SimpleReaderBase
+{
+public:
+
+	struct AisanWayarea
+	{
+		int 	ID;
+		int 	AID;
+		int 	LinkID;
+	};
+
+	AisanWayareaFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	~AisanWayareaFileReader(){}
+
+	bool ReadNextLine(AisanWayarea& data);
+	int ReadAllData(std::vector<AisanWayarea>& data_list);
 };
 
 class AisanDataConnFileReader : public SimpleReaderBase

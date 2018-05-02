@@ -1137,6 +1137,8 @@ double PlanningHelpers::CalcAngleAndCost(vector<WayPoint>& path, const double& l
 
 double PlanningHelpers::CalcAngleAndCostAndCurvatureAnd2D(vector<WayPoint>& path, const double& lastCost)
 {
+	if(path.size() < 2) return -1;
+
 	path[0].pos.a 	= atan2(path[1].pos.y - path[0].pos.y, path[1].pos.x - path[0].pos.x );
 	path[0].cost 	= lastCost;
 

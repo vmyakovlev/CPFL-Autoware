@@ -67,7 +67,7 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	m_LocalPlanner->m_SimulationSteeringDelayFactor = m_ControlParams.SimulationSteeringDelay;
 
 	//For rviz visualization
-	std::ostringstream str_s1, str_s2, str_s3, str_s4, str_s5, str_s6, str_s7;
+	std::ostringstream str_s1, str_s2, str_s3, str_s4, str_s5, str_s6, str_s7, str_s8, str_s9;
 	str_s1 << "curr_simu_pose_";
 	str_s1 << m_SimParams.id;
 
@@ -88,6 +88,9 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	str_s7 << "simu_internal_info";
 	str_s7 << m_SimParams.id;
 
+	str_s8 << "simu_car_path_beh_";
+	str_s8 << m_SimParams.id;
+
 	pub_CurrPoseRviz				= nh.advertise<visualization_msgs::Marker>(str_s1.str() , 100);
 	pub_SimuBoxPose					= nh.advertise<geometry_msgs::PoseArray>(str_s5.str(), 100);
 	pub_SafetyBorderRviz  			= nh.advertise<visualization_msgs::Marker>(str_s4.str(), 1);
@@ -95,6 +98,8 @@ OpenPlannerCarSimulator::OpenPlannerCarSimulator()
 	pub_BehaviorStateRviz			= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 	pub_PointerBehaviorStateRviz	= nh.advertise<visualization_msgs::Marker>(str_s2.str(), 1);
 	pub_InternalInfoRviz			= nh.advertise<visualization_msgs::MarkerArray>(str_s7.str(), 1);
+
+	pub_CurrentLocalPath 			= nh.advertise<autoware_msgs::lane>(str_s8.str(), 1);
 
 	sub_joystick = nh.subscribe("/joy", 		1, &OpenPlannerCarSimulator::callbackGetJoyStickInfo, 		this);
 	sub_StepSignal = nh.subscribe("/simu_step_signal", 		1, &OpenPlannerCarSimulator::callbackGetStepForwardSignals, 		this);
@@ -899,7 +904,7 @@ void OpenPlannerCarSimulator::MainLoop()
 
 
 			sim_data.header.frame_id = "map";
-			sim_data.header.stamp = ros::Time();
+			sim_data.header.stamp = ros::Time().now();
 
 			p_id.position.x = m_SimParams.id;
 			p_id.position.y = currStatus.speed; // send actual calculated velocity after sensing delay
@@ -945,6 +950,16 @@ void OpenPlannerCarSimulator::MainLoop()
 				m_LocalPlanner->Init(m_ControlParams, m_PlanningParams, m_CarInfo);
 				m_LocalPlanner->m_SimulationSteeringDelayFactor = m_ControlParams.SimulationSteeringDelay;
 				InitializeSimuCar(m_SimParams.startPose);
+			}
+
+			if(m_SimParams.bEnableLogs)
+			{
+				autoware_msgs::lane lane;
+				PlannerHNS::RosHelpers::ConvertFromLocalLaneToAutowareLane(m_LocalPlanner->m_Path, lane);
+				lane.lane_id = m_SimParams.id;
+				lane.lane_index = (int)m_CurrBehavior.state;
+				lane.header.stamp = sim_data.header.stamp;
+				pub_CurrentLocalPath.publish(lane);
 			}
 		}
 

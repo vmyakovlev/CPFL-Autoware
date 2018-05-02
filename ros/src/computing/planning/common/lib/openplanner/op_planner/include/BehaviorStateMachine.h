@@ -152,6 +152,7 @@ public:
 	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_STOP_STATE;}
 	virtual ~TrafficLightStopState(){}
 	virtual BehaviorStateMachine* GetNextState();
+
 };
 
 class TrafficLightWaitState : public BehaviorStateMachine
@@ -161,6 +162,7 @@ public:
 	: BehaviorStateMachine(pParams, pPreCalcVal, pNextState){m_Behavior = TRAFFIC_LIGHT_WAIT_STATE;}
 	virtual ~TrafficLightWaitState(){}
 	virtual BehaviorStateMachine* GetNextState();
+
 };
 
 class StopSignStopState : public BehaviorStateMachine

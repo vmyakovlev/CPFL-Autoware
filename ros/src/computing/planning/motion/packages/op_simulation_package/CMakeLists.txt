@@ -64,4 +64,7 @@ target_link_libraries(op_perception_simulator ${catkin_LIBRARIES} ${PCL_LIBRARIE
 add_executable(op_signs_simulator nodes/op_signs_simulator/op_signs_simulator.cpp nodes/op_signs_simulator/op_signs_simulator_core.cpp)
 target_link_libraries(op_signs_simulator ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-add_dependencies(op_car_simulator op_perception_simulator op_signs_simulator ${catkin_EXPORTED_TARGETS})
+add_executable(op_data_logger nodes/op_data_logger/op_data_logger.cpp nodes/op_data_logger/op_data_logger_core.cpp)
+target_link_libraries(op_data_logger ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
+add_dependencies(op_car_simulator op_perception_simulator op_signs_simulator op_data_logger ${catkin_EXPORTED_TARGETS})

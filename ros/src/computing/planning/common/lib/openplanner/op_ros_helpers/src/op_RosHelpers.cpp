@@ -685,6 +685,9 @@ void RosHelpers::ConvertFromAutowareDetectedObjectToOpenPlannerDetectedObject(co
 	{
 		std::vector<PlannerHNS::WayPoint> _traj;
 		PlannerHNS::RosHelpers::ConvertFromAutowareLaneToLocalLane(det_obj.candidate_trajectories.lanes.at(j), _traj);
+		for(unsigned int k=0; k < _traj.size(); k++)
+			_traj.at(k).collisionCost = det_obj.candidate_trajectories.lanes.at(j).cost;
+
 		obj.predTrajectories.push_back(_traj);
 	}
 }
@@ -730,7 +733,10 @@ void RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(co
 	{
 		autoware_msgs::lane pred_traj;
 		PlannerHNS::RosHelpers::ConvertFromLocalLaneToAutowareLane(det_obj.predTrajectories.at(j), pred_traj);
-		pred_traj.cost = 0;
+		if(det_obj.predTrajectories.at(j).size() > 0)
+		{
+			pred_traj.cost = det_obj.predTrajectories.at(j).at(0).collisionCost;
+		}
 		pred_traj.lane_index = 0;
 		obj.candidate_trajectories.lanes.push_back(pred_traj);
 	}
@@ -1798,10 +1804,12 @@ void RosHelpers::UpdateRoadMap(const AutowareRoadNetwork& src_map, PlannerHNS::R
 	std::vector<UtilityHNS::AisanVectorFileReader::AisanVector> vector_data;
 	std::vector<UtilityHNS::AisanCurbFileReader::AisanCurb> curb_data;
 	std::vector<UtilityHNS::AisanRoadEdgeFileReader::AisanRoadEdge> roadedge_data;
+	std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea> way_area;
+	std::vector<UtilityHNS::AisanCrossWalkFileReader::AisanCrossWalk> crossing;
 	std::vector<UtilityHNS::AisanDataConnFileReader::DataConn> conn_data;
 
 	PlannerHNS::GPSPoint origin;//(m_OriginPos.position.x, m_OriginPos.position.y, m_OriginPos.position.z, 0);
-	PlannerHNS::MappingHelpers::ConstructRoadNetworkFromRosMessage(lanes, points, dts, inters, areas, line_data, stop_line_data, signal_data, vector_data, curb_data, roadedge_data, conn_data, origin, out_map);
+	PlannerHNS::MappingHelpers::ConstructRoadNetworkFromRosMessage(lanes, points, dts, inters, areas, line_data, stop_line_data, signal_data, vector_data, curb_data, roadedge_data, way_area, crossing, conn_data, origin, out_map);
 }
 
 void RosHelpers::GetIndicatorArrows(const PlannerHNS::WayPoint& center, const double& width,const double& length, const PlannerHNS::LIGHT_INDICATOR& indicator, const int& id, visualization_msgs::MarkerArray& markerArray)

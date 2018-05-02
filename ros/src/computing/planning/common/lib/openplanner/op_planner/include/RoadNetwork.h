@@ -41,8 +41,15 @@ enum ACTION_TYPE {FORWARD_ACTION, BACKWARD_ACTION, STOP_ACTION, LEFT_TURN_ACTION
 
 enum BEH_STATE_TYPE {BEH_FORWARD_STATE=0,BEH_STOPPING_STATE=1, BEH_BRANCH_LEFT_STATE=2, BEH_BRANCH_RIGHT_STATE=3, BEH_YIELDING_STATE=4, BEH_ACCELERATING_STATE=5, BEH_SLOWDOWN_STATE=6};
 
+enum SEGMENT_TYPE {NORMAL_ROAD_SEG, INTERSECTION_ROAD_SEG, UTURN_ROAD_SEG, EXIT_ROAD_SEG, MERGE_ROAD_SEG, HIGHWAY_ROAD_SEG};
+
+enum MARKING_TYPE {UNKNOWN_MARK, TEXT_MARK, AF_MARK, AL_MARK, AR_MARK, AFL_MARK, AFR_MARK, ALR_MARK, UTURN_MARK, NOUTURN_MARK};
+
+enum TrafficSignTypes {UNKNOWN_SIGN, STOP_SIGN, MAX_SPEED_SIGN, MIN_SPEED_SIGN};
+
 class Lane;
 class TrafficLight;
+class RoadSegment;
 
 class ObjTimeStamp
 {
@@ -463,21 +470,19 @@ public:
 	}
 };
 
-class Edge
+class Boundary //represent wayarea in vector map
 {
 public:
 	int id;
-	int laneId;
 	int roadId;
 	std::vector<GPSPoint> points;
-	Lane* pLane;
+	RoadSegment* pSegment;
 
-	Edge()
+	Boundary()
 	{
 		id    = 0;
-		laneId =0;
 		roadId =0;
-		pLane = 0;
+		pSegment = nullptr;
 	}
 };
 
@@ -496,6 +501,22 @@ public:
 		laneId =0;
 		roadId =0;
 		pLane = 0;
+	}
+};
+
+class Crossing
+{
+public:
+	int id;
+	int roadId;
+	std::vector<GPSPoint> points;
+	RoadSegment* pSegment;
+
+	Crossing()
+	{
+		id    = 0;
+		roadId =0;
+		pSegment = nullptr;
 	}
 };
 
@@ -540,8 +561,6 @@ public:
 		pLane = 0;
 	}
 };
-
-enum TrafficSignTypes {UNKNOWN_SIGN, STOP_SIGN, MAX_SPEED_SIGN, MIN_SPEED_SIGN};
 
 class TrafficSign
 {
@@ -610,16 +629,37 @@ public:
 	}
 };
 
-enum RoadSegmentType {NORMAL_ROAD, INTERSECTION_ROAD, UTURN_ROAD, EXIT_ROAD, MERGE_ROAD, HIGHWAY_ROAD};
+class Marking
+{
+public:
+	int id;
+	int laneId;
+	int roadId;
+	MARKING_TYPE  mark_type;
+	GPSPoint center;
+	std::vector<GPSPoint> points;
+	Lane* pLane;
+
+	Marking()
+	{
+		id = 0;
+		laneId = 0;
+		roadId = 0;
+		mark_type = UNKNOWN_MARK;
+		pLane = nullptr;
+	}
+};
 
 class RoadSegment
 {
 public:
 	int id;
 
-	RoadSegmentType roadType;
-	PolygonShape	segment_area;
-	double avgWidth;
+	SEGMENT_TYPE 	roadType;
+	Boundary		boundary;
+	Crossing		start_crossing;
+	Crossing		finish_crossing;
+	double 			avgWidth;
 	std::vector<int> fromIds;
 	std::vector<int> toIds;
 	std::vector<Lane> Lanes;
@@ -632,7 +672,7 @@ public:
 	{
 		id = 0;
 		avgWidth = 0;
-		roadType = NORMAL_ROAD;
+		roadType = NORMAL_ROAD_SEG;
 	}
 
 
@@ -656,7 +696,6 @@ public:
 	double dir;
 	LaneType type;
 	double width;
-	std::vector<TrafficSign> signs;
 	std::vector<WayPoint> points;
 	std::vector<TrafficLight> trafficlights;
 	std::vector<StopLine> stopLines;
@@ -696,7 +735,10 @@ public:
 	std::vector<TrafficLight> trafficLights;
 	std::vector<StopLine> stopLines;
 	std::vector<Curb> curbs;
-	std::vector<Edge> edges;
+	std::vector<Boundary> boundaries;
+	std::vector<Crossing> crossings;
+	std::vector<Marking> markings;
+	std::vector<TrafficSign> signs;
 };
 
 class VehicleState : public ObjTimeStamp

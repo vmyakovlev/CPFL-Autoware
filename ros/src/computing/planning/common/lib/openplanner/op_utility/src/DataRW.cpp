@@ -25,6 +25,7 @@ std::string DataRW::PathLogFolderName 		= "TrajectoriesLogs/";
 std::string DataRW::StatesLogFolderName 	= "BehaviorsLogs/";
 std::string DataRW::SimulationFolderName 	= "SimulationData/";
 std::string DataRW::KmlMapsFolderName 		= "KmlMaps/";
+std::string DataRW::PredictionFolderName 	= "PredictionResults/";
 
 
 DataRW::DataRW()
@@ -55,6 +56,9 @@ void DataRW::CreateLoggingFolder()
 	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + DataRW::SimulationFolderName;
+	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + DataRW::PredictionFolderName;
 	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + "SimulatedCar1";
@@ -882,8 +886,8 @@ bool AisanCurbFileReader::ReadNextLine(AisanCurb& data)
 		data.LID 	= strtol(lineData.at(0).at(1).c_str(), NULL, 10);
 		data.Height = strtod(lineData.at(0).at(2).c_str(), NULL);
 		data.Width 	= strtod(lineData.at(0).at(3).c_str(), NULL);
-		data.dir 	= strtol(lineData.at(0).at(0).c_str(), NULL, 10);
-		data.LinkID = strtol(lineData.at(0).at(1).c_str(), NULL, 10);
+		data.dir 	= strtol(lineData.at(0).at(4).c_str(), NULL, 10);
+		data.LinkID = strtol(lineData.at(0).at(5).c_str(), NULL, 10);
 
 		return true;
 
@@ -916,7 +920,7 @@ bool AisanRoadEdgeFileReader::ReadNextLine(AisanRoadEdge& data)
 
 		data.ID 	= strtol(lineData.at(0).at(0).c_str(), NULL, 10);
 		data.LID 	= strtol(lineData.at(0).at(1).c_str(), NULL, 10);
-		data.LinkID = strtol(lineData.at(0).at(1).c_str(), NULL, 10);
+		data.LinkID = strtol(lineData.at(0).at(2).c_str(), NULL, 10);
 
 		return true;
 
@@ -929,6 +933,74 @@ int AisanRoadEdgeFileReader::ReadAllData(vector<AisanRoadEdge>& data_list)
 {
 	data_list.clear();
 	AisanRoadEdge data;
+	//double logTime = 0;
+	int count = 0;
+	while(ReadNextLine(data))
+	{
+		data_list.push_back(data);
+		count++;
+	}
+	return count;
+}
+
+bool AisanCrossWalkFileReader::ReadNextLine(AisanCrossWalk& data)
+{
+	vector<vector<string> > lineData;
+	if(ReadSingleLine(lineData))
+	{
+		if(lineData.size()==0) return false;
+		if(lineData.at(0).size() < 5) return false;
+
+		data.ID 	= strtol(lineData.at(0).at(0).c_str(), NULL, 10);
+		data.AID 	= strtol(lineData.at(0).at(1).c_str(), NULL, 10);
+		data.Type 	= strtol(lineData.at(0).at(2).c_str(), NULL, 10);
+		data.BdID 	= strtol(lineData.at(0).at(3).c_str(), NULL, 10);
+		data.LinkID = strtol(lineData.at(0).at(4).c_str(), NULL, 10);
+
+		return true;
+
+	}
+	else
+		return false;
+}
+
+int AisanCrossWalkFileReader::ReadAllData(vector<AisanCrossWalk>& data_list)
+{
+	data_list.clear();
+	AisanCrossWalk data;
+	//double logTime = 0;
+	int count = 0;
+	while(ReadNextLine(data))
+	{
+		data_list.push_back(data);
+		count++;
+	}
+	return count;
+}
+
+bool AisanWayareaFileReader::ReadNextLine(AisanWayarea& data)
+{
+	vector<vector<string> > lineData;
+	if(ReadSingleLine(lineData))
+	{
+		if(lineData.size()==0) return false;
+		if(lineData.at(0).size() < 3) return false;
+
+		data.ID 	= strtol(lineData.at(0).at(0).c_str(), NULL, 10);
+		data.AID 	= strtol(lineData.at(0).at(1).c_str(), NULL, 10);
+		data.LinkID = strtol(lineData.at(0).at(3).c_str(), NULL, 10);
+
+		return true;
+
+	}
+	else
+		return false;
+}
+
+int AisanWayareaFileReader::ReadAllData(vector<AisanWayarea>& data_list)
+{
+	data_list.clear();
+	AisanWayarea data;
 	//double logTime = 0;
 	int count = 0;
 	while(ReadNextLine(data))

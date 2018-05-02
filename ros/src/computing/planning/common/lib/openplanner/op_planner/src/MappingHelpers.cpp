@@ -97,6 +97,8 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 		const std::vector<UtilityHNS::AisanVectorFileReader::AisanVector>& vector_data,
 		const std::vector<UtilityHNS::AisanCurbFileReader::AisanCurb>& curb_data,
 		const std::vector<UtilityHNS::AisanRoadEdgeFileReader::AisanRoadEdge>& roadedge_data,
+		const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
+		const std::vector<UtilityHNS::AisanCrossWalkFileReader::AisanCrossWalk>& crosswalk_data,
 		const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,
 		const GPSPoint& origin, RoadNetwork& map, const bool& bSpecialFlag)
 {
@@ -440,6 +442,9 @@ void MappingHelpers::ConstructRoadNetworkFromRosMessage(const std::vector<Utilit
 	//Curbs
 	ExtractCurbData(curb_data, line_data, points_data, origin, map);
 
+	//Wayarea
+	ExtractWayArea(area_data, wayarea_data, line_data, points_data, origin, map);
+
 	//Fix angle for lanes
 	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
 	{
@@ -495,7 +500,8 @@ void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMa
 	string vector_info = vectoMapPath + "vector.csv";
 	string curb_info = vectoMapPath + "curb.csv";
 	string roadedge_info = vectoMapPath + "roadedge.csv";
-
+	string wayarea_info = vectoMapPath + "wayarea.csv";
+	string crosswalk_info = vectoMapPath + "crosswalk.csv";
 	string conn_info = vectoMapPath + "dataconnection.csv";
 
 
@@ -512,10 +518,9 @@ void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMa
 	AisanCurbFileReader curb(curb_info);
 	AisanRoadEdgeFileReader roadedge(roadedge_info);
 	AisanDataConnFileReader conn(conn_info);
-
-	//AisanAreasFileReader areas(node_info);
-	//AisanIntersectionFileReader intersections(node_info);
-
+	AisanAreasFileReader areas(area_info);
+	AisanWayareaFileReader way_area(wayarea_info);
+	AisanCrossWalkFileReader cross_walk(crosswalk_info);
 
 
 	vector<AisanNodesFileReader::AisanNode> nodes_data;
@@ -530,7 +535,7 @@ void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMa
 	vector<AisanCenterLinesFileReader::AisanCenterLine> dt_data;
 	center_lanes.ReadAllData(dt_data);
 
-	vector<AisanAreasFileReader::AisanArea> area_data;
+
 	vector<AisanIntersectionFileReader::AisanIntersection> intersection_data;
 	vector<AisanLinesFileReader::AisanLine> line_data;
 	lines.ReadAllData(line_data);
@@ -540,15 +545,25 @@ void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMa
 	signal.ReadAllData(signal_data);
 	vector<AisanVectorFileReader::AisanVector> vector_data;
 	vec.ReadAllData(vector_data);
-
 	vector<AisanCurbFileReader::AisanCurb> curb_data;
 	curb.ReadAllData(curb_data);
-
 	vector<AisanRoadEdgeFileReader::AisanRoadEdge> roadedge_data;
 	roadedge.ReadAllData(roadedge_data);
-
+	vector<AisanAreasFileReader::AisanArea> area_data;
+	areas.ReadAllData(area_data);
+	vector<AisanWayareaFileReader::AisanWayarea> way_area_data;
+	way_area.ReadAllData(way_area_data);
+	vector<AisanCrossWalkFileReader::AisanCrossWalk> crosswalk_data;
+	cross_walk.ReadAllData(crosswalk_data);
 	vector<AisanDataConnFileReader::DataConn> conn_data;
 	conn.ReadAllData(conn_data);
+
+
+	if(points_data.size() == 0)
+	{
+		std::cout << "Can't Read Points Data from vector map files in path: " << vectoMapPath << std::endl;
+		return;
+	}
 
 	//Traffic Light Type from the file
 	// 4 , 5 -> pedestrian crossing light
@@ -563,7 +578,8 @@ void MappingHelpers::ConstructRoadNetworkFromDataFiles(const std::string vectoMa
 
 	// use this to transform data to origin (0,0,0)
 	ConstructRoadNetworkFromRosMessage(lanes_data, points_data, dt_data, intersection_data, area_data,
-			line_data, stop_line_data, signal_data, vector_data, curb_data, roadedge_data, conn_data,
+			line_data, stop_line_data, signal_data, vector_data, curb_data, roadedge_data,
+			way_area_data, crosswalk_data, conn_data,
 			GetTransformationOrigin(bToyotaCityMap), map, bToyotaCityMap == 1);
 
 	//use this when using the same coordinates as the map
@@ -681,9 +697,31 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 
 	vector<Lane> laneLinksList = GetLanesList(pHeadElem);
 	vector<RoadSegment> roadLinksList = GetRoadSegmentsList(pHeadElem);
-	vector<StopLine> stopLines = GetStopLinesList(pHeadElem);
 	vector<TrafficLight> trafficLights = GetTrafficLightsList(pHeadElem);
+	vector<StopLine> stopLines = GetStopLinesList(pHeadElem);
 
+	std::cout << "#### Number of StopLines from KML = " << stopLines.size() << std::endl;
+
+	vector<TrafficSign> signs = GetTrafficSignsList(pHeadElem);
+	vector<Crossing> crossings = GetCrossingsList(pHeadElem);
+	vector<Marking> markings = GetMarkingsList(pHeadElem);
+	vector<Boundary> boundaries = GetBoundariesList(pHeadElem);
+	vector<Curb> curbs = GetCurbsList(pHeadElem);
+
+	map.signs.clear();
+	map.signs = signs;
+
+	map.crossings.clear();
+	map.crossings = crossings;
+
+	map.markings.clear();
+	map.markings = markings;
+
+	map.boundaries.clear();
+	map.boundaries = boundaries;
+
+	map.curbs.clear();
+	map.curbs = curbs;
 
 	//Fill the relations
 	for(unsigned int i= 0; i<roadLinksList.size(); i++ )
@@ -1150,6 +1188,177 @@ Lane* MappingHelpers::GetLaneFromPath(const WayPoint& currPos, const std::vector
 	return currPath.at(closest_index).pLane;
 }
 
+std::vector<Curb> MappingHelpers::GetCurbsList(TiXmlElement* pElem)
+{
+	vector<Curb> cList;
+	TiXmlElement* pCurbs = GetDataFolder("CurbsLines", pElem);
+
+	TiXmlElement* pE = pCurbs->FirstChildElement("Placemark");
+	for( ; pE; pE=pE->NextSiblingElement())
+	{
+		string tfID;
+		TiXmlElement* pNameXml = pE->FirstChildElement("name");
+
+		if(pNameXml)
+		{
+			tfID = pNameXml->GetText();
+			Curb c;
+			c.id = GetIDsFromPrefix(tfID, "BID", "LnID").at(0);
+			c.laneId = GetIDsFromPrefix(tfID, "LnID", "RdID").at(0);
+			c.roadId = GetIDsFromPrefix(tfID, "RdID", "").at(0);
+
+			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
+			c.points = GetPointsData(pPoints);
+
+			cList.push_back(c);
+		}
+	}
+
+	return cList;
+}
+
+std::vector<Boundary> MappingHelpers::GetBoundariesList(TiXmlElement* pElem)
+{
+	vector<Boundary> bList;
+	TiXmlElement* pBoundaries = GetDataFolder("Boundaries", pElem);
+
+	TiXmlElement* pE = pBoundaries->FirstChildElement("Placemark");
+	for( ; pE; pE=pE->NextSiblingElement())
+	{
+		string tfID;
+		TiXmlElement* pNameXml = pE->FirstChildElement("name");
+
+		if(pNameXml)
+		{
+			tfID = pNameXml->GetText();
+			Boundary b;
+			b.id = GetIDsFromPrefix(tfID, "BID", "RdID").at(0);
+			b.roadId = GetIDsFromPrefix(tfID, "RdID", "").at(0);
+
+			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
+			b.points = GetPointsData(pPoints);
+
+			bList.push_back(b);
+		}
+	}
+
+	return bList;
+}
+
+std::vector<Marking> MappingHelpers::GetMarkingsList(TiXmlElement* pElem)
+{
+	vector<Marking> mList;
+	TiXmlElement* pMarkings= GetDataFolder("Markings", pElem);
+
+	TiXmlElement* pE = pMarkings->FirstChildElement("Placemark");
+	for( ; pE; pE=pE->NextSiblingElement())
+	{
+		string tfID;
+		TiXmlElement* pNameXml =pE->FirstChildElement("name");
+
+		if(pNameXml)
+		{
+			tfID = pNameXml->GetText();
+			Marking m;
+			m.id = GetIDsFromPrefix(tfID, "MID", "LnID").at(0);
+			m.laneId = GetIDsFromPrefix(tfID, "LnID", "RdID").at(0);
+			m.roadId = GetIDsFromPrefix(tfID, "RdID", "").at(0);
+
+			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
+
+			m.points = GetPointsData(pPoints);
+
+			if(m.points.size() > 0)
+			{
+				//first item is the center of the marking
+				m.center = m.points.at(0);
+				m.points.erase(m.points.begin()+0);
+			}
+
+			mList.push_back(m);
+		}
+	}
+
+	return mList;
+}
+
+std::vector<Crossing> MappingHelpers::GetCrossingsList(TiXmlElement* pElem)
+{
+	vector<Crossing> crossList;
+	TiXmlElement* pCrossings= GetDataFolder("Crossings", pElem);
+
+	TiXmlElement* pE = pCrossings->FirstChildElement("Placemark");
+	for( ; pE; pE=pE->NextSiblingElement())
+	{
+		string tfID;
+		TiXmlElement* pNameXml =pE->FirstChildElement("name");
+
+		if(pNameXml)
+		{
+			tfID = pNameXml->GetText();
+			Crossing cross;
+			cross.id = GetIDsFromPrefix(tfID, "CRID", "RdID").at(0);
+			cross.roadId = GetIDsFromPrefix(tfID, "RdID", "").at(0);
+
+			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
+			cross.points = GetPointsData(pPoints);
+
+			crossList.push_back(cross);
+		}
+	}
+
+	return crossList;
+}
+
+std::vector<TrafficSign> MappingHelpers::GetTrafficSignsList(TiXmlElement* pElem)
+{
+	vector<TrafficSign> tsList;
+	TiXmlElement* pSigns = GetDataFolder("TrafficSigns", pElem);
+
+	TiXmlElement* pE = pSigns->FirstChildElement("Placemark");
+	for( ; pE; pE=pE->NextSiblingElement())
+	{
+		string tfID;
+		TiXmlElement* pNameXml =pE->FirstChildElement("name");
+
+		if(pNameXml)
+		{
+		  tfID = pNameXml->GetText();
+
+		  	TrafficSign ts;
+			ts.id = GetIDsFromPrefix(tfID, "TSID", "LnID").at(0);
+			ts.laneId = GetIDsFromPrefix(tfID, "LnID", "RdID").at(0);
+			ts.roadId = GetIDsFromPrefix(tfID, "RdID", "Type").at(0);
+			int iType = GetIDsFromPrefix(tfID, "Type", "").at(0);
+			switch(iType)
+			{
+			case 0:
+				ts.signType = UNKNOWN_SIGN;
+				break;
+			case 1:
+				ts.signType = STOP_SIGN;
+				break;
+			case 2:
+				ts.signType = MAX_SPEED_SIGN;
+				break;
+			case 3:
+				ts.signType = MIN_SPEED_SIGN;
+				break;
+			default:
+				ts.signType = STOP_SIGN;
+				break;
+			}
+
+
+			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
+			ts.pos = GetPointsData(pPoints).at(0);
+
+			tsList.push_back(ts);
+		}
+	}
+
+	return tsList;
+}
 
 std::vector<StopLine> MappingHelpers::GetStopLinesList(TiXmlElement* pElem)
 {
@@ -1169,8 +1378,8 @@ std::vector<StopLine> MappingHelpers::GetStopLinesList(TiXmlElement* pElem)
 			StopLine sl;
 			sl.id = GetIDsFromPrefix(tfID, "SLID", "LnID").at(0);
 			sl.laneId = GetIDsFromPrefix(tfID, "LnID", "TSID").at(0);
-			sl.stopSignID = GetIDsFromPrefix(tfID, "TSID", "TLTID").at(0);
-			sl.trafficLightID = GetIDsFromPrefix(tfID, "TLTID", "").at(0);
+			sl.stopSignID = GetIDsFromPrefix(tfID, "TSID", "TLID").at(0);
+			sl.trafficLightID = GetIDsFromPrefix(tfID, "TLID", "").at(0);
 
 
 			TiXmlElement* pPoints = pE->FirstChildElement("LineString")->FirstChildElement("coordinates");
@@ -1199,7 +1408,7 @@ std::vector<TrafficLight> MappingHelpers::GetTrafficLightsList(TiXmlElement* pEl
 		  tfID = pNameXml->GetText();
 
 			TrafficLight tl;
-			tl.id = GetIDsFromPrefix(tfID, "SLID", "LnID").at(0);
+			tl.id = GetIDsFromPrefix(tfID, "TLID", "LnID").at(0);
 			tl.laneIds = GetIDsFromPrefix(tfID, "LnID", "");
 
 			TiXmlElement* pPoints = pE->FirstChildElement("Point")->FirstChildElement("coordinates");
@@ -1666,6 +1875,29 @@ void MappingHelpers::ExtractSignalData(const std::vector<UtilityHNS::AisanSignal
 			}
 			map.trafficLights.push_back(tl);
 		}
+
+//		//if(signal_data.at(is).Type == 1)
+//		{
+//			TrafficSign ts;
+//			ts.id = signal_data.at(is).ID;
+//			ts.signType = STOP_SIGN;
+//
+//			for(unsigned int iv = 0; iv < vector_data.size(); iv++)
+//			{
+//				if(signal_data.at(is).VID == vector_data.at(iv).VID)
+//				{
+//					for(unsigned int ip = 0; ip < points_data.size(); ip++)
+//					{
+//						if(vector_data.at(iv).PID == points_data.at(ip).PID)
+//						{
+//							ts.pos = GPSPoint(points_data.at(ip).Ly + origin.x, points_data.at(ip).Bx + origin.y, points_data.at(ip).H + origin.z, vector_data.at(iv).Hang*DEG2RAD);
+//							break;
+//						}
+//					}
+//				}
+//			}
+//			map.signs.push_back(ts);
+//		}
 	}
 }
 
@@ -1718,7 +1950,7 @@ void MappingHelpers::ExtractCurbData(const std::vector<UtilityHNS::AisanCurbFile
 				if(curb_data.at(ic).LID == line_data.at(il).LID)
 				{
 					int s_id = line_data.at(il).BPID;
-					int e_id = line_data.at(il).FPID;
+					//int e_id = line_data.at(il).FPID;
 					for(unsigned int ip = 0; ip < points_data.size(); ip++)
 					{
 						if(points_data.at(ip).PID == s_id)
@@ -1733,11 +1965,54 @@ void MappingHelpers::ExtractCurbData(const std::vector<UtilityHNS::AisanCurbFile
 								c.pLane = pLane;
 							}
 						}
+//						else if(points_data.at(ip).PID > s_id && points_data.at(ip).PID <= e_id)
+//						{
+//							c.points.push_back(GPSPoint(points_data.at(ip).Ly + origin.x, points_data.at(ip).Bx + origin.y, points_data.at(ip).H + origin.z, 0));
+//						}
 					}
 				}
 			}
 			map.curbs.push_back(c);
 		}
+}
+
+void MappingHelpers::ExtractWayArea(const std::vector<UtilityHNS::AisanAreasFileReader::AisanArea>& area_data,
+		const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
+			const std::vector<UtilityHNS::AisanLinesFileReader::AisanLine>& line_data,
+			const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points_data,
+			const GPSPoint& origin, RoadNetwork& map)
+{
+	for(unsigned int iw=0; iw < wayarea_data.size(); iw ++)
+	{
+		Boundary bound;
+		bound.id = wayarea_data.at(iw).ID;
+
+		for(unsigned int ia=0; ia < area_data.size(); ia ++)
+		{
+			if(wayarea_data.at(iw).AID == area_data.at(ia).AID)
+			{
+				int s_id = area_data.at(ia).SLID;
+				int e_id = area_data.at(ia).ELID;
+
+				for(unsigned int il=0; il< line_data.size(); il++)
+				{
+					if(line_data.at(il).LID >= s_id && line_data.at(il).LID <= e_id)
+					{
+						for(unsigned int ip=0; ip < points_data.size(); ip++)
+						{
+							if(points_data.at(ip).PID == line_data.at(il).BPID)
+							{
+								GPSPoint p(points_data.at(ip).Ly + origin.x, points_data.at(ip).Bx + origin.y, points_data.at(ip).H + origin.z, 0);
+								bound.points.push_back(p);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		map.boundaries.push_back(bound);
+	}
 }
 
 void MappingHelpers::LinkMissingBranchingWayPoints(RoadNetwork& map)

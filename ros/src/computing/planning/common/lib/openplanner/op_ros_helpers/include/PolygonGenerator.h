@@ -4,8 +4,8 @@
 /// \author Hatem Darweesh
 /// \date Nov 2, 2016
 
-#ifndef POLYGONGENERATOR_H_
-#define POLYGONGENERATOR_H_
+#ifndef OP_POLYGONGENERATOR_H_
+#define OP_POLYGONGENERATOR_H_
 
 #include "RoadNetwork.h"
 #include <sensor_msgs/PointCloud2.h>
@@ -92,4 +92,4 @@ public:
 
 } /* namespace PlannerXNS */
 
-#endif /* POLYGONGENERATOR_H_ */
+#endif /* OP_POLYGONGENERATOR_H_ */

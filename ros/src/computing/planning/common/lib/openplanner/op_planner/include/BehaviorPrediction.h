@@ -1,9 +1,9 @@
-/*
- * BehaviorPrediction.h
- *
- *  Created on: Jul 6, 2017
- *      Author: user
- */
+
+/// \file  BehaviorPrediction.h
+/// \brief Predict detected vehicles's possible trajectories, these trajectories extracted from the vector map.
+/// \author Hatem Darweesh
+/// \date Jul 6, 2017
+
 
 #ifndef BEHAVIORPREDICTION_H_
 #define BEHAVIORPREDICTION_H_
@@ -794,8 +794,8 @@ public:
 	bool m_bUseFixedPrediction;
 	bool m_bStepByStep;
 	bool m_bParticleFilter;
-	std::vector<DetectedObject> m_PredictedObjects;
-	std::vector<DetectedObject*> m_PredictedObjectsII;
+	//std::vector<DetectedObject> m_PredictedObjects;
+	//std::vector<DetectedObject*> m_PredictedObjectsII;
 
 	std::vector<ObjParticles> m_temp_list;
 	std::vector<ObjParticles> m_ParticleInfo;
@@ -808,6 +808,7 @@ public:
 
 	bool m_bCanDecide;
 	bool m_bFirstMove;
+	bool m_bDebugOut;
 
 
 protected:
