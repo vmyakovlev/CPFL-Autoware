@@ -1,29 +1,35 @@
-#include <ros/ros.h>
-#include <ros/spinner.h>
-#include <std_msgs/Float64.h>
-#include <std_msgs/Float64MultiArray.h>
-#include <std_msgs/String.h>
-#include <stdio.h>
-#include <tf/transform_listener.h>
-
-// lib
-#include <state_machine_lib/state.hpp>
-#include <state_machine_lib/state_context.hpp>
 
 #include <decision_maker_node.hpp>
 
-#include <autoware_msgs/lane.h>
-#include <autoware_msgs/state.h>
-#include <jsk_recognition_msgs/BoundingBoxArray.h>
-#include <random>
-#include <visualization_msgs/MarkerArray.h>
-
-#include <geometry_msgs/Point.h>
-#include <geometry_msgs/Pose.h>
-#include <geometry_msgs/PoseStamped.h>
-
 namespace decision_maker
 {
+void DecisionMakerNode::publishLampCmd(const E_Lamp &status)
+{
+  autoware_msgs::lamp_cmd lamp_msg;
+
+  switch (status)
+  {
+    case E_Lamp::LAMP_LEFT:
+      lamp_msg.l = LAMP_ON;
+      lamp_msg.r = LAMP_OFF;
+      break;
+    case E_Lamp::LAMP_RIGHT:
+      lamp_msg.l = LAMP_OFF;
+      lamp_msg.r = LAMP_ON;
+      break;
+    case E_Lamp::LAMP_HAZARD:
+      lamp_msg.l = LAMP_ON;
+      lamp_msg.r = LAMP_ON;
+      break;
+    case E_Lamp::LAMP_EMPTY:
+    default:
+      lamp_msg.l = LAMP_OFF;
+      lamp_msg.r = LAMP_OFF;
+      break;
+  }
+  Pubs["lamp_cmd"].publish(lamp_msg);
+}
+
 void DecisionMakerNode::update_pubsub(void)
 {
   // if state machine require to re-subscribe topic,
@@ -54,6 +60,7 @@ int DecisionMakerNode::createCrossRoadAreaMarker(visualization_msgs::Marker &cro
 
 void DecisionMakerNode::displayMarker(void)
 {
+#if 0
   // vector_map init
   // parse vectormap
   jsk_recognition_msgs::BoundingBoxArray bbox_array;
@@ -66,18 +73,18 @@ void DecisionMakerNode::displayMarker(void)
 
   double scale = 3.0;
   createCrossRoadAreaMarker(crossroad_marker, scale);
-  
+
   detection_area_marker = crossroad_marker;
   detection_area_marker.header.frame_id = param_baselink_tf_;
   detection_area_marker.scale.x = (detectionArea_.x1 - detectionArea_.x2) * param_detection_area_rate_;
   detection_area_marker.scale.y = (detectionArea_.y1 - detectionArea_.y2) * param_detection_area_rate_;
-  detection_area_marker.color.r = foundOtherVehicleForIntersectionStop_?0.0:1.0;
-  detection_area_marker.pose.position.x =  detection_area_marker.scale.x/2;
+  detection_area_marker.color.r = foundOtherVehicleForIntersectionStop_ ? 0.0 : 1.0;
+  detection_area_marker.pose.position.x = detection_area_marker.scale.x / 2;
   detection_area_marker.color.g = 1;
   detection_area_marker.color.b = 0.3;
   detection_area_marker.color.a = 0.3;
   detection_area_marker.type = visualization_msgs::Marker::CUBE;
-  detection_area_marker.lifetime=ros::Duration();
+  detection_area_marker.lifetime = ros::Duration();
 
   stopline_target_marker = crossroad_marker;
   stopline_target_marker.type = visualization_msgs::Marker::SPHERE;
@@ -93,7 +100,7 @@ void DecisionMakerNode::displayMarker(void)
   stopline_target_marker.pose.position.x = CurrentStoplineTarget_.pose.pose.position.x;
   stopline_target_marker.pose.position.y = CurrentStoplineTarget_.pose.pose.position.y;
   stopline_target_marker.pose.position.z = CurrentStoplineTarget_.pose.pose.position.z;
-  
+
   inside_marker = crossroad_marker;
   inside_marker.scale.x = scale / 3;
   inside_marker.scale.y = scale / 3;
@@ -105,7 +112,6 @@ void DecisionMakerNode::displayMarker(void)
   inside_marker.color.b = 0.0;
   inside_marker.ns = "inside";
   inside_marker.lifetime = ros::Duration();
-   
 
   inside_marker = crossroad_marker;
   inside_marker.scale.x = scale / 3;
@@ -167,7 +173,7 @@ void DecisionMakerNode::displayMarker(void)
 
       geometry_msgs::Pose shift_p = lane.waypoints.at(idx).pose.pose;
 
-      double current_angle = getPoseAngle(shift_p);
+      double current_angle = amathutils::getPoseYawAngle(shift_p);
 
       shift_p.position.x -= param_shift_width_ * cos(current_angle + M_PI / 2);
       shift_p.position.y -= param_shift_width_ * sin(current_angle + M_PI / 2);
@@ -176,8 +182,6 @@ void DecisionMakerNode::displayMarker(void)
     }
     marker_array.markers.push_back(inside_line_marker);
   }
-
-
   Pubs["detection_area"].publish(detection_area_marker);
   Pubs["crossroad_bbox"].publish(bbox_array);
   Pubs["crossroad_marker"].publish(marker_array);
@@ -185,43 +189,61 @@ void DecisionMakerNode::displayMarker(void)
   bbox_array.boxes.clear();
   // Pubs["crossroad_inside_marker"].publish(inside_marker);
   Pubs["crossroad_inside_marker"].publish(inside_line_marker);
+#endif
 }
 
 void DecisionMakerNode::update_msgs(void)
 {
   if (ctx)
   {
-    static std::string prevStateName;
-    CurrentStateName = ctx->getCurrentStateName();
+#if 0
+      	  static std::string prevStateName;
+    // CurrentStateName = ctx->getCurrentStateName();
 
     if (prevStateName != CurrentStateName)
     {
       prevStateName = CurrentStateName;
       update_pubsub();
     }
-
+#if 0
     autoware_msgs::state state_msg;
     state_msg.main_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::MAIN_STATE);
     state_msg.acc_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::ACC_STATE);
     state_msg.str_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::STR_STATE);
     state_msg.behavior_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::BEHAVIOR_STATE);
-
-    state_string_msg.data = CurrentStateName;
+#endif
+    // state_string_msg.data = CurrentStateName;
     // state_text_msg.text = createStateMessageText();
-    state_text_msg.text = state_msg.main_state + "\n" + state_msg.acc_state + "\n" + state_msg.str_state + "\n" +
-                          state_msg.behavior_state + "\n";
+    // state_text_msg.text = state_msg.main_state + "\n" + state_msg.acc_state + "\n" + state_msg.str_state + "\n" +
+    // state_msg.behavior_state + "\n";
 
-    Pubs["states"].publish(state_msg);
+    // Pubs["states"].publish(state_msg);
     // Pubs["state"].publish(state_string_msg);
-    Pubs["state_overlay"].publish(state_text_msg);
+    // Pubs["state_overlay"].publish(state_text_msg);
   }
   else
     std::cerr << "ctx is not found " << std::endl;
+#endif
+  }
 }
 
 std::string DecisionMakerNode::createStateMessageText()
 {
-  return ctx->createStateMessageText();
+  // return ctx->createStateMessageText();
+}
+
+void DecisionMakerNode::publishLightColor(int status)
+{
+  autoware_msgs::traffic_light msg;
+  msg.traffic_light = status;
+  Pubs["light_color"].publish(msg);
+}
+
+void DecisionMakerNode::publishStoplineWaypointIdx(int wp_idx)
+{
+  std_msgs::Int32 msg;
+  msg.data = wp_idx;
+  Pubs["state/stopline_wpidx"].publish(msg);
 }
 
 void DecisionMakerNode::publishToVelocityArray()
@@ -229,7 +251,7 @@ void DecisionMakerNode::publishToVelocityArray()
   int count = 0;
   std_msgs::Float64MultiArray msg;
 
-  for (const auto &i : current_finalwaypoints_.waypoints)
+  for (const auto &i : current_status_.finalwaypoints.waypoints)
   {
     msg.data.push_back(amathutils::mps2kmph(i.twist.twist.linear.x));
     if (++count >= 10)

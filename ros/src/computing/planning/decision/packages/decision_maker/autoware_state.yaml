@@ -1,0 +1,223 @@
+---
+autoware_states:
+  - 
+    StateName: Start
+    Transition:
+      - 
+        Key: started
+        Target: Init
+    Parent: ~
+  - 
+    StateName: Init
+    Transition:
+      - 
+        Key: init_start
+        Target: SensorInit
+    Parent: ~
+  -
+    StateName: SensorInit
+    Transition:
+      - 
+        Key: sensor_is_ready
+        Target: MapInit
+    Parent: Init
+  -
+    StateName: MapInit
+    Transition:
+      - 
+        Key: map_is_ready
+        Target: LocalizationInit
+    Parent: Init
+  -
+    StateName: LocalizationInit
+    Transition:
+      - 
+        Key: localization_is_ready
+        Target: PlanningInit
+    Parent: Init
+  -
+    StateName: PlanningInit
+    Transition:
+      - 
+        Key: planning_is_ready
+        Target: VehicleInit
+    Parent: Init
+  -
+    StateName: VehicleInit
+    Transition:
+      - 
+        Key: vehicle_is_ready
+        Target: VehicleReady
+    Parent: Init
+  -
+    StateName: VehicleReady
+    Transition:
+      - 
+        Key: going_to_wait_mission_order
+        Target: WaitMissionOrder
+    Parent: ~
+  -
+    StateName: WaitMissionOrder
+    Transition:
+      - 
+        Key: received_mission_order
+        Target: MissionCheck
+    Parent: ~
+  -
+    StateName: MissionCheck
+    Transition:
+      - 
+        Key: mission_is_compatible
+        Target: DriveReady
+    Parent: ~
+  -
+    StateName: DriveReady
+    Transition:
+      - 
+        Key: engage
+        Target: Drive
+    Parent: ~
+  -
+    StateName: Drive
+    Transition:
+      - 
+        Key: on_lane_area
+        Target: LaneArea
+      - 
+        Key: on_free_area
+        Target: FreeArea
+      - 
+        Key: arrived_goal
+        Target: MissionComplete
+      - 
+        Key: mission_aborted
+        Target: MissionAborted
+    Parent: ~
+  -
+    StateName: LaneArea
+    Transition:
+      - 
+        Key: on_left_turn
+        Target: LeftTurn
+      - 
+        Key: on_right_turn
+        Target: RightTurn
+      - 
+        Key: on_straight
+        Target: Straight
+    Parent: Drive
+  -
+    StateName: LeftTurn
+    Transition:
+      - 
+        Key: clear
+        Target: L_Go
+    Parent: LaneArea
+  -
+    StateName: L_StopLine
+    Transition:
+      - 
+        Key: clear
+        Target: L_Go
+      - 
+        Key: found_obstacle_on_opposite_lane
+        Target: L_Wait
+      - 
+        Key: found_obstacle_on_waypoint
+        Target: L_Wait
+    Parent: LeftTurn
+  -
+    StateName: L_Wait
+    Transition:
+      - 
+        Key: clear
+        Target: L_Go
+      - 
+        Key: found_stopline
+        Target: L_StopLine
+    Parent: LeftTurn
+  -
+    StateName: L_Go
+    Transition:
+      - 
+        Key: found_obstacle_on_opposite_lane
+        Target: L_Wait
+      - 
+        Key: found_obstacle_on_waypoint
+        Target: L_Wait
+      - 
+        Key: found_stopline
+        Target: L_StopLine
+    Parent: LeftTurn
+  -
+    StateName: RightTurn
+    Transition:
+      - 
+        Key: clear
+        Target: R_Go
+    Parent: LaneArea
+  -
+    StateName: R_StopLine
+    Transition:
+      - 
+        Key: clear
+        Target: R_Go
+      - 
+        Key: found_obstacle_on_opposite_lane
+        Target: R_Wait
+      - 
+        Key: found_obstacle_on_waypoint
+        Target: R_Wait
+    Parent: RightTurn
+  -
+    StateName: R_Wait
+    Transition:
+      - 
+        Key: clear
+        Target: R_Go
+      - 
+        Key: found_stopline
+        Target: R_StopLine
+    Parent: RightTurn
+  -
+    StateName: R_Go
+    Transition:
+      - 
+        Key: found_obstacle_on_opposite_lane
+        Target: R_Wait
+      - 
+        Key: found_obstacle_on_waypoint
+        Target: R_Wait
+      - 
+        Key: found_stopline
+        Target: R_StopLine
+    Parent: RightTurn
+  -
+    StateName: Straight
+    Transition: []
+    Parent: LaneArea
+  -
+    StateName: FreeArea
+    Transition: []
+    Parent: Drive
+  -
+    StateName: MissionComplete
+    Transition:
+      -
+        Key: on_wait_order
+        Target: WaitOrder
+    Parent: ~
+  -
+    StateName: MissionAborted
+    Transition:
+      -
+        Key: goto_wait_order
+        Target: WaitOrder
+    Parent: ~
+  -
+    StateName: WaitOrder
+    Transition:
+      -
+        Key: received_mission_order
+        Target: MissionCheck
+    Parent: ~

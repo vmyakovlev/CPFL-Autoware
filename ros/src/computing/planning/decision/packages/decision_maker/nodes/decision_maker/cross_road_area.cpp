@@ -10,32 +10,27 @@ CrossRoadArea *CrossRoadArea::findClosestCrossRoad(const autoware_msgs::lane &_f
 {
   CrossRoadArea *_area = nullptr;
 
-  amathutils::point _pa;
-  amathutils::point _pb;
+  geometry_msgs::Point pa;
+  geometry_msgs::Point pb;
 
   double _min_distance = DBL_MAX;
 
   if (!_finalwaypoints.waypoints.empty())
   {
-    _pa.x = _finalwaypoints.waypoints[TARGET_WAYPOINTS_NUM].pose.pose.position.x;
-    _pa.y = _finalwaypoints.waypoints[TARGET_WAYPOINTS_NUM].pose.pose.position.y;
-    _pa.z = 0.0;
+    pa = _finalwaypoints.waypoints[TARGET_WAYPOINTS_NUM].pose.pose.position;
   }
 
   for (size_t i = 0; i < intersects.size(); i++)
   {
-    _pb.x = intersects[i].bbox.pose.position.x;
-    _pb.y = intersects[i].bbox.pose.position.y;
+    pb = intersects[i].bbox.pose.position;
 
-    _pb.z = 0.0;
-
-    double __temp_dis = amathutils::find_distance(&_pa, &_pb);
+    const double range_of_waypoint_and_intersection = amathutils::find_distance(pa, pb);
 
     intersects[i].bbox.label = 0;
-    if (_min_distance >= __temp_dis)
+    if (_min_distance >= range_of_waypoint_and_intersection)
     {
       _area = &intersects[i];
-      _min_distance = __temp_dis;  //
+      _min_distance = range_of_waypoint_and_intersection;  //
     }
   }
 
@@ -51,8 +46,8 @@ std::vector<geometry_msgs::Point> convhull(const CrossRoadArea *_TargetArea)
 {
   std::vector<int> enablePoints;
 
-  if(_TargetArea->points.size() < 3)
-	  return {};
+  if (_TargetArea->points.size() < 3)
+    return {};
 
   // Jarvis's March algorithm
   size_t l = 0;

@@ -18,32 +18,43 @@
 
 namespace decision_maker
 {
-double DecisionMakerNode::getPoseAngle(const geometry_msgs::Pose &pose)
+bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag)
 {
-  double r, p, y;
+  const uint32_t monitoring_rate = 20;  // Hz
 
-  tf::Quaternion quat(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
-  tf::Matrix3x3(quat).getRPY(r, p, y);
-
-  // convert to [-pi : pi]
-  return y;
+  ros::Rate loop_rate(monitoring_rate);
+  while (ros::ok())
+  {
+    if (isEventFlagTrue(key) == flag)
+    {
+      break;
+    }
+    loop_rate.sleep();
+  }
+  return true;
 }
 
-double DecisionMakerNode::calcPosesAngleDiffN(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to)
+bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag, const double &timeout_sec)
 {
-  // convert to [-pi : pi]
-  return getPoseAngle(p_from) - getPoseAngle(p_to);
-}
+  const uint32_t monitoring_rate = 20;  // Hz
+  ros::Rate loop_rate(monitoring_rate);
 
-double DecisionMakerNode::calcPosesAngleDiff(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to)
-{
-  // convert to [-pi : pi]
-  double diff = std::fmod(calcPosesAngleDiffN(p_from, p_to), 2 * M_PI);
-  diff = diff > M_PI ? diff - 2 * M_PI : diff < -M_PI ? 2 * M_PI + diff : diff;
-  diff = diff * 180 / M_PI;
-  return diff;
-}
+  ros::Time entry_time = ros::Time::now();
 
+  while (ros::ok())
+  {
+    if (isEventFlagTrue(key) == flag)
+    {
+      return true;
+    }
+    if ((ros::Time::now() - entry_time).toSec() >= timeout_sec)
+    {
+      break;
+    }
+    loop_rate.sleep();
+  }
+  return false;
+}
 double DecisionMakerNode::calcIntersectWayAngle(const autoware_msgs::lane &laneinArea)
 {
   double diff = 0.0;
@@ -56,32 +67,27 @@ double DecisionMakerNode::calcIntersectWayAngle(const autoware_msgs::lane &lanei
     const geometry_msgs::Pose InPose = laneinArea.waypoints.front().pose.pose;
     const geometry_msgs::Pose OutPose = laneinArea.waypoints.back().pose.pose;
 
-    diff = calcPosesAngleDiff(InPose, OutPose);
+    diff = amathutils::calcPosesAngleDiffDeg(InPose, OutPose);
   }
 
   return diff;
 }
 
-bool DecisionMakerNode::isLocalizationConvergence(double _x, double _y, double _z, double _roll, double _pitch,
-                                                  double _yaw)
+bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_current_point)
 {
-  static amathutils::point a;
-  static amathutils::point b;
-
   static std::vector<double> distances;
   static uint32_t distances_count = 0;
+  static geometry_msgs::Point prev_point;
 
   bool ret = false;
 
-  a.x = b.x;
-  a.y = b.y;
-  a.z = b.z;
+  if (_current_point.x == 0 && _current_point.y == 0 && _current_point.z == 0 && prev_point.x == 0 &&
+      prev_point.y == 0 && prev_point.z == 0)
+  {
+    return ret;
+  }
 
-  b.x = _x;
-  b.y = _y;
-  b.z = _z;
-
-  distances.push_back(amathutils::find_distance(&a, &b));
+  distances.push_back(amathutils::find_distance(prev_point, _current_point));
   if (++distances_count > param_convergence_count_)
   {
     distances.erase(distances.begin());
@@ -89,10 +95,28 @@ bool DecisionMakerNode::isLocalizationConvergence(double _x, double _y, double _
     double avg_distances = std::accumulate(distances.begin(), distances.end(), 0) / distances.size();
     if (avg_distances <= param_convergence_threshold_)
     {
-      ret =  ctx->setCurrentState(state_machine::DRIVE_STATE);
+      ret = true;
     }
   }
-  
+
+  prev_point = _current_point;
   return ret;
+}
+bool DecisionMakerNode::isArrivedGoal()
+{
+  const double goal_threshold = 1.0;  // 1.0 meter
+  const auto goal_point = current_status_.finalwaypoints.waypoints.back().pose.pose.position;
+  fprintf(stderr, "distance:%f-'(%.4f,%.4f,%.4f):(%.4f,%.4f,%.4f)\n",
+          amathutils::find_distance(goal_point, current_status_.pose.position), goal_point.x, goal_point.y,
+          goal_point.z, current_status_.pose.position.x, current_status_.pose.position.y,
+          current_status_.pose.position.z);
+  if (amathutils::find_distance(goal_point, current_status_.pose.position) < goal_threshold)
+  {
+    if (current_status_.velocity <= 0.1)
+    {
+      return true;
+    }
+  }
+  return false;
 }
 }

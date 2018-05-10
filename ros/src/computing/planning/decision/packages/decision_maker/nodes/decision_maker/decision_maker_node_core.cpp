@@ -14,8 +14,8 @@
 
 #include <autoware_msgs/lane.h>
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
-#include <random>
 #include <visualization_msgs/MarkerArray.h>
+#include <random>
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Pose.h>
@@ -23,20 +23,27 @@
 
 namespace decision_maker
 {
+void DecisionMakerNode::tryNextState(const std::string &key)
+{
+  ctx->nextState(key);
+
+#if 0
+  std_msgs::String msg;
+  msg.data = Pubs[""].publish
+#endif
+}
+
 void DecisionMakerNode::update(void)
 {
   update_msgs();
   if (ctx)
-    ctx->update();
+    ctx->onUpdate();
 }
 
 void DecisionMakerNode::run(void)
 {
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(5);
 
-  // for subscribe callback function
-  ros::AsyncSpinner spinner(3);
-  spinner.start();
   while (ros::ok())
   {
     ros::Time begin = ros::Time::now();

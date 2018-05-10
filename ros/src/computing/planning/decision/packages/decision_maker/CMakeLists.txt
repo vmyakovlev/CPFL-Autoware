@@ -46,19 +46,16 @@ add_executable(decision_maker_node
         nodes/decision_maker/decision_maker_node_decision.cpp
         nodes/decision_maker/decision_maker_node_init.cpp
         nodes/decision_maker/decision_maker_node_callback.cpp
-        nodes/decision_maker/decision_maker_node_stateupdate.cpp
+        nodes/decision_maker/decision_maker_node_state_init.cpp
+        nodes/decision_maker/decision_maker_node_state_drive.cpp
         nodes/decision_maker/decision_maker_node_publish.cpp
         nodes/decision_maker/cross_road_area.cpp
         )
 target_link_libraries(decision_maker_node ${catkin_LIBRARIES})
 add_dependencies(decision_maker_node ${catkin_EXPORTED_TARGETS})
 
-# This function will be integrated into decision_maker soon.
-add_executable(planner_selector_node nodes/planner_selector/planner_selector_node.cpp)
-target_link_libraries(planner_selector_node ${catkin_LIBRARIES})
-add_dependencies(planner_selector_node ${catkin_EXPORTED_TARGETS})
 
-install(TARGETS decision_maker_node planner_selector_node
+install(TARGETS decision_maker_node 
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
