@@ -75,7 +75,7 @@ private:
   void brake_cmd_callback(const autoware_msgs::brake_cmd::ConstPtr& input_msg);
   void lamp_cmd_callback(const autoware_msgs::lamp_cmd::ConstPtr& input_msg);
   void ctrl_cmd_callback(const autoware_msgs::ControlCommandStamped::ConstPtr& input_msg);
-  void states_callback(const std_msgs::StringConstPtr& input_msg);
+  void state_callback(const std_msgs::StringConstPtr& input_msg);
 
   void reset_vehicle_cmd_msg();
   bool is_using_decisionmaker();
@@ -103,7 +103,7 @@ private:
       previous_command_mode_;
   std_msgs::String command_mode_topic_;
 
-  bool is_drive_state = false;
+  bool is_state_drive_ = false;
   // still send is true
   bool send_emergency_cmd = false;
 };
@@ -118,7 +118,7 @@ TwistGate::TwistGate(const ros::NodeHandle& nh, const ros::NodeHandle& private_n
   emergency_stop_pub_ = nh_.advertise<std_msgs::Bool>("/emergency_stop", 1, true);
   control_command_pub_ = nh_.advertise<std_msgs::String>("/ctrl_mode", 1);
   vehicle_cmd_pub_ = nh_.advertise<vehicle_cmd_msg_t>("/vehicle_cmd", 1, true);
-  state_cmd_pub_ = nh_.advertise<std_msgs::Int32>("/state_cmd", 1, true);
+  state_cmd_pub_ = nh_.advertise<std_msgs::String>("/state_cmd", 1, true);
 
   remote_cmd_sub_ = nh_.subscribe("/remote_cmd", 1, &TwistGate::remote_cmd_callback, this);
 
@@ -130,7 +130,7 @@ TwistGate::TwistGate(const ros::NodeHandle& nh, const ros::NodeHandle& private_n
   auto_cmd_sub_stdmap_["brake_cmd"] = nh_.subscribe("/brake_cmd", 1, &TwistGate::brake_cmd_callback, this);
   auto_cmd_sub_stdmap_["lamp_cmd"] = nh_.subscribe("/lamp_cmd", 1, &TwistGate::lamp_cmd_callback, this);
   auto_cmd_sub_stdmap_["ctrl_cmd"] = nh_.subscribe("/ctrl_cmd", 1, &TwistGate::ctrl_cmd_callback, this);
-  auto_cmd_sub_stdmap_["states"] = nh_.subscribe("/decisionmaker/states", 1, &TwistGate::states_callback, this);
+  auto_cmd_sub_stdmap_["states"] = nh_.subscribe("/decision_maker/state", 1, &TwistGate::state_callback, this);
 
   twist_gate_msg_.header.seq = 0;
   emergency_stop_msg_.data = false;
@@ -187,7 +187,7 @@ void TwistGate::check_state()
 {
   if (is_using_decisionmaker() && is_state_drive_)
   {
-    twist_gate_msg_.twist_cmd.twist = 0.0;
+    twist_gate_msg_.twist_cmd.twist.linear.x = 0.0;
     twist_gate_msg_.ctrl_cmd.linear_velocity = 0.0;
     twist_gate_msg_.ctrl_cmd.linear_acceleration = 0.0;
   }
@@ -242,8 +242,8 @@ void TwistGate::watchdog_timer()
       if (send_emergency_cmd == false)
       {
         // Change State to Stop
-        std_msgs::Int32 state_cmd;
-        state_cmd.data = 14;
+        std_msgs::String state_cmd;
+        state_cmd.data = "emmergency";
         state_cmd_pub_.publish(state_cmd);
         send_emergency_cmd = true;
       }
@@ -384,12 +384,12 @@ void TwistGate::ctrl_cmd_callback(const autoware_msgs::ControlCommandStamped::Co
   }
 }
 
-void TwistGate::states_callback(const autoware_msgs::stateConstPtr& input_msg)
+void TwistGate::state_callback(const std_msgs::StringConstPtr& input_msg)
 {
   if (command_mode_ == CommandMode::AUTO)
   {
     // Set Parking Gear
-    if (input_msg->behavior_state.find("WaitOrders") != std::string::npos)
+    if (input_msg->data.find("WaitOrders") != std::string::npos)
     {
       twist_gate_msg_.gear = CMD_GEAR_P;
     }
@@ -397,6 +397,16 @@ void TwistGate::states_callback(const autoware_msgs::stateConstPtr& input_msg)
     else
     {
       twist_gate_msg_.gear = CMD_GEAR_D;
+    }
+
+    // get drive state
+    if (input_msg->data.find("Drive") != std::string::npos)
+    {
+      is_state_drive_ = true;
+    }
+    else
+    {
+      is_state_drive_ = false;
     }
     vehicle_cmd_pub_.publish(twist_gate_msg_);
   }
