@@ -30,6 +30,53 @@ void DecisionMakerNode::publishLampCmd(const E_Lamp &status)
   Pubs["lamp_cmd"].publish(lamp_msg);
 }
 
+jsk_rviz_plugins::OverlayText createOverlayText(const std::string &data, const int column)
+{
+  jsk_rviz_plugins::OverlayText ret;
+
+  // message setup
+  ret.width = 500;
+  ret.height = 500;
+  ret.top = 10 + (column * 500);
+  ret.left = 10;
+  ret.bg_color.r = 0;
+  ret.bg_color.g = 0;
+  ret.bg_color.b = 0;
+  ret.bg_color.a = 0.8;
+
+  ret.line_width = 2;
+  ret.text_size = 9;
+  ret.font = "DejaVu Sans Mono";
+  ret.fg_color.r = 1.0;
+  ret.fg_color.g = 1.0;
+  ret.fg_color.b = 0.5;
+  ret.fg_color.a = 0.9;
+
+  ret.text = data;
+
+  return ret;
+}
+
+void DecisionMakerNode::publishOperatorHelpMessage(const std::string &message)
+{
+  static std::vector<std::string> msg_log;
+  static const size_t log_size = 10;
+
+  msg_log.push_back(message);
+
+  if (msg_log.size() >= log_size)
+  {
+    msg_log.erase(msg_log.begin());
+  }
+
+  std::string joined_msg;
+  for (const auto &i : msg_log)
+  {
+    joined_msg += "> " + i + "\n";
+  }
+  Pubs["operator_help_text"].publish(createOverlayText(joined_msg, 0));
+}
+
 void DecisionMakerNode::update_pubsub(void)
 {
   // if state machine require to re-subscribe topic,
@@ -194,37 +241,24 @@ void DecisionMakerNode::displayMarker(void)
 
 void DecisionMakerNode::update_msgs(void)
 {
+#if 1
   if (ctx)
   {
-#if 0
-      	  static std::string prevStateName;
-    // CurrentStateName = ctx->getCurrentStateName();
+    static std_msgs::String state_msg;
+    state_msg.data = ctx->getStateText();
+    Pubs["state"].publish(state_msg);
+    Pubs["state_overlay"].publish(createOverlayText(state_msg.data, 1));
 
-    if (prevStateName != CurrentStateName)
-    {
-      prevStateName = CurrentStateName;
-      update_pubsub();
-    }
-#if 0
-    autoware_msgs::state state_msg;
-    state_msg.main_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::MAIN_STATE);
-    state_msg.acc_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::ACC_STATE);
-    state_msg.str_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::STR_STATE);
-    state_msg.behavior_state = ctx->getCurrentStateName((uint8_t)state_machine::StateKinds::BEHAVIOR_STATE);
-#endif
-    // state_string_msg.data = CurrentStateName;
-    // state_text_msg.text = createStateMessageText();
-    // state_text_msg.text = state_msg.main_state + "\n" + state_msg.acc_state + "\n" + state_msg.str_state + "\n" +
-    // state_msg.behavior_state + "\n";
+    static std_msgs::String transition_msg;
+    transition_msg.data = ctx->getAvailableTransition();
 
-    // Pubs["states"].publish(state_msg);
-    // Pubs["state"].publish(state_string_msg);
-    // Pubs["state_overlay"].publish(state_text_msg);
+    Pubs["available_transition"].publish(transition_msg);
   }
   else
+  {
     std::cerr << "ctx is not found " << std::endl;
-#endif
   }
+#endif
 }
 
 std::string DecisionMakerNode::createStateMessageText()

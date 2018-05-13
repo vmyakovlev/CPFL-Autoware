@@ -50,6 +50,7 @@ inline double getTimefromAcceleration(const double &_v0, const double &_v, const
 }
 
 double find_distance(const geometry_msgs::Point &_from, const geometry_msgs::Point &_to);
+double find_distance(const geometry_msgs::Pose &_from, const geometry_msgs::Pose &_to);
 double find_angle(const geometry_msgs::Point &_from, const geometry_msgs::Point &_to);
 bool isIntersectLine(const geometry_msgs::Point &_l1_p1, const geometry_msgs::Point &_l1_p2,
                      const geometry_msgs::Point &_l2_p1, const geometry_msgs::Point &_l2_p2);

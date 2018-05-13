@@ -4,50 +4,49 @@ namespace decision_maker
 {
 void DecisionMakerNode::init(void)
 {
+  initROS();
 }
 
 void DecisionMakerNode::setupStateCallback(void)
 {
+  /*INIT*/
   ctx->setCallback(state_machine::CallbackType::ENTRY, "Init",
                    std::bind(&DecisionMakerNode::entryInitState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "Init",
                    std::bind(&DecisionMakerNode::updateInitState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "SensorInit",
                    std::bind(&DecisionMakerNode::entrySensorInitState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "SensorInit",
                    std::bind(&DecisionMakerNode::updateSensorInitState, this, std::placeholders::_1, 0));
-
+  ctx->setCallback(state_machine::CallbackType::ENTRY, "MapInit",
+                   std::bind(&DecisionMakerNode::entryMapInitState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "MapInit",
                    std::bind(&DecisionMakerNode::updateMapInitState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "LocalizationInit",
                    std::bind(&DecisionMakerNode::entryLocalizationInitState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::UPDATE, "LocalizationInit",
                    std::bind(&DecisionMakerNode::updateLocalizationInitState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "PlanningInit",
                    std::bind(&DecisionMakerNode::entryPlanningInitState, this, std::placeholders::_1, 0));
-
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "PlanningInit",
+                   std::bind(&DecisionMakerNode::updatePlanningInitState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::ENTRY, "VehicleInit",
                    std::bind(&DecisionMakerNode::entryVehicleInitState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "VehicleInit",
+                   std::bind(&DecisionMakerNode::updateVehicleInitState, this, std::placeholders::_1, 0));
 
   ctx->setCallback(state_machine::CallbackType::ENTRY, "VehicleReady",
                    std::bind(&DecisionMakerNode::entryVehicleReadyState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "VehicleReady",
                    std::bind(&DecisionMakerNode::updateVehicleReadyState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "WaitMissionOrder",
                    std::bind(&DecisionMakerNode::entryWaitMissionOrderState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "WaitMissionOrder",
                    std::bind(&DecisionMakerNode::updateWaitMissionOrderState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "MissionCheck",
                    std::bind(&DecisionMakerNode::entryMissionCheckState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "MissionCheck",
                    std::bind(&DecisionMakerNode::updateMissionCheckState, this, std::placeholders::_1, 0));
-
   ctx->setCallback(state_machine::CallbackType::ENTRY, "DriveReady",
                    std::bind(&DecisionMakerNode::entryDriveReadyState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "DriveReady",
@@ -64,13 +63,36 @@ void DecisionMakerNode::setupStateCallback(void)
                    std::bind(&DecisionMakerNode::updateLeftTurnState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "RightTurn",
                    std::bind(&DecisionMakerNode::updateRightTurnState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::ENTRY, "LeftTurn",
+                   std::bind(&DecisionMakerNode::entryTurnState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::ENTRY, "RightTurn",
+                   std::bind(&DecisionMakerNode::entryTurnState, this, std::placeholders::_1, 0));
 
   ctx->setCallback(state_machine::CallbackType::UPDATE, "Go",
                    std::bind(&DecisionMakerNode::updateGoState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "L_Go",
+                   std::bind(&DecisionMakerNode::updateGoState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "R_Go",
+                   std::bind(&DecisionMakerNode::updateGoState, this, std::placeholders::_1, 0));
+
   ctx->setCallback(state_machine::CallbackType::UPDATE, "Wait",
+                   std::bind(&DecisionMakerNode::updateWaitState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "L_Wait",
+                   std::bind(&DecisionMakerNode::updateWaitState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "R_Wait",
                    std::bind(&DecisionMakerNode::updateWaitState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::UPDATE, "Stopline",
                    std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "L_Stopline",
+                   std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "R_Stopline",
+                   std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "Stop",
+                   std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 1));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "L_Stop",
+                   std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 1));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "R_Stop",
+                   std::bind(&DecisionMakerNode::updateStoplineState, this, std::placeholders::_1, 1));
 
   ctx->setCallback(state_machine::CallbackType::UPDATE, "MissionComplete",
                    std::bind(&DecisionMakerNode::updateMissionCompleteState, this, std::placeholders::_1, 0));
@@ -80,8 +102,8 @@ void DecisionMakerNode::setupStateCallback(void)
   ctx->setCallback(state_machine::CallbackType::EXIT, "WaitOrder",
                    std::bind(&DecisionMakerNode::exitWaitMissionOrderState, this, std::placeholders::_1, 0));
 
-  ctx->setCallback(state_machine::CallbackType::ENTRY, "DriveReady",
-                   std::bind(&DecisionMakerNode::entryDriveReadyState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "MissionAborted",
+                   std::bind(&DecisionMakerNode::updateMissionAbortedState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::ENTRY, "DriveReady",
                    std::bind(&DecisionMakerNode::entryDriveReadyState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::ENTRY, "DriveReady",
@@ -113,40 +135,52 @@ void DecisionMakerNode::setupStateCallback(void)
 
   ctx->nextState("started");
 }
-void DecisionMakerNode::initROS()
-{
-  // for subscribe callback function
-  spinners = std::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(3));
-  spinners->start();
 
+void DecisionMakerNode::createSubscriber(void)
+{
   // Config subscriber
   Subs["config/decision_maker"] =
       nh_.subscribe("/config/decision_maker", 3, &DecisionMakerNode::callbackFromConfig, this);
 
+  Subs["state_cmd"] = nh_.subscribe("/state_cmd", 1, &DecisionMakerNode::callbackFromStateCmd, this);
+}
+void DecisionMakerNode::createPublisher(void)
+{
   // pub
   Pubs["state/stopline_wpidx"] = nh_.advertise<std_msgs::Int32>("/state/stopline_wpidx", 1, false);
 
   // for controlling other planner
-  Pubs["state"] = nh_.advertise<std_msgs::String>("state", 1);
   Pubs["lane_waypoints_array"] = nh_.advertise<autoware_msgs::LaneArray>(TPNAME_CONTROL_LANE_WAYPOINTS_ARRAY, 10, true);
-  Pubs["states"] = nh_.advertise<autoware_msgs::state>("/decisionmaker/states", 1, true);
   Pubs["light_color"] = nh_.advertise<autoware_msgs::traffic_light>("/light_color_managed", 1);
 
   // for controlling vehicle
   Pubs["lamp_cmd"] = nh_.advertise<autoware_msgs::lamp_cmd>("/lamp_cmd", 1);
 
   // for visualize status
-  Pubs["state_overlay"] = nh_.advertise<jsk_rviz_plugins::OverlayText>("/state/overlay_text", 1);
   Pubs["crossroad_marker"] = nh_.advertise<visualization_msgs::MarkerArray>("/state/cross_road_marker", 1);
-  Pubs["crossroad_inside_marker"] = nh_.advertise<visualization_msgs::Marker>("/state/cross_inside_marker", 1);
-  Pubs["crossroad_bbox"] = nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/state/crossroad_bbox", 10);
-  Pubs["detection_area"] = nh_.advertise<visualization_msgs::Marker>("/state/detection_area", 1);
   Pubs["stopline_target"] = nh_.advertise<visualization_msgs::Marker>("/state/stopline_target", 1);
+
+  Pubs["crossroad_inside_marker"] = private_nh_.advertise<visualization_msgs::Marker>("/state/cross_inside_marker", 1);
+  Pubs["crossroad_bbox"] = private_nh_.advertise<jsk_recognition_msgs::BoundingBoxArray>("/state/crossroad_bbox", 10);
+
+  Pubs["state"] = private_nh_.advertise<std_msgs::String>("state", 1, true);
+  Pubs["state_overlay"] = private_nh_.advertise<jsk_rviz_plugins::OverlayText>("/state/overlay_text", 1);
+  Pubs["available_transition"] = private_nh_.advertise<std_msgs::String>("available_transition", 1, true);
 
   // for debug
   Pubs["target_velocity_array"] = nh_.advertise<std_msgs::Float64MultiArray>("/target_velocity_array", 1);
-  Pubs["state_local_diffdistance"] = nh_.advertise<std_msgs::Float64>("/state/val_diff_distance", 1);
-  Pubs["exectime"] = nh_.advertise<std_msgs::Float64>("/state/exectime", 1);
+  Pubs["operator_help_text"] = private_nh_.advertise<jsk_rviz_plugins::OverlayText>("operator_help_text", 1, true);
+}
+
+void DecisionMakerNode::initROS()
+{
+  // for subscribe callback function
+
+  createSubscriber();
+  createPublisher();
+
+  spinners = std::shared_ptr<ros::AsyncSpinner>(new ros::AsyncSpinner(3));
+  spinners->start();
 
 #if 0
   // message setup

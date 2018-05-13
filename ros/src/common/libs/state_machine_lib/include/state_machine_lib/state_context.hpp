@@ -70,9 +70,9 @@ public:
   void createDOTGraph(std::string _file_name);
 
   std::string getStateText();
+  std::string getAvailableTransition(void);
   void showStateName();
   void nextState(const std::string &transition_key);
-  void InitContext(void);
 };
 }
 

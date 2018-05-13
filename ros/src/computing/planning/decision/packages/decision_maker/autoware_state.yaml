@@ -92,6 +92,9 @@ autoware_states:
       - 
         Key: mission_aborted
         Target: MissionAborted
+      - 
+        Key: emergency
+        Target: Emergency
     Parent: ~
   -
     StateName: LaneArea
@@ -112,18 +115,25 @@ autoware_states:
       - 
         Key: clear
         Target: L_Go
+      - 
+        Key: wait
+        Target: L_Wait
     Parent: LaneArea
+  -
+    StateName: L_Stop
+    Transition:
+      - 
+        Key: stopped
+        Target: L_Wait
+    Parent: LeftTurn
   -
     StateName: L_StopLine
     Transition:
       - 
         Key: clear
         Target: L_Go
-      - 
-        Key: found_obstacle_on_opposite_lane
-        Target: L_Wait
-      - 
-        Key: found_obstacle_on_waypoint
+      -
+        Key: found_risk
         Target: L_Wait
     Parent: LeftTurn
   -
@@ -132,19 +142,16 @@ autoware_states:
       - 
         Key: clear
         Target: L_Go
-      - 
-        Key: found_stopline
-        Target: L_StopLine
     Parent: LeftTurn
   -
     StateName: L_Go
     Transition:
       - 
         Key: found_obstacle_on_opposite_lane
-        Target: L_Wait
+        Target: L_Stop
       - 
-        Key: found_obstacle_on_waypoint
-        Target: L_Wait
+        Key: found_obstacle_in_stopped_area
+        Target: L_Stop
       - 
         Key: found_stopline
         Target: L_StopLine
@@ -155,18 +162,25 @@ autoware_states:
       - 
         Key: clear
         Target: R_Go
+      - 
+        Key: wait
+        Target: R_Wait
     Parent: LaneArea
+  -
+    StateName: R_Stop
+    Transition:
+      - 
+        Key: stopped
+        Target: R_Wait
+    Parent: RightTurn
   -
     StateName: R_StopLine
     Transition:
       - 
         Key: clear
         Target: R_Go
-      - 
-        Key: found_obstacle_on_opposite_lane
-        Target: R_Wait
-      - 
-        Key: found_obstacle_on_waypoint
+      -
+        Key: found_risk
         Target: R_Wait
     Parent: RightTurn
   -
@@ -175,27 +189,63 @@ autoware_states:
       - 
         Key: clear
         Target: R_Go
-      - 
-        Key: found_stopline
-        Target: R_StopLine
     Parent: RightTurn
   -
     StateName: R_Go
     Transition:
       - 
         Key: found_obstacle_on_opposite_lane
-        Target: R_Wait
+        Target: R_Stop
       - 
-        Key: found_obstacle_on_waypoint
-        Target: R_Wait
+        Key: found_obstacle_in_stopped_area
+        Target: R_Stop
       - 
         Key: found_stopline
         Target: R_StopLine
     Parent: RightTurn
   -
     StateName: Straight
-    Transition: []
+    Transition: 
+      - 
+        Key: clear
+        Target: Go
+      - 
+        Key: wait
+        Target: Wait
     Parent: LaneArea
+  -
+    StateName: Stop
+    Transition:
+      - 
+        Key: stopped
+        Target: Wait
+    Parent: Straight
+  -
+    StateName: StopLine
+    Transition:
+      - 
+        Key: clear
+        Target: Go
+      - Key: found_risk
+        Target: Wait
+    Parent: Straight
+  -
+    StateName: Wait
+    Transition:
+      - 
+        Key: clear
+        Target: Go
+    Parent: Straight
+  -
+    StateName: Go
+    Transition:
+      - 
+        Key: found_obstacle_in_stopped_area
+        Target: Stop
+      - 
+        Key: found_stopline
+        Target: StopLine
+    Parent: Straight
   -
     StateName: FreeArea
     Transition: []
@@ -212,6 +262,13 @@ autoware_states:
     Transition:
       -
         Key: goto_wait_order
+        Target: WaitOrder
+    Parent: ~
+  -
+    StateName: Emergency
+    Transition:
+      -
+        Key: return_from_emergency
         Target: WaitOrder
     Parent: ~
   -

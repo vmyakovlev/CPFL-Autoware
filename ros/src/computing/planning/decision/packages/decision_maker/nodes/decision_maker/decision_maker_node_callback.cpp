@@ -21,35 +21,10 @@ namespace decision_maker
 {
 void DecisionMakerNode::callbackFromFilteredPoints(const sensor_msgs::PointCloud2::ConstPtr &msg)
 {
-  EventFlags["received_pointcloud_for_NDT"] = true;
-}
+  setEventFlag("received_pointcloud_for_NDT", true);
 
-bool DecisionMakerNode::handleStateCmd(const uint64_t _state_num)
-{
-  bool _ret;
-#if 0
-  ctx->setEnableForceSetState(true);
-  if (!ctx->isCurrentState(_state_num))
-  {
-    _ret = ctx->setCurrentState((state_machine::StateFlags)_state_num);
-    if (_state_num == state_machine::DRIVE_BEHAVIOR_TRAFFICLIGHT_RED_STATE ||
-        _state_num == state_machine::DRIVE_BEHAVIOR_TRAFFICLIGHT_GREEN_STATE)
-    {
-      isManualLight = true;
-    }
-  }
-  else
-  {
-    _ret = ctx->disableCurrentState((state_machine::StateFlags)_state_num);
-    if (_state_num == state_machine::DRIVE_BEHAVIOR_TRAFFICLIGHT_RED_STATE ||
-        _state_num == state_machine::DRIVE_BEHAVIOR_TRAFFICLIGHT_GREEN_STATE)
-    {
-      isManualLight = false;
-    }
-  }
-  ctx->setEnableForceSetState(false);
-#endif
-  return _ret;
+  /* todo */
+  /* create timer for flags reset   */
 }
 
 void DecisionMakerNode::callbackFromSimPose(const geometry_msgs::PoseStamped &msg)
@@ -59,9 +34,10 @@ void DecisionMakerNode::callbackFromSimPose(const geometry_msgs::PoseStamped &ms
   Subs["sim_pose"].shutdown();
 }
 
-void DecisionMakerNode::callbackFromStateCmd(const std_msgs::Int32 &msg)
+void DecisionMakerNode::callbackFromStateCmd(const std_msgs::String &msg)
 {
-  ROS_INFO("Received forcing state changing request: %llx", 1ULL << (uint64_t)msg.data);
+  ROS_INFO("Received State Command");
+  tryNextState(msg.data);
   // handleStateCmd((uint64_t)1ULL << (uint64_t)msg.data);
 }
 
@@ -263,9 +239,9 @@ void DecisionMakerNode::setWaypointState(autoware_msgs::LaneArray &lane_array)
       for (auto &stopline : stoplines)
       {
         geometry_msgs::Point bp =
-            to_geoPoint(g_vmap.findByKey(Key<Point>(g_vmap.findByKey(Key<Line>(stopline.lid)).bpid)));
+            VMPoint2GeoPoint(g_vmap.findByKey(Key<Point>(g_vmap.findByKey(Key<Line>(stopline.lid)).bpid)));
         geometry_msgs::Point fp =
-            to_geoPoint(g_vmap.findByKey(Key<Point>(g_vmap.findByKey(Key<Line>(stopline.lid)).fpid)));
+            VMPoint2GeoPoint(g_vmap.findByKey(Key<Point>(g_vmap.findByKey(Key<Line>(stopline.lid)).fpid)));
 
 #define INTERSECT_CHECK_THRESHOLD 5.0
         if (getDistance(bp.x, bp.y, lane.waypoints.at(wp_idx).pose.pose.position.x,
@@ -322,7 +298,7 @@ void DecisionMakerNode::callbackFromLaneWaypoint(const autoware_msgs::LaneArray 
     }
   }
   setWaypointState(current_status_.based_lane_array);
-  EventFlags["received_based_lane_waypoint"] = true;
+  setEventFlag("received_based_lane_waypoint", true);
 }
 
 #if 0
@@ -337,7 +313,8 @@ void DecisionMakerNode::callbackFromLaneWaypoint(const autoware_msgs::LaneArray 
 void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane &msg)
 {
   current_status_.finalwaypoints = msg;
-  EventFlags["received_finalwaypoints"] = true;
+  setEventFlag("received_finalwaypoints", true);
+
 #if 0
   if (!ctx->isCurrentState(state_machine::DRIVE_STATE))
   {

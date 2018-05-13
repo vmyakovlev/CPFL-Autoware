@@ -22,24 +22,28 @@ private:
   std::shared_ptr<State> parent_state_;
   std::shared_ptr<State> child_state_;
 
-  std::function<void(const std::string &)> CallbackUpdateFunc;
-  std::function<void(const std::string &)> CallbackEntryFunc;
-  std::function<void(const std::string &)> CallbackExitFunc;
+  std::function<void(const std::string&)> CallbackUpdateFunc;
+  std::function<void(const std::string&)> CallbackEntryFunc;
+  std::function<void(const std::string&)> CallbackExitFunc;
 
   std::map<std::string, uint64_t> transition_map_;
 
-  void parseChildState(YAML::Node &node);
+  std::string entered_key_;
+
+  void parseChildState(YAML::Node& node);
 
 public:
   State(std::string _state_name, uint64_t _state_id, std::shared_ptr<State> _parent_state = NULL)
-    : child_state_(NULL), state_name_(_state_name), state_id_(_state_id), parent_state_(_parent_state)
+    : child_state_(NULL), state_name_(_state_name), state_id_(_state_id), parent_state_(_parent_state), entered_key_("")
   {
+#if 0
     CallbackUpdateFunc =
         [&](const std::string &arg) { /*DEBUG_PRINT("[%s]:%s is not registered\n", state_name_.c_str(), "update");*/ };
     CallbackEntryFunc =
         [&](const std::string &arg) { /*DEBUG_PRINT("[%s]:%s is not registered\n", state_name_.c_str(), "entry");*/ };
     CallbackExitFunc =
         [&](const std::string &arg) { /*DEBUG_PRINT("[%s]:%s is not registered\n", state_name_.c_str(), "exit");*/ };
+#endif
   }
   ~State()
   {
@@ -72,16 +76,16 @@ public:
     if (CallbackExitFunc)
       CallbackExitFunc(state_name_);
   }
-  void setCallbackUpdate(std::function<void(const std::string &)> _f)
+  void setCallbackUpdate(std::function<void(const std::string&)> _f)
   {
     CallbackUpdateFunc = _f;
   }
-  void setCallbackEntry(std::function<void(const std::string &)> _f)
+  void setCallbackEntry(std::function<void(const std::string&)> _f)
   {
     CallbackEntryFunc = _f;
   }
 
-  void setCallbackExit(std::function<void(const std::string &)> _f)
+  void setCallbackExit(std::function<void(const std::string&)> _f)
   {
     CallbackExitFunc = _f;
   }
@@ -115,7 +119,7 @@ public:
     return std::string(state_name_);
   }
 
-  void addTransition(std::string key, uint64_t val)
+  void addTransition(const std::string key, const uint64_t val)
   {
     transition_map_[key] = val;
   }
@@ -133,6 +137,14 @@ public:
   uint64_t getStateID(void)
   {
     return state_id_;
+  }
+  void setEnteredKey(const std::string& key)
+  {
+    entered_key_ = key;
+  }
+  std::string getEnteredKey(void)
+  {
+    return entered_key_;
   }
 };
 }

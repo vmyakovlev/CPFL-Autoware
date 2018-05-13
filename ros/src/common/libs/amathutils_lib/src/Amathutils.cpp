@@ -6,6 +6,10 @@ double find_distance(const geometry_msgs::Point &_from, const geometry_msgs::Poi
 {
   return std::hypot(std::hypot(_from.x - _to.x, _from.y - _to.y), _from.z - _to.z);
 }
+double find_distance(const geometry_msgs::Pose &_from, const geometry_msgs::Pose &_to)
+{
+  return find_distance(_from.position, _to.position);
+}
 
 double find_angle(const geometry_msgs::Point &_from, const geometry_msgs::Point &_to)
 {

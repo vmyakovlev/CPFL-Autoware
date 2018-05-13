@@ -130,7 +130,7 @@ TwistGate::TwistGate(const ros::NodeHandle& nh, const ros::NodeHandle& private_n
   auto_cmd_sub_stdmap_["brake_cmd"] = nh_.subscribe("/brake_cmd", 1, &TwistGate::brake_cmd_callback, this);
   auto_cmd_sub_stdmap_["lamp_cmd"] = nh_.subscribe("/lamp_cmd", 1, &TwistGate::lamp_cmd_callback, this);
   auto_cmd_sub_stdmap_["ctrl_cmd"] = nh_.subscribe("/ctrl_cmd", 1, &TwistGate::ctrl_cmd_callback, this);
-  auto_cmd_sub_stdmap_["states"] = nh_.subscribe("/decision_maker/state", 1, &TwistGate::state_callback, this);
+  auto_cmd_sub_stdmap_["state"] = nh_.subscribe("/decision_maker/state", 1, &TwistGate::state_callback, this);
 
   twist_gate_msg_.header.seq = 0;
   emergency_stop_msg_.data = false;
@@ -172,7 +172,7 @@ bool TwistGate::is_using_decisionmaker()
 
     for (const auto& i : node_list)
     {
-      if ("/decision_maker" == i)
+      if (i.find("decision_maker") != std::string::npos)
       {
         using_decision_maker_flag = true;
         break;
@@ -185,7 +185,7 @@ bool TwistGate::is_using_decisionmaker()
 
 void TwistGate::check_state()
 {
-  if (is_using_decisionmaker() && is_state_drive_)
+  if (is_using_decisionmaker() && !is_state_drive_)
   {
     twist_gate_msg_.twist_cmd.twist.linear.x = 0.0;
     twist_gate_msg_.ctrl_cmd.linear_velocity = 0.0;
@@ -400,7 +400,7 @@ void TwistGate::state_callback(const std_msgs::StringConstPtr& input_msg)
     }
 
     // get drive state
-    if (input_msg->data.find("Drive") != std::string::npos)
+    if (input_msg->data.find("Drive\n") != std::string::npos)
     {
       is_state_drive_ = true;
     }

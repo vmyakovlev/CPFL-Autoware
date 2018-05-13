@@ -87,6 +87,8 @@ typename std::underlying_type<T>::type enumToInteger(T t)
 
 struct AutowareStatus
 {
+  std::map<std::string, bool> EventFlags;
+
   // planning status
   autoware_msgs::LaneArray using_lane_array;  // with wpstate
   autoware_msgs::LaneArray based_lane_array;
@@ -97,6 +99,10 @@ struct AutowareStatus
   geometry_msgs::Pose pose;
   double velocity;  // kmph
 
+  AutowareStatus(void) : closest_waypoint(-1), velocity(0)
+  {
+  }
+
   // control status
 };
 
@@ -105,6 +111,7 @@ class DecisionMakerNode
 private:
   ros::NodeHandle nh_;
   ros::NodeHandle private_nh_;
+
   // Publishers
   std::unordered_map<std::string, ros::Publisher> Pubs;
   // Subscribers
@@ -122,8 +129,6 @@ private:
 
   // ROS Messages(Autoware)
   std::vector<geometry_msgs::Point> inside_points_;
-
-  std::map<std::string, bool> EventFlags;
 
   tf::TransformListener tflistener_baselink;
 
@@ -182,6 +187,9 @@ private:
   void initStateMsgs(void);
   bool initVectorMapClient(void);
 
+  void createSubscriber(void);
+  void createPublisher(void);
+
   // looping method
   void update(void);
   void update_msgs(void);
@@ -191,21 +199,6 @@ private:
   void publishToVelocityArray();
   std::string createStateMessageText();
   int createCrossRoadAreaMarker(visualization_msgs::Marker &crossroad_marker, double scale);
-
-  // judge method
-  // in near future, these methods will be deprecate to decision_maker library
-  bool isCrossRoadByVectorMapServer(const autoware_msgs::lane &lane_msg, const geometry_msgs::PoseStamped &pose_msg);
-  bool isLocalizationConvergence(const geometry_msgs::Point &_current_point);
-  bool handleStateCmd(const uint64_t _state_num);
-  // double calcIntersectWayAngle(const CrossRoadArea& area);
-  double calcIntersectWayAngle(const autoware_msgs::lane &laneinArea);
-
-  void insertPointWithinCrossRoad(const std::vector<CrossRoadArea> &_intersects, autoware_msgs::LaneArray &lane_array);
-
-  void setWaypointState(autoware_msgs::LaneArray &lane_array);
-  double calcPosesAngleDiff(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to);
-  double calcPosesAngleDiffN(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to);
-  double getPoseAngle(const geometry_msgs::Pose &p);
 
   /* for planning according to state*/
   void publishStoppedLaneArray(void);
@@ -218,32 +211,29 @@ private:
   void removeShiftLane(void);
   void setAllStoplineStop(void);
 
+  void publishOperatorHelpMessage(const std::string &message);
   void publishLampCmd(const E_Lamp &status);
   void publishStoplineWaypointIdx(int wp_idx);
   void publishLightColor(int status);
-#if 0
-  // callback by state context
-  void StoplinePlanIn(int status);
-  void StoplinePlanOut(int status);
-  void callbackInStateObstacleAvoid(int status);
-  void callbackOutStateObstacleAvoid(int status);
-  void updateStateObstacleAvoid(int status);
-  void updateStateSTR(int status);
-  void updateStateStop(int status);
-  void callbackOutStateStop(int status);
-  void callbackInStateStop(int status);
-  void callbackInStateAcc(int status);
-  void callbackInStateDec(int status);
-  void callbackInStateKeep(int status);
-  void callbackOutStateLaneChange(int status);
-#endif
 
+  /* decision */
   void tryNextState(const std::string &key);
-
+  bool isArrivedGoal(void);
+  bool isCrossRoadByVectorMapServer(const autoware_msgs::lane &lane_msg, const geometry_msgs::PoseStamped &pose_msg);
+  bool isLocalizationConvergence(const geometry_msgs::Point &_current_point);
+  bool handleStateCmd(const uint64_t _state_num);
+  void insertPointWithinCrossRoad(const std::vector<CrossRoadArea> &_intersects, autoware_msgs::LaneArray &lane_array);
+  void setWaypointState(autoware_msgs::LaneArray &lane_array);
   bool waitForEvent(const std::string &key, const bool &flag);
   bool waitForEvent(const std::string &key, const bool &flag, const double &timeout);
 
-  bool isArrivedGoal(void);
+  double calcIntersectWayAngle(const autoware_msgs::lane &laneinArea);
+  double calcPosesAngleDiff(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to);
+  double calcPosesAngleDiffN(const geometry_msgs::Pose &p_from, const geometry_msgs::Pose &p_to);
+  double getPoseAngle(const geometry_msgs::Pose &p);
+
+  uint8_t getSteeringStateFromWaypoint(void);
+  uint8_t getStopSignStateFromWaypoint(void);
 
   // current decision maker is support only lane area
   bool isVehicleOnLaneArea(void)
@@ -257,14 +247,14 @@ private:
 
   void setupStateCallback(void);
 
-  void updateStateVehicleReady(const std::string &state_name, int status);
-  void updateStateDriveReady(const std::string &state_name, int status);
-  void updateStateDrive(const std::string &state_name, int status);
-  void updateStateMissionComplete(const std::string &state_name, int status);
+  /*
+   * state callback
+   **/
 
   // entry callback
   void entryInitState(const std::string &state_name, int status);
   void entrySensorInitState(const std::string &state_name, int status);
+  void entryMapInitState(const std::string &state_name, int status);
   void entryLocalizationInitState(const std::string &state_name, int status);
   void entryPlanningInitState(const std::string &state_name, int status);
   void entryVehicleInitState(const std::string &state_name, int status);
@@ -273,17 +263,20 @@ private:
   void entryMissionCheckState(const std::string &state_name, int status);
   void entryDriveReadyState(const std::string &state_name, int status);
   void entryDriveState(const std::string &state_name, int status);
+  void entryTurnState(const std::string &state_name, int status);
 
   // update callback
   void updateInitState(const std::string &state_name, int status);
   void updateSensorInitState(const std::string &state_name, int status);
   void updateMapInitState(const std::string &state_name, int status);
   void updateLocalizationInitState(const std::string &state_name, int status);
+  void updatePlanningInitState(const std::string &state_name, int status);
+  void updateVehicleInitState(const std::string &state_name, int status);
   void updateVehicleReadyState(const std::string &state_name, int status);
   void updateWaitMissionOrderState(const std::string &state_name, int status);
-
   void updateMissionCheckState(const std::string &state_name, int status);
   void updateDriveReadyState(const std::string &state_name, int status);
+
   void updateDriveState(const std::string &state_name, int status);
   void updateLaneAreaState(const std::string &state_name, int status);
   void updateFreeAreaState(const std::string &state_name, int status);
@@ -292,12 +285,15 @@ private:
   void updateStoplineState(const std::string &state_name, int status);
   void updateGoState(const std::string &state_name, int status);
   void updateWaitState(const std::string &state_name, int status);
+
   void updateMissionCompleteState(const std::string &state_name, int status);
+  void updateMissionAbortedState(const std::string &state_name, int status);
+
+  // exit callback
   void exitWaitMissionOrderState(const std::string &state_name, int status);
 
   // callback by topic subscribing
   void callbackFromFilteredPoints(const sensor_msgs::PointCloud2::ConstPtr &msg);
-
   void callbackFromCurrentVelocity(const geometry_msgs::TwistStamped &msg);
   void callbackFromCurrentPose(const geometry_msgs::PoseStamped &msg);
   void callbackFromClosestWaypoint(const std_msgs::Int32 &msg);
@@ -307,14 +303,23 @@ private:
   void callbackFromLaneWaypoint(const autoware_msgs::LaneArray &msg);
   void callbackFromTwistCmd(const geometry_msgs::TwistStamped &msg);
   void callbackFromSimPose(const geometry_msgs::PoseStamped &msg);
-  void callbackFromStateCmd(const std_msgs::Int32 &msg);
   void callbackFromConfig(const autoware_msgs::ConfigDecisionMaker &msg);
   void callbackFromObjectDetector(const autoware_msgs::CloudClusterArray &msg);
+  void callbackFromStateCmd(const std_msgs::String &msg);
 
-  void callbackFromVectorMapArea(const vector_map_msgs::AreaArray &msg);
-  void callbackFromVectorMapPoint(const vector_map_msgs::PointArray &msg);
-  void callbackFromVectorMapLine(const vector_map_msgs::LineArray &msg);
-  void callbackFromVectorMapCrossRoad(const vector_map_msgs::CrossRoadArray &msg);
+  void setEventFlag(const std::string &key, const bool &value)
+  {
+    current_status_.EventFlags[key] = value;
+  }
+
+  bool isEventFlagTrue(std::string key)
+  {
+    if (current_status_.EventFlags.count(key) == 0)
+    {
+      current_status_.EventFlags[key] = false;
+    }
+    return current_status_.EventFlags[key];
+  }
 
 public:
   state_machine::StateContext *ctx;
@@ -322,6 +327,7 @@ public:
 
   DecisionMakerNode(int argc, char **argv) : private_nh_("~")
   {
+#if 0
     enableDisplayMarker = DEFAULT_DISPLAY_FLAG;
     param_convergence_threshold_ = DEFAULT_CONVERGENCE_THRESHOLD;
     param_convergence_count_ = DEFAULT_CONVERGENCE_COUNT;
@@ -336,33 +342,24 @@ public:
     detectionArea_.x2 = DEFAULT_DETECTION_AREA_X2;
     detectionArea_.y1 = DEFAULT_DETECTION_AREA_Y1;
     detectionArea_.y2 = DEFAULT_DETECTION_AREA_Y2;
-
+#endif
     std::string file_name;
     private_nh_.getParam("state_file_name", file_name);
 
     ctx = new state_machine::StateContext(file_name);
+    init();
     setupStateCallback();
-    // this->initROS(argc, argv);
   }
 
   void init(void);
+  void run(void);
 
-  bool isSubscribed(const std::string &topic_name)
+  bool isSubscriberRegistered(const std::string &topic_name)
   {
     return Subs.count(topic_name) ? true : false;
   }
 
-  bool isEventFlagTrue(std::string key)
-  {
-    if (EventFlags.count(key) == 0)
-    {
-      EventFlags[key] = false;
-    }
-    return EventFlags[key];
-  }
-
-  void run(void);
-  geometry_msgs::Point to_geoPoint(const vector_map_msgs::Point &vp)
+  static geometry_msgs::Point VMPoint2GeoPoint(const vector_map_msgs::Point &vp)
   {
     geometry_msgs::Point gp;
     gp.x = vp.ly;

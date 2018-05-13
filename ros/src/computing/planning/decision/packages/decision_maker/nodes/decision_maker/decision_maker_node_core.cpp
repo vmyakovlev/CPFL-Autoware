@@ -26,7 +26,6 @@ namespace decision_maker
 void DecisionMakerNode::tryNextState(const std::string &key)
 {
   ctx->nextState(key);
-
 #if 0
   std_msgs::String msg;
   msg.data = Pubs[""].publish
@@ -46,18 +45,9 @@ void DecisionMakerNode::run(void)
 
   while (ros::ok())
   {
-    ros::Time begin = ros::Time::now();
     update();
     if (enableDisplayMarker)
       displayMarker();
-
-#ifdef DEBUG_PRINT
-    // debug status
-    ros::Duration exec_time = ros::Time::now() - begin;
-    std_msgs::Float64 exec_time_sec;
-    exec_time_sec.data = exec_time.toSec();
-    Pubs["exectime"].publish(exec_time_sec);
-#endif
 
     loop_rate.sleep();
   }

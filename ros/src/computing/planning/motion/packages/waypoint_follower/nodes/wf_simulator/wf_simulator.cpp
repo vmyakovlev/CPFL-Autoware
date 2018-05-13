@@ -43,7 +43,7 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 
-#include "autoware_msgs/ControlCommandStamped.h"
+#include "autoware_msgs/VehicleCmd.h"
 #include "waypoint_follower/libwaypoint_follower.h"
 
 namespace
@@ -71,48 +71,43 @@ double g_wheel_base_m = 2.7;
 
 constexpr int LOOP_RATE = 50;  // 50Hz
 
-void CmdCallBack(const geometry_msgs::TwistStampedConstPtr& msg, double accel_rate)
+void CmdCallBack(const autoware_msgs::VehicleCmdConstPtr& msg, double accel_rate)
 {
   if (_use_ctrl_cmd == true)
-    return;
-
-  static double previous_linear_velocity = 0;
-
-  if (_current_velocity.linear.x < msg->twist.linear.x)
   {
-    _current_velocity.linear.x = previous_linear_velocity + accel_rate / (double)LOOP_RATE;
-
-    if (_current_velocity.linear.x > msg->twist.linear.x)
-    {
-      _current_velocity.linear.x = msg->twist.linear.x;
-    }
+    g_linear_acceleration = msg->ctrl_cmd.linear_acceleration;
+    g_steering_angle = msg->ctrl_cmd.steering_angle;
   }
   else
   {
-    _current_velocity.linear.x = previous_linear_velocity - accel_rate / (double)LOOP_RATE;
+    static double previous_linear_velocity = 0;
 
-    if (_current_velocity.linear.x < msg->twist.linear.x)
+    if (_current_velocity.linear.x < msg->twist_cmd.twist.linear.x)
     {
-      _current_velocity.linear.x = msg->twist.linear.x;
+      _current_velocity.linear.x = previous_linear_velocity + accel_rate / (double)LOOP_RATE;
+
+      if (_current_velocity.linear.x > msg->twist_cmd.twist.linear.x)
+      {
+        _current_velocity.linear.x = msg->twist_cmd.twist.linear.x;
+      }
     }
+    else
+    {
+      _current_velocity.linear.x = previous_linear_velocity - accel_rate / (double)LOOP_RATE;
+
+      if (_current_velocity.linear.x < msg->twist_cmd.twist.linear.x)
+      {
+        _current_velocity.linear.x = msg->twist_cmd.twist.linear.x;
+      }
+    }
+
+    previous_linear_velocity = _current_velocity.linear.x;
+
+    _current_velocity.angular.z = msg->twist_cmd.twist.angular.z;
+
+    //_current_velocity = msg->twist;
   }
-
-  previous_linear_velocity = _current_velocity.linear.x;
-
-  _current_velocity.angular.z = msg->twist.angular.z;
-
-  //_current_velocity = msg->twist;
 }
-
-void controlCmdCallBack(const autoware_msgs::ControlCommandStampedConstPtr& msg)
-{
-  if (_use_ctrl_cmd == false)
-    return;
-
-  g_linear_acceleration = msg->cmd.linear_acceleration;
-  g_steering_angle = msg->cmd.steering_angle;
-}
-
 void getTransformFromTF(const std::string parent_frame, const std::string child_frame, tf::StampedTransform& transform)
 {
   static tf::TransformListener listener;
@@ -298,8 +293,7 @@ int main(int argc, char** argv)
 
   // subscribe topic
   ros::Subscriber cmd_subscriber =
-      nh.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 10, boost::bind(CmdCallBack, _1, accel_rate));
-  ros::Subscriber control_cmd_subscriber = nh.subscribe("ctrl_cmd", 10, controlCmdCallBack);
+      nh.subscribe<autoware_msgs::VehicleCmd>("vehicle_cmd", 10, boost::bind(CmdCallBack, _1, accel_rate));
   ros::Subscriber waypoint_subcscriber = nh.subscribe("base_waypoints", 10, waypointCallback);
   ros::Subscriber closest_sub = nh.subscribe("closest_waypoint", 10, callbackFromClosestWaypoint);
   ros::Subscriber initialpose_subscriber;

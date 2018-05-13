@@ -18,6 +18,7 @@
 
 namespace decision_maker
 {
+/* do not use this within callback */
 bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag)
 {
   const uint32_t monitoring_rate = 20;  // Hz
@@ -81,6 +82,7 @@ bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_c
 
   bool ret = false;
 
+  // if current point is not set, localization is failure
   if (_current_point.x == 0 && _current_point.y == 0 && _current_point.z == 0 && prev_point.x == 0 &&
       prev_point.y == 0 && prev_point.z == 0)
   {
@@ -104,12 +106,9 @@ bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_c
 }
 bool DecisionMakerNode::isArrivedGoal()
 {
-  const double goal_threshold = 1.0;  // 1.0 meter
+  const double goal_threshold = 3.0;  // 1.0 meter
   const auto goal_point = current_status_.finalwaypoints.waypoints.back().pose.pose.position;
-  fprintf(stderr, "distance:%f-'(%.4f,%.4f,%.4f):(%.4f,%.4f,%.4f)\n",
-          amathutils::find_distance(goal_point, current_status_.pose.position), goal_point.x, goal_point.y,
-          goal_point.z, current_status_.pose.position.x, current_status_.pose.position.y,
-          current_status_.pose.position.z);
+
   if (amathutils::find_distance(goal_point, current_status_.pose.position) < goal_threshold)
   {
     if (current_status_.velocity <= 0.1)
@@ -118,5 +117,13 @@ bool DecisionMakerNode::isArrivedGoal()
     }
   }
   return false;
+}
+bool DecisionMakerNode::handleStateCmd(const uint64_t _state_num)
+{
+  bool _ret = false;
+
+  /* todo  */
+  /* key  */
+  return _ret;
 }
 }
