@@ -80,6 +80,8 @@ bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_c
   static uint32_t distances_count = 0;
   static geometry_msgs::Point prev_point;
 
+  static const int param_convergence_count_ = 10;
+
   bool ret = false;
 
   // if current point is not set, localization is failure

@@ -1,7 +1,7 @@
 <!-- -->
 <launch>
   <arg name="state_file_name" default="autoware_state.yaml" />
-	<node pkg="decision_maker" type="decision_maker_node" name="decision_maker" output="screen">
+<node pkg="decision_maker" type="decision_maker_node" name="decision_maker" output="screen"> 
     <param name ="state_file_name" value="$(find decision_maker)/$(arg state_file_name)"/>
 	</node>
 	

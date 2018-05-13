@@ -52,7 +52,7 @@ uint8_t DecisionMakerNode::getSteeringStateFromWaypoint(void)
   }
   return state;
 }
-uint8_t DecisionMakerNode::getStopSignStateFromWaypoint(void)
+std::pair<uint8_t, int> DecisionMakerNode::getStopSignStateFromWaypoint(void)
 {
   static const size_t ignore_idx = 0;
   static const double mu = 0.7;  // dry ground/ asphalt/ normal tire
@@ -63,13 +63,15 @@ uint8_t DecisionMakerNode::getStopSignStateFromWaypoint(void)
   const double braking_distance = velocity * velocity / (2 * g * mu);
   const double distance_to_target = (free_running_distance + braking_distance) * 2 /* safety margin*/;
 
+  std::pair<uint8_t, int> ret(0, -1);
+
   double distance = 0.0;
   geometry_msgs::Pose prev_pose = current_status_.pose;
   uint8_t state = 0;
 
   if (ignore_idx > current_status_.finalwaypoints.waypoints.size())
   {
-    return 0;
+    return ret;
   }
 
   for (auto idx = 0; idx < current_status_.finalwaypoints.waypoints.size() - 1; idx++)
@@ -79,11 +81,13 @@ uint8_t DecisionMakerNode::getStopSignStateFromWaypoint(void)
 
     if (state && distance >= distance_to_target)
     {
+      ret.first = state;
+      ret.second = idx;
       break;
     }
     prev_pose = current_status_.finalwaypoints.waypoints.at(idx).pose.pose;
   }
-  return state;
+  return ret;
 }
 void DecisionMakerNode::updateLaneAreaState(cstring_t &state_name, int status)
 {
@@ -129,8 +133,10 @@ void DecisionMakerNode::updateRightTurnState(cstring_t &state_name, int status)
 
 void DecisionMakerNode::updateGoState(cstring_t &state_name, int status)
 {
-  if (getStopSignStateFromWaypoint())
+  std::pair<uint8_t, int> got_stopsign = getStopSignStateFromWaypoint();
+  if (got_stopsign.first != 0)
   {
+    current_status_.found_stopsign_idx = got_stopsign.second;
     tryNextState("found_stopline");
   }
 }
@@ -138,10 +144,32 @@ void DecisionMakerNode::updateGoState(cstring_t &state_name, int status)
 void DecisionMakerNode::updateWaitState(cstring_t &state_name, int status)
 {
   /* clear,*/
+  publishStoplineWaypointIdx(current_status_.closest_waypoint + 1);
 }
 
 void DecisionMakerNode::updateStoplineState(cstring_t &state_name, int status)
 {
+  publishStoplineWaypointIdx(current_status_.found_stopsign_idx);
   /* clear found_risk*/
+
+  static bool timerflag = false;
+  static ros::Timer stopping_timer;
+
+  if (current_status_.velocity == 0.0 && !timerflag)
+  {
+    stopping_timer = nh_.createTimer(ros::Duration(0.5),
+                                     [&](const ros::TimerEvent &) {
+                                       timerflag = false;
+                                       tryNextState("clear");
+                                       /*if found risk, tryNextState("found_risk");*/
+                                     },
+                                     this, true);
+    timerflag = true;
+  }
+}
+void DecisionMakerNode::exitStopState(cstring_t &state_name, int status)
+{
+  current_status_.found_stopsign_idx = -1;
+  publishStoplineWaypointIdx(current_status_.found_stopsign_idx);
 }
 }
