@@ -19,7 +19,7 @@
 namespace decision_maker
 {
 /* do not use this within callback */
-bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag)
+bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag)
 {
   const uint32_t monitoring_rate = 20;  // Hz
 
@@ -35,7 +35,7 @@ bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag)
   return true;
 }
 
-bool DecisionMakerNode::waitForEvent(const std::string &key, const bool &flag, const double &timeout_sec)
+bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag, const double &timeout_sec)
 {
   const uint32_t monitoring_rate = 20;  // Hz
   ros::Rate loop_rate(monitoring_rate);

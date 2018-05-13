@@ -30,7 +30,7 @@ void DecisionMakerNode::publishLampCmd(const E_Lamp &status)
   Pubs["lamp_cmd"].publish(lamp_msg);
 }
 
-jsk_rviz_plugins::OverlayText createOverlayText(const std::string &data, const int column)
+jsk_rviz_plugins::OverlayText createOverlayText(cstring_t &data, const int column)
 {
   jsk_rviz_plugins::OverlayText ret;
 
@@ -57,7 +57,7 @@ jsk_rviz_plugins::OverlayText createOverlayText(const std::string &data, const i
   return ret;
 }
 
-void DecisionMakerNode::publishOperatorHelpMessage(const std::string &message)
+void DecisionMakerNode::publishOperatorHelpMessage(cstring_t &message)
 {
   static std::vector<std::string> msg_log;
   static const size_t log_size = 10;

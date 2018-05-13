@@ -2,11 +2,11 @@
 
 namespace decision_maker
 {
-void DecisionMakerNode::entryDriveState(const std::string &state_name, int status)
+void DecisionMakerNode::entryDriveState(cstring_t &state_name, int status)
 {
   publishOperatorHelpMessage("< Engaged");
 }
-void DecisionMakerNode::updateDriveState(const std::string &state_name, int status)
+void DecisionMakerNode::updateDriveState(cstring_t &state_name, int status)
 {
   if (isArrivedGoal())
   {
@@ -85,7 +85,7 @@ uint8_t DecisionMakerNode::getStopSignStateFromWaypoint(void)
   }
   return state;
 }
-void DecisionMakerNode::updateLaneAreaState(const std::string &state_name, int status)
+void DecisionMakerNode::updateLaneAreaState(cstring_t &state_name, int status)
 {
   if (current_status_.finalwaypoints.waypoints.empty())
   {
@@ -108,26 +108,26 @@ void DecisionMakerNode::updateLaneAreaState(const std::string &state_name, int s
   }
 }
 
-void DecisionMakerNode::updateFreeAreaState(const std::string &state_name, int status)
+void DecisionMakerNode::updateFreeAreaState(cstring_t &state_name, int status)
 {
 }
 
-void DecisionMakerNode::entryTurnState(const std::string &state_name, int status)
+void DecisionMakerNode::entryTurnState(cstring_t &state_name, int status)
 {
   tryNextState("clear");
 }
 
-void DecisionMakerNode::updateLeftTurnState(const std::string &state_name, int status)
+void DecisionMakerNode::updateLeftTurnState(cstring_t &state_name, int status)
 {
   publishLampCmd(E_Lamp::LAMP_LEFT);
 }
 
-void DecisionMakerNode::updateRightTurnState(const std::string &state_name, int status)
+void DecisionMakerNode::updateRightTurnState(cstring_t &state_name, int status)
 {
   publishLampCmd(E_Lamp::LAMP_RIGHT);
 }
 
-void DecisionMakerNode::updateGoState(const std::string &state_name, int status)
+void DecisionMakerNode::updateGoState(cstring_t &state_name, int status)
 {
   if (getStopSignStateFromWaypoint())
   {
@@ -135,12 +135,12 @@ void DecisionMakerNode::updateGoState(const std::string &state_name, int status)
   }
 }
 
-void DecisionMakerNode::updateWaitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateWaitState(cstring_t &state_name, int status)
 {
   /* clear,*/
 }
 
-void DecisionMakerNode::updateStoplineState(const std::string &state_name, int status)
+void DecisionMakerNode::updateStoplineState(cstring_t &state_name, int status)
 {
   /* clear found_risk*/
 }

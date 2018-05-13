@@ -2,7 +2,7 @@
 
 namespace decision_maker
 {
-void DecisionMakerNode::entryInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entryInitState(cstring_t &state_name, int status)
 {
   ROS_INFO("Hello Autoware World");
 
@@ -11,7 +11,7 @@ void DecisionMakerNode::entryInitState(const std::string &state_name, int status
   tryNextState("init_start");
 }
 
-void DecisionMakerNode::updateInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateInitState(cstring_t &state_name, int status)
 {
   static bool is_first_callback = true;
 
@@ -23,13 +23,13 @@ void DecisionMakerNode::updateInitState(const std::string &state_name, int statu
   is_first_callback = false;
 }
 
-void DecisionMakerNode::entrySensorInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entrySensorInitState(cstring_t &state_name, int status)
 {
   Subs["filtered_points"] = nh_.subscribe("filtered_points", 1, &DecisionMakerNode::callbackFromFilteredPoints, this);
   publishOperatorHelpMessage("Please publish \"filtered_points\"");
 }
 
-void DecisionMakerNode::updateSensorInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateSensorInitState(cstring_t &state_name, int status)
 {
   const double timeout = 1;
 
@@ -56,12 +56,12 @@ void DecisionMakerNode::updateSensorInitState(const std::string &state_name, int
   ROS_INFO("DecisionMaker is waiting filtered_point for NDT");
 }
 
-void DecisionMakerNode::entryMapInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entryMapInitState(cstring_t &state_name, int status)
 {
   publishOperatorHelpMessage("Please load map");
 }
 
-void DecisionMakerNode::updateMapInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateMapInitState(cstring_t &state_name, int status)
 {
   bool vmap_loaded = false;
 
@@ -86,13 +86,13 @@ void DecisionMakerNode::updateMapInitState(const std::string &state_name, int st
   }
 }
 
-void DecisionMakerNode::entryLocalizationInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entryLocalizationInitState(cstring_t &state_name, int status)
 {
   Subs["current_pose"] = nh_.subscribe("current_pose", 5, &DecisionMakerNode::callbackFromCurrentPose, this);
   publishOperatorHelpMessage("Please start localization in stopped.");
 }
 
-void DecisionMakerNode::updateLocalizationInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateLocalizationInitState(cstring_t &state_name, int status)
 {
   if (isLocalizationConvergence(current_status_.pose.position))
   {
@@ -100,23 +100,23 @@ void DecisionMakerNode::updateLocalizationInitState(const std::string &state_nam
   }
 }
 
-void DecisionMakerNode::entryPlanningInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entryPlanningInitState(cstring_t &state_name, int status)
 {
   Subs["closest_waypoint"] =
       nh_.subscribe("closest_waypoint", 1, &DecisionMakerNode::callbackFromClosestWaypoint, this);
 }
 
-void DecisionMakerNode::updatePlanningInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updatePlanningInitState(cstring_t &state_name, int status)
 {
   tryNextState("planning_is_ready");
 }
 
-void DecisionMakerNode::entryVehicleInitState(const std::string &state_name, int status)
+void DecisionMakerNode::entryVehicleInitState(cstring_t &state_name, int status)
 {
   publishOperatorHelpMessage("Please prepare vehicle for depature.");
 }
 
-void DecisionMakerNode::updateVehicleInitState(const std::string &state_name, int status)
+void DecisionMakerNode::updateVehicleInitState(cstring_t &state_name, int status)
 {
   if (true /*isEventFlagTrue("received_vehicle_status")*/)
   {
@@ -124,11 +124,11 @@ void DecisionMakerNode::updateVehicleInitState(const std::string &state_name, in
   }
 }
 
-void DecisionMakerNode::entryVehicleReadyState(const std::string &state_name, int status)
+void DecisionMakerNode::entryVehicleReadyState(cstring_t &state_name, int status)
 {
 }
 
-void DecisionMakerNode::updateVehicleReadyState(const std::string &state_name, int status)
+void DecisionMakerNode::updateVehicleReadyState(cstring_t &state_name, int status)
 {
   tryNextState("going_to_wait_mission_order");
 }
