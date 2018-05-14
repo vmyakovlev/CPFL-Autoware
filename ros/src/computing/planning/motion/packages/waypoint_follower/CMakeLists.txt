@@ -47,6 +47,7 @@ add_executable(pure_pursuit
   nodes/pure_pursuit/pure_pursuit.cpp
   nodes/pure_pursuit/pure_pursuit_core.cpp
   nodes/pure_pursuit/pure_pursuit_viz.cpp
+  nodes/pure_pursuit/accel.cpp
   )
 target_link_libraries(pure_pursuit libwaypoint_follower ${catkin_LIBRARIES})
 add_dependencies(pure_pursuit

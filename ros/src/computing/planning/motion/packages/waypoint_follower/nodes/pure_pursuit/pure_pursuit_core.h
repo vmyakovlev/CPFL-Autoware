@@ -44,6 +44,7 @@
 #include "autoware_msgs/ControlCommandStamped.h"
 #include "pure_pursuit_viz.h"
 #include "pure_pursuit.h"
+#include "accel.h"
 
 namespace waypoint_follower
 {
@@ -76,7 +77,7 @@ private:
 
   // class
   PurePursuit pp_;
-
+  Accel accel_;
   // publisher
   ros::Publisher pub1_, pub2_, pub11_, pub12_, pub13_, pub14_, pub15_, pub16_;
 
@@ -113,7 +114,6 @@ private:
 
   double computeLookaheadDistance() const;
   double computeCommandVelocity() const;
-  double computeCommandAccel() const;
   double computeAngularGravity(double velocity, double kappa) const;
 };
 

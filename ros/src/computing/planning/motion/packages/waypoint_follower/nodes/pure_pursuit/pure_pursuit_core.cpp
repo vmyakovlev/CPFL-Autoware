@@ -117,9 +117,9 @@ void PurePursuitNode::run()
     angular_gravity_msg.data = computeAngularGravity(computeCommandVelocity(), kappa);
     pub16_.publish(angular_gravity_msg);
 
-    is_pose_set_ = false;
-    is_velocity_set_ = false;
-    is_waypoint_set_ = false;
+    // is_pose_set_ = false;
+    // is_velocity_set_ = false;
+    // is_waypoint_set_ = false;
 
     loop_rate.sleep();
   }
@@ -142,7 +142,7 @@ void PurePursuitNode::publishControlCommandStamped(const bool &can_get_curvature
   autoware_msgs::ControlCommandStamped ccs;
   ccs.header.stamp = ros::Time::now();
   ccs.cmd.linear_velocity = can_get_curvature ? computeCommandVelocity() : 0;
-  ccs.cmd.linear_acceleration = can_get_curvature ? computeCommandAccel() : 0;
+  ccs.cmd.linear_acceleration = can_get_curvature ? accel_.computeAccel() : 0;
   ccs.cmd.steering_angle = can_get_curvature ? convertCurvatureToSteeringAngle(wheel_base_, kappa) : 0;
 
   pub2_.publish(ccs);
@@ -167,19 +167,6 @@ double PurePursuitNode::computeCommandVelocity() const
     return kmph2mps(const_velocity_);
 
   return command_linear_velocity_;
-}
-
-double PurePursuitNode::computeCommandAccel() const
-{
-  const geometry_msgs::Pose current_pose = pp_.getCurrentPose();
-  const geometry_msgs::Pose target_pose = pp_.getCurrentWaypoints().at(1).pose.pose;
-
-  // v^2 - v0^2 = 2ax
-  const double x =  std::hypot(current_pose.position.x-target_pose.position.x, current_pose.position.y-target_pose.position.y);
-  const double v0 = current_linear_velocity_;
-  const double v = computeCommandVelocity();
-  const double a = (v*v - v0*v0) / (2*x);
-  return a;
 }
 
 double PurePursuitNode::computeAngularGravity(double velocity, double kappa) const
@@ -208,6 +195,7 @@ void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStam
 {
   current_linear_velocity_ = msg->twist.linear.x;
   pp_.setCurrentVelocity(current_linear_velocity_);
+  accel_.setCurrentVelocity(current_linear_velocity_);
   is_velocity_set_ = true;
 }
 
@@ -219,6 +207,7 @@ void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr &m
     command_linear_velocity_ = 0;
 
   pp_.setCurrentWaypoints(msg->waypoints);
+  accel_.setTargetVelocity(command_linear_velocity_);
   is_waypoint_set_ = true;
 }
 
