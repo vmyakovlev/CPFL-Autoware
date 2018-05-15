@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
         velodyne_pointcloud
         autoware_msgs
         tf
+        laser_geometry
         )
 
 catkin_package(CATKIN_DEPENDS
@@ -141,7 +142,7 @@ add_dependencies(cloud_transformer ${catkin_EXPORTED_TARGETS})
 #    find_package(rostest REQUIRED)
 #    find_package(roslaunch REQUIRED)
 
-#    add_rostest_gtest(test_points_preprocessor 
+#    add_rostest_gtest(test_points_preprocessor
 #			test/test_points_preprocessor.test
 #			test/src/test_points_preprocessor.cpp)
 #   target_include_directories(test_points_preprocessor PRIVATE
@@ -151,6 +152,15 @@ add_dependencies(cloud_transformer ${catkin_EXPORTED_TARGETS})
 #            ray_ground_filter_lib
 #            ${catkin_LIBRARIES})
 #endif ()
+
+# Laser to Pointcloud
+add_executable(laser_to_pointcloud
+    nodes/laser_to_pointcloud/laser_to_pointcloud.cpp
+)
+target_link_libraries(laser_to_pointcloud
+    ${catkin_LIBRARIES}
+    ${PCL_LIBRARIES}
+)
 
 
 install(TARGETS cloud_transformer points_concat_filter ray_ground_filter ring_ground_filter space_filter
