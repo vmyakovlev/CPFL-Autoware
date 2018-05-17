@@ -170,7 +170,9 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 		pcl::PointXYZI *host_tmp = input->points.data();
 
 		// Pin the host buffer for accelerating the memory copy
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostRegister(host_tmp, sizeof(pcl::PointXYZI) * points_number_, cudaHostRegisterDefault));
+#endif
 
 		checkCudaErrors(cudaMemcpy(tmp, host_tmp, sizeof(pcl::PointXYZI) * points_number_, cudaMemcpyHostToDevice));
 
@@ -228,7 +230,9 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 		checkCudaErrors(cudaFree(tmp));
 
 		// Unpin host buffer
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostUnregister(host_tmp));
+#endif
 	}
 }
 
@@ -245,7 +249,9 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 		pcl::PointXYZ *host_tmp = input->points.data();
 
 		// Pin the host buffer for accelerating the memory copy
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostRegister(host_tmp, sizeof(pcl::PointXYZ) * points_number_, cudaHostRegisterDefault));
+#endif
 
 		checkCudaErrors(cudaMemcpy(tmp, host_tmp, sizeof(pcl::PointXYZ) * points_number_, cudaMemcpyHostToDevice));
 
@@ -299,7 +305,10 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 		checkCudaErrors(cudaMemcpy(trans_z_, z_, sizeof(float) * points_number_, cudaMemcpyDeviceToDevice));
 
 		checkCudaErrors(cudaFree(tmp));
+
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostUnregister(host_tmp));
+#endif
 	}
 }
 
@@ -317,7 +326,9 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 
 		pcl::PointXYZI *host_tmp = input->points.data();
 
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostRegister(host_tmp, sizeof(pcl::PointXYZI) * target_points_number_, cudaHostRegisterDefault));
+#endif
 
 		checkCudaErrors(cudaMemcpy(tmp, host_tmp, sizeof(pcl::PointXYZI) * target_points_number_, cudaMemcpyHostToDevice));
 
@@ -347,8 +358,11 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
 
-		checkCudaErrors(cudaHostUnregister(host_tmp));
 		checkCudaErrors(cudaFree(tmp));
+
+#ifndef __aarch64__
+		checkCudaErrors(cudaHostUnregister(host_tmp));
+#endif
 	}
 }
 
@@ -363,7 +377,9 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 
 		pcl::PointXYZ *host_tmp = input->points.data();
 
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostRegister(host_tmp, sizeof(pcl::PointXYZ) * target_points_number_, cudaHostRegisterDefault));
+#endif
 
 		checkCudaErrors(cudaMemcpy(tmp, host_tmp, sizeof(pcl::PointXYZ) * target_points_number_, cudaMemcpyHostToDevice));
 
@@ -394,7 +410,10 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 		checkCudaErrors(cudaDeviceSynchronize());
 
 		checkCudaErrors(cudaFree(tmp));
+
+#ifndef __aarch64__
 		checkCudaErrors(cudaHostUnregister(host_tmp));
+#endif
 	}
 }
 

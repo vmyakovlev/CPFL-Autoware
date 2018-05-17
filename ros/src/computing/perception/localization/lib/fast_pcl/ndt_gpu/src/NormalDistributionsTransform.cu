@@ -199,10 +199,21 @@ void GNormalDistributionsTransform::computeTransformation(const Eigen::Matrix<fl
 
 		delta_p *= delta_p_norm;
 
-		transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(delta_p(0)), static_cast<float>(delta_p(1)), static_cast<float>(delta_p(2))) *
-							Eigen::AngleAxis<float>(static_cast<float>(delta_p(3)), Eigen::Vector3f::UnitX()) *
-							Eigen::AngleAxis<float>(static_cast<float>(delta_p(4)), Eigen::Vector3f::UnitY()) *
-							Eigen::AngleAxis<float>(static_cast<float>(delta_p(5)), Eigen::Vector3f::UnitZ())).matrix();
+		// Fix ndt_gpu not working on TegraX2 and DrivePX2
+		Eigen::Translation<float, 3> translation(static_cast<float>(delta_p(0)), static_cast<float>(delta_p(1)), static_cast<float>(delta_p(2)));
+		Eigen::AngleAxis<float> tmp1(static_cast<float>(delta_p(3)), Eigen::Vector3f::UnitX());
+		Eigen::AngleAxis<float> tmp2(static_cast<float>(delta_p(4)), Eigen::Vector3f::UnitY());
+		Eigen::AngleAxis<float> tmp3(static_cast<float>(delta_p(5)), Eigen::Vector3f::UnitZ());
+		Eigen::AngleAxis<float> tmp4(tmp1 * tmp2 * tmp3);
+
+		transformation_ = (translation * tmp4).matrix();
+
+//		transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(delta_p(0)), static_cast<float>(delta_p(1)), static_cast<float>(delta_p(2))) *
+//							Eigen::AngleAxis<float>(static_cast<float>(delta_p(3)), Eigen::Vector3f::UnitX()) *
+//							Eigen::AngleAxis<float>(static_cast<float>(delta_p(4)), Eigen::Vector3f::UnitY()) *
+//							Eigen::AngleAxis<float>(static_cast<float>(delta_p(5)), Eigen::Vector3f::UnitZ())).matrix();
+
+
 
 		p = p + delta_p;
 
@@ -529,7 +540,7 @@ __global__ void computeHessianListS0(float *trans_x, float *trans_y, float *tran
 													double *icov00, double *icov01, double *icov02,
 													double *icov10, double *icov11, double *icov12,
 													double *icov20, double *icov21, double *icov22,
-													double *point_gradients0, double *point_gradients1, double *point_gradients2,
+													double *point_gradients,
 													double *tmp_hessian,
 													int valid_voxel_num)
 {
@@ -538,9 +549,9 @@ __global__ void computeHessianListS0(float *trans_x, float *trans_y, float *tran
 	int col = blockIdx.y;
 
 	if (col < 6) {
-		double *tmp_pg0 = point_gradients0 + col * valid_points_num;
-		double *tmp_pg1 = point_gradients1 + 6 * valid_points_num;
-		double *tmp_pg2 = point_gradients2 + 6 * valid_points_num;
+		double *tmp_pg0 = point_gradients + col * valid_points_num;
+		double *tmp_pg1 = tmp_pg0 + 6 * valid_points_num;
+		double *tmp_pg2 = tmp_pg1 + 6 * valid_points_num;
 		double *tmp_h = tmp_hessian + col * valid_voxel_num;
 
 		for (int i = id; i < valid_points_num && col < 6; i += stride) {
@@ -876,7 +887,7 @@ double GNormalDistributionsTransform::computeDerivatives(Eigen::Matrix<double, 6
 												inverse_covariance, inverse_covariance + voxel_num, inverse_covariance + 2 * voxel_num,
 												inverse_covariance + 3 * voxel_num, inverse_covariance + 4 * voxel_num, inverse_covariance + 5 * voxel_num,
 												inverse_covariance + 6 * voxel_num, inverse_covariance + 7 * voxel_num, inverse_covariance + 8 * voxel_num,
-												point_gradients, point_gradients + 6 * valid_points_num, point_gradients + 12 * valid_points_num,
+												point_gradients,
 												tmp_hessian, valid_voxel_num);
 		checkCudaErrors(cudaGetLastError());
 		grid.z = 6;
@@ -1193,10 +1204,18 @@ double GNormalDistributionsTransform::computeStepLengthMT(const Eigen::Matrix<do
 
 	x_t = x + step_dir * a_t;
 
-	final_transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2))) *
-								Eigen::AngleAxis<float>(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX()) *
-								Eigen::AngleAxis<float>(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY()) *
-								Eigen::AngleAxis<float>(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ())).matrix();
+	Eigen::Translation<float, 3> translation(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2)));
+	Eigen::AngleAxis<float> tmp1(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX());
+	Eigen::AngleAxis<float> tmp2(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY());
+	Eigen::AngleAxis<float> tmp3(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ());
+	Eigen::AngleAxis<float> tmp4(tmp1 * tmp2 * tmp3);
+
+	final_transformation_ = (translation * tmp4).matrix();
+
+//	final_transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2))) *
+//								Eigen::AngleAxis<float>(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX()) *
+//								Eigen::AngleAxis<float>(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY()) *
+//								Eigen::AngleAxis<float>(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ())).matrix();
 
 	transformPointCloud(x_, y_, z_, trans_x, trans_y, trans_z, points_num, final_transformation_);
 
@@ -1219,11 +1238,18 @@ double GNormalDistributionsTransform::computeStepLengthMT(const Eigen::Matrix<do
 
 		x_t = x + step_dir * a_t;
 
+		translation = Eigen::Translation<float, 3>(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2)));
+		tmp1 = Eigen::AngleAxis<float>(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX());
+		tmp2 = Eigen::AngleAxis<float>(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY());
+		tmp3 = Eigen::AngleAxis<float>(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ());
+		tmp4 = tmp1 * tmp2 * tmp3;
 
-		final_transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2))) *
-								 Eigen::AngleAxis<float>(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX()) *
-								 Eigen::AngleAxis<float>(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY()) *
-								 Eigen::AngleAxis<float>(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ())).matrix();
+		final_transformation_ = (translation * tmp4).matrix();
+
+//		final_transformation_ = (Eigen::Translation<float, 3>(static_cast<float>(x_t(0)), static_cast<float>(x_t(1)), static_cast<float>(x_t(2))) *
+//								 Eigen::AngleAxis<float>(static_cast<float>(x_t(3)), Eigen::Vector3f::UnitX()) *
+//								 Eigen::AngleAxis<float>(static_cast<float>(x_t(4)), Eigen::Vector3f::UnitY()) *
+//								 Eigen::AngleAxis<float>(static_cast<float>(x_t(5)), Eigen::Vector3f::UnitZ())).matrix();
 
 		transformPointCloud(x_, y_, z_, trans_x, trans_y, trans_z, points_num, final_transformation_);
 
@@ -1495,7 +1521,7 @@ void GNormalDistributionsTransform::computeHessian(Eigen::Matrix<double, 6, 6> &
 												inverse_covariance, inverse_covariance + voxel_num, inverse_covariance + 2 * voxel_num,
 												inverse_covariance + 3 * voxel_num, inverse_covariance + 4 * voxel_num, inverse_covariance + 5 * voxel_num,
 												inverse_covariance + 6 * voxel_num, inverse_covariance + 7 * voxel_num, inverse_covariance + 8 * voxel_num,
-												point_gradients, point_gradients + 6 * valid_points_num, point_gradients + 12 * valid_points_num,
+												point_gradients,
 												tmp_hessian, valid_voxel_num);
 	checkCudaErrors(cudaGetLastError());
 
