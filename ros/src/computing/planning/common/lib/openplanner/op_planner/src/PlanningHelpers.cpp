@@ -80,6 +80,84 @@ bool PlanningHelpers::GetRelativeInfoRange(const std::vector<std::vector<WayPoin
 	return true;
 }
 
+bool PlanningHelpers::GetRelativeInfoSlow(const std::vector<WayPoint>& trajectory, const WayPoint& p, RelativeInfo& info, const int& prevIndex )
+{
+	if(trajectory.size() < 2) return false;
+
+	WayPoint p0, p1;
+	if(trajectory.size()==2)
+	{
+		p0 = trajectory.at(0);
+		p1 = WayPoint((trajectory.at(0).pos.x+trajectory.at(1).pos.x)/2.0,
+					  (trajectory.at(0).pos.y+trajectory.at(1).pos.y)/2.0,
+					  (trajectory.at(0).pos.z+trajectory.at(1).pos.z)/2.0, trajectory.at(0).pos.a);
+		info.iFront = 1;
+		info.iBack = 0;
+	}
+	else
+	{
+		info.iFront = GetClosestNextPointIndex_obsolete(trajectory, p, prevIndex);
+//		WayPoint p2 = p;
+//		int old_index = GetClosestNextPointIndex(trajectory, p2, prevIndex);
+//		if(old_index != info.iFront)
+//			cout << " Alert Alert !!!! fast: " << info.iFront << ", slow: " << old_index  << endl;
+
+		if(info.iFront > 0)
+			info.iBack = info.iFront -1;
+		else
+			info.iBack = 0;
+
+		if(info.iFront == 0)
+		{
+			p0 = trajectory.at(info.iFront);
+			p1 = trajectory.at(info.iFront+1);
+		}
+		else if(info.iFront > 0 && info.iFront < trajectory.size()-1)
+		{
+			p0 = trajectory.at(info.iFront-1);
+			p1 = trajectory.at(info.iFront);
+		}
+		else
+		{
+			p0 = trajectory.at(info.iFront-1);
+			p1 = WayPoint((p0.pos.x+trajectory.at(info.iFront).pos.x)/2.0, (p0.pos.y+trajectory.at(info.iFront).pos.y)/2.0, (p0.pos.z+trajectory.at(info.iFront).pos.z)/2.0, p0.pos.a);
+		}
+	}
+
+	WayPoint prevWP = p0;
+	Mat3 rotationMat(-p1.pos.a);
+	Mat3 translationMat(-p.pos.x, -p.pos.y);
+	Mat3 invRotationMat(p1.pos.a);
+	Mat3 invTranslationMat(p.pos.x, p.pos.y);
+
+	p0.pos = translationMat*p0.pos;
+	p0.pos = rotationMat*p0.pos;
+
+	p1.pos = translationMat*p1.pos;
+	p1.pos = rotationMat*p1.pos;
+
+	double m = (p1.pos.y-p0.pos.y)/(p1.pos.x-p0.pos.x);
+	info.perp_distance = p1.pos.y - m*p1.pos.x; // solve for x = 0
+
+	if(isnan(info.perp_distance) || isinf(info.perp_distance)) info.perp_distance = 0;
+
+	info.to_front_distance = fabs(p1.pos.x); // distance on the x axes
+
+
+	info.perp_point = p1;
+	info.perp_point.pos.x = 0; // on the same y axis of the car
+	info.perp_point.pos.y = info.perp_distance; //perp distance between the car and the trajectory
+
+	info.perp_point.pos = invRotationMat  * info.perp_point.pos;
+	info.perp_point.pos = invTranslationMat  * info.perp_point.pos;
+
+	info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
+
+	info.angle_diff = UtilityH::AngleBetweenTwoAnglesPositive(p1.pos.a, p.pos.a)*RAD2DEG;
+
+	return true;
+}
+
 bool PlanningHelpers::GetRelativeInfo(const std::vector<WayPoint>& trajectory, const WayPoint& p, RelativeInfo& info, const int& prevIndex )
 {
 	if(trajectory.size() < 2) return false;
@@ -154,6 +232,176 @@ bool PlanningHelpers::GetRelativeInfo(const std::vector<WayPoint>& trajectory, c
 	info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
 
 	info.angle_diff = UtilityH::AngleBetweenTwoAnglesPositive(p1.pos.a, p.pos.a)*RAD2DEG;
+
+	return true;
+}
+
+bool PlanningHelpers::GetRelativeInfoLimited(const std::vector<WayPoint>& trajectory, const WayPoint& p, RelativeInfo& info, const int& prevIndex )
+{
+	if(trajectory.size() < 2) return false;
+
+	WayPoint p0, p1;
+
+	if(trajectory.size()==2)
+	{
+		vector<WayPoint> _trajectory;
+		p0 = trajectory.at(0);
+		p1 = p0;
+		p1 = WayPoint((trajectory.at(0).pos.x+trajectory.at(1).pos.x)/2.0,
+					  (trajectory.at(0).pos.y+trajectory.at(1).pos.y)/2.0,
+					  (trajectory.at(0).pos.z+trajectory.at(1).pos.z)/2.0, trajectory.at(0).pos.a);
+		_trajectory.push_back(p0);
+		_trajectory.push_back(p1);
+		_trajectory.push_back(trajectory.at(0));
+
+		info.iFront = GetClosestNextPointIndexFast(_trajectory, p, prevIndex);
+		if(info.iFront > 0)
+			info.iBack = info.iFront -1;
+		else
+			info.iBack = 0;
+
+		if(info.iFront == 0)
+		{
+			p0 = _trajectory.at(info.iFront);
+			p1 = _trajectory.at(info.iFront+1);
+		}
+		else if(info.iFront > 0 && info.iFront < _trajectory.size()-1)
+		{
+			p0 = _trajectory.at(info.iFront-1);
+			p1 = _trajectory.at(info.iFront);
+		}
+		else
+		{
+			p0 = _trajectory.at(info.iFront-1);
+			p1 = WayPoint((p0.pos.x+_trajectory.at(info.iFront).pos.x)/2.0, (p0.pos.y+_trajectory.at(info.iFront).pos.y)/2.0, (p0.pos.z+_trajectory.at(info.iFront).pos.z)/2.0, p0.pos.a);
+		}
+
+		WayPoint prevWP = p0;
+		Mat3 rotationMat(-p1.pos.a);
+		Mat3 translationMat(-p.pos.x, -p.pos.y);
+		Mat3 invRotationMat(p1.pos.a);
+		Mat3 invTranslationMat(p.pos.x, p.pos.y);
+
+		p0.pos = translationMat*p0.pos;
+		p0.pos = rotationMat*p0.pos;
+
+		p1.pos = translationMat*p1.pos;
+		p1.pos = rotationMat*p1.pos;
+
+		double m = (p1.pos.y-p0.pos.y)/(p1.pos.x-p0.pos.x);
+		info.perp_distance = p1.pos.y - m*p1.pos.x; // solve for x = 0
+
+		if(isnan(info.perp_distance) || isinf(info.perp_distance)) info.perp_distance = 0;
+
+		info.to_front_distance = fabs(p1.pos.x); // distance on the x axes
+
+		info.perp_point = p1;
+		info.perp_point.pos.x = 0; // on the same y axis of the car
+		info.perp_point.pos.y = info.perp_distance; //perp distance between the car and the _trajectory
+
+		info.perp_point.pos = invRotationMat  * info.perp_point.pos;
+		info.perp_point.pos = invTranslationMat  * info.perp_point.pos;
+
+		info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
+
+		info.angle_diff = UtilityH::AngleBetweenTwoAnglesPositive(p1.pos.a, p.pos.a)*RAD2DEG;
+
+		info.bAfter = false;
+		info.bBefore = false;
+
+		if(info.iFront == 0)
+		{
+			info.bBefore = true;
+		}
+		else if(info.iFront == _trajectory.size()-1)
+		{
+			int s = _trajectory.size();
+			double angle_befor_last = UtilityH::FixNegativeAngle(atan2(_trajectory.at(s-2).pos.y - _trajectory.at(s-1).pos.y, _trajectory.at(s-2).pos.x - _trajectory.at(s-1).pos.x));
+			double angle_from_perp = UtilityH::FixNegativeAngle(atan2(info.perp_point.pos.y - _trajectory.at(s-1).pos.y, info.perp_point.pos.x - _trajectory.at(s-1).pos.x));
+			double diff_last_perp = UtilityH::AngleBetweenTwoAnglesPositive(angle_befor_last, angle_from_perp);
+			info.after_angle = diff_last_perp;
+			if(diff_last_perp > M_PI_2)
+			{
+				info.bAfter = true;
+			}
+
+		}
+	}
+	else
+	{
+		info.iFront = GetClosestNextPointIndexFast(trajectory, p, prevIndex);
+		if(info.iFront > 0)
+			info.iBack = info.iFront -1;
+		else
+			info.iBack = 0;
+
+		if(info.iFront == 0)
+		{
+			p0 = trajectory.at(info.iFront);
+			p1 = trajectory.at(info.iFront+1);
+		}
+		else if(info.iFront > 0 && info.iFront < trajectory.size()-1)
+		{
+			p0 = trajectory.at(info.iFront-1);
+			p1 = trajectory.at(info.iFront);
+		}
+		else
+		{
+			p0 = trajectory.at(info.iFront-1);
+			p1 = WayPoint((p0.pos.x+trajectory.at(info.iFront).pos.x)/2.0, (p0.pos.y+trajectory.at(info.iFront).pos.y)/2.0, (p0.pos.z+trajectory.at(info.iFront).pos.z)/2.0, p0.pos.a);
+		}
+
+		WayPoint prevWP = p0;
+		Mat3 rotationMat(-p1.pos.a);
+		Mat3 translationMat(-p.pos.x, -p.pos.y);
+		Mat3 invRotationMat(p1.pos.a);
+		Mat3 invTranslationMat(p.pos.x, p.pos.y);
+
+		p0.pos = translationMat*p0.pos;
+		p0.pos = rotationMat*p0.pos;
+
+		p1.pos = translationMat*p1.pos;
+		p1.pos = rotationMat*p1.pos;
+
+		double m = (p1.pos.y-p0.pos.y)/(p1.pos.x-p0.pos.x);
+		info.perp_distance = p1.pos.y - m*p1.pos.x; // solve for x = 0
+
+		if(isnan(info.perp_distance) || isinf(info.perp_distance)) info.perp_distance = 0;
+
+		info.to_front_distance = fabs(p1.pos.x); // distance on the x axes
+
+		info.perp_point = p1;
+		info.perp_point.pos.x = 0; // on the same y axis of the car
+		info.perp_point.pos.y = info.perp_distance; //perp distance between the car and the trajectory
+
+		info.perp_point.pos = invRotationMat  * info.perp_point.pos;
+		info.perp_point.pos = invTranslationMat  * info.perp_point.pos;
+
+		info.from_back_distance = hypot(info.perp_point.pos.y - prevWP.pos.y, info.perp_point.pos.x - prevWP.pos.x);
+
+		info.angle_diff = UtilityH::AngleBetweenTwoAnglesPositive(p1.pos.a, p.pos.a)*RAD2DEG;
+
+		info.bAfter = false;
+		info.bBefore = false;
+
+		if(info.iFront == 0)
+		{
+			info.bBefore = true;
+		}
+		else if(info.iFront == trajectory.size()-1)
+		{
+			int s = trajectory.size();
+			double angle_befor_last = UtilityH::FixNegativeAngle(atan2(trajectory.at(s-2).pos.y - trajectory.at(s-1).pos.y, trajectory.at(s-2).pos.x - trajectory.at(s-1).pos.x));
+			double angle_from_perp = UtilityH::FixNegativeAngle(atan2(info.perp_point.pos.y - trajectory.at(s-1).pos.y, info.perp_point.pos.x - trajectory.at(s-1).pos.x));
+			double diff_last_perp = UtilityH::AngleBetweenTwoAnglesPositive(angle_befor_last, angle_from_perp);
+			info.after_angle = diff_last_perp;
+			if(diff_last_perp > M_PI_2)
+			{
+				info.bAfter = true;
+			}
+
+		}
+	}
 
 	return true;
 }
@@ -448,10 +696,17 @@ int PlanningHelpers::GetClosestNextPointIndexFast(const vector<WayPoint>& trajec
 
 		//divide every 5 meters
 		int skip_factor = 5;
-		int skip = skip_factor/resolution;
+		if(resolution > skip_factor)
+			resolution = skip_factor;
+
+
+		int skip = 1;
+		if(resolution > 0)
+			skip = skip_factor/resolution;
 
 		for(int i=0; i< size; i+=skip)
 		{
+			//std::cout << "Res: " << resolution << ", skip: " << skip << ", i" << i << ", i+skip/2" << i+skip/2 << ", Size: " << size << std::endl;
 			if(i+skip/2 < size)
 				d  = (distance2pointsSqr(trajectory[i].pos, p.pos) + distance2pointsSqr(trajectory[i+skip/2].pos, p.pos))/2.0;
 			else
@@ -491,7 +746,7 @@ int PlanningHelpers::GetClosestNextPointIndexFast(const vector<WayPoint>& trajec
 			}
 		}
 
-		if(min_index < size-2)
+		if(min_index < size-1)
 		{
 			GPSPoint curr, next;
 			curr = trajectory[min_index].pos;
@@ -585,7 +840,7 @@ WayPoint PlanningHelpers::GetPerpendicularOnTrajectory_obsolete(const vector<Way
 	}
 	else
 	{
-		int next_index = GetClosestNextPointIndexFast(trajectory, p, prevIndex);
+		int next_index = GetClosestNextPointIndex_obsolete(trajectory, p, prevIndex);
 
 		if(next_index == 0)
 		{
@@ -1110,7 +1365,15 @@ void PlanningHelpers::FixAngleOnly(std::vector<WayPoint>& path)
 
 double PlanningHelpers::CalcAngleAndCost(vector<WayPoint>& path, const double& lastCost, const bool& bSmooth)
 {
-	if(path.size() <= 2) return 0;
+	if(path.size() < 2) return 0;
+	if(path.size() == 2)
+	{
+		path[0].pos.a = UtilityH::FixNegativeAngle(atan2(path[1].pos.y - path[0].pos.y, path[1].pos.x - path[0].pos.x ));
+		path[0].cost = lastCost;
+		path[1].pos.a = path[0].pos.a;
+		path[1].cost = path[0].cost +  distance2points(path[0].pos, path[1].pos);
+		return path[1].cost;
+	}
 
 	path[0].pos.a = UtilityH::FixNegativeAngle(atan2(path[1].pos.y - path[0].pos.y, path[1].pos.x - path[0].pos.x ));
 	path[0].cost = lastCost;

@@ -13,6 +13,7 @@
 #include <sstream>
 #include <vector>
 #include <iostream>
+#include <limits>
 
 namespace UtilityHNS {
 
@@ -160,11 +161,20 @@ public:
 		int MCODE3;
 	};
 
-	AisanPointsFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	AisanPointsFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1)
+	{
+		m_min_id = std::numeric_limits<int>::max();
+	}
 	~AisanPointsFileReader(){}
 
+	std::vector<AisanPoints> m_data_list;
 	bool ReadNextLine(AisanPoints& data);
 	int ReadAllData(std::vector<AisanPoints>& data_list);
+	AisanPoints* GetDataRowById(int _pid);
+
+private:
+	int m_min_id;
+	std::vector<AisanPoints*> m_data_map;
 };
 
 class AisanNodesFileReader : public SimpleReaderBase
@@ -177,11 +187,21 @@ public:
 		int PID;
 	};
 
-	AisanNodesFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	AisanNodesFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1)
+	{
+		m_min_id = std::numeric_limits<int>::max();
+	}
 	~AisanNodesFileReader(){}
 
+	std::vector<AisanNode> m_data_list;
 	bool ReadNextLine(AisanNode& data);
 	int ReadAllData(std::vector<AisanNode>& data_list);
+	AisanNode* GetDataRowById(int _nid);
+
+
+private:
+	int m_min_id;
+	std::vector<AisanNode*> m_data_map;
 };
 
 class AisanLinesFileReader : public SimpleReaderBase
@@ -202,6 +222,27 @@ public:
 
 	bool ReadNextLine(AisanLine& data);
 	int ReadAllData(std::vector<AisanLine>& data_list);
+};
+
+class AisanCLinesFileReader : public SimpleReaderBase
+{
+public:
+
+	struct AisanCLine
+	{
+		int ID;
+		int LID;
+		double width;
+		char color;
+		int type;
+		int LinkID;
+	};
+
+	AisanCLinesFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	~AisanCLinesFileReader(){}
+
+	bool ReadNextLine(AisanCLine& data);
+	int ReadAllData(std::vector<AisanCLine>& data_list);
 };
 
 class AisanCenterLinesFileReader : public SimpleReaderBase
@@ -301,11 +342,20 @@ public:
 		int originalMapID;
 	};
 
-	AisanLanesFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1){}
+	AisanLanesFileReader(const std::string& fileName) : SimpleReaderBase(fileName, 1)
+	{
+		m_min_id = std::numeric_limits<int>::max();
+	}
 	~AisanLanesFileReader(){}
 
+	std::vector<AisanLane> m_data_list;
 	bool ReadNextLine(AisanLane& data);
 	int ReadAllData(std::vector<AisanLane>& data_list);
+	AisanLane* GetDataRowById(int _lnid);
+
+private:
+	int m_min_id;
+	std::vector<AisanLane*> m_data_map;
 };
 
 class AisanStopLineFileReader : public SimpleReaderBase

@@ -35,6 +35,7 @@ AlternativeVisualizer::AlternativeVisualizer()
 	m_bCancelThread = false;
 	m_bStepForward = false;
 	m_bPredStepForward = false;
+	m_bGenerateSignal = false;
 
 	ros::NodeHandle nh;
 	pub_VehicleCommand		= nh.advertise<geometry_msgs::TwistStamped>("twist_cmd", 100);
@@ -43,6 +44,7 @@ AlternativeVisualizer::AlternativeVisualizer()
 	//pub_CanInfo 			= nh.advertise<autoware_msgs::CanInfo>("can_info", 100);
 	pub_SimuStepSignal 		= nh.advertise<geometry_msgs::TwistStamped>("simu_step_signal", 1);
 	pub_PredStepSignal 		= nh.advertise<geometry_msgs::TwistStamped>("pred_step_signal", 1);
+	pub_SimuGenSignal		= nh.advertise<geometry_msgs::TwistStamped>("simu_generate_signal", 1);
 
 	twist_sub = nh.subscribe("/twist_cmd", 1, &AlternativeVisualizer::twistCMDCallback, this);
 	cmd_sub = nh.subscribe("/ctrl_cmd", 1, &AlternativeVisualizer::ctrlCMDCallback, this);
@@ -240,6 +242,16 @@ void AlternativeVisualizer::DrawSimu()
 			m_bPredStepForward = true;
 		}
 
+		if(m_bGenerateSignal)
+		{
+			geometry_msgs::TwistStamped g_signal;
+			g_signal.header.frame_id = "velodyne";
+			g_signal.header.stamp = ros::Time();
+			g_signal.twist.linear.x = 1;
+			pub_SimuGenSignal.publish(g_signal);
+			m_bGenerateSignal = false;
+		}
+
 		ros::spinOnce();
 		loop_rate.sleep();
 	}
@@ -431,6 +443,7 @@ void AlternativeVisualizer::OnKeyboardPress(const SPECIAL_KEYS_TYPE& sKey, const
 	break;
 	case 'g':
 	{
+		m_bGenerateSignal = true;
 	}
 	break;
 	case '+':

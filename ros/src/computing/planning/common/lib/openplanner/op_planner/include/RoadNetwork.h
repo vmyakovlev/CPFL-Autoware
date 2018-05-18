@@ -136,6 +136,11 @@ public:
     return p.x >= bottom_left.x && p.x <= top_right.x && p.y >= bottom_left.y && p.y <= top_right.y;
   }
 
+  inline bool PointInsideRect(GPSPoint p)
+  {
+    return p.x > bottom_left.x && p.x < top_right.x && p.y > bottom_left.y && p.y < top_right.y;
+  }
+
   inline bool HitTest(GPSPoint p)
   {
     return PointInRect(p) && bObstacle;
@@ -457,9 +462,15 @@ public:
 	int iGlobalPath;
 	WayPoint perp_point;
 	double angle_diff; // degrees
+	bool bBefore;
+	bool bAfter;
+	double after_angle;
 
 	RelativeInfo()
 	{
+		after_angle = 0;
+		bBefore = false;
+		bAfter = false;
 		perp_distance = 0;
 		to_front_distance = 0;
 		from_back_distance = 0;

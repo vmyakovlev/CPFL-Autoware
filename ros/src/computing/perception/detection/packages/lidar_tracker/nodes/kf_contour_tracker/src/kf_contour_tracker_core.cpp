@@ -200,6 +200,7 @@ void ContourTracker::MainLoop()
 
 			pub_AllTrackedObjects.publish(m_OutPutResults);
 
+			std::cout << "Visualize tracking is Online ! " << std::endl;
 			VisualizeLocalTracking();
 
 			bNewClusters = false;

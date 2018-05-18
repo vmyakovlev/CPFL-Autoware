@@ -53,6 +53,7 @@ public:
 
     bool m_bStepForward;
     bool m_bPredStepForward;
+    bool m_bGenerateSignal;
 
     double m_VehicleTargetStateSpeed;
     double m_VehicleTargetStateSteer;
@@ -64,6 +65,7 @@ public:
     ros::Publisher pub_VehicleCommandBrk;
     ros::Publisher pub_CanInfo;
     ros::Publisher pub_SimuStepSignal;
+    ros::Publisher pub_SimuGenSignal;
     ros::Publisher pub_PredStepSignal;
 
     ros::Subscriber twist_sub;

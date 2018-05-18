@@ -37,8 +37,29 @@ public:
 			const std::vector<UtilityHNS::AisanRoadEdgeFileReader::AisanRoadEdge>& roadedge_data,
 			const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
 			const std::vector<UtilityHNS::AisanCrossWalkFileReader::AisanCrossWalk>& crosswalk_data,
+			const std::vector<UtilityHNS::AisanNodesFileReader::AisanNode>& nodes_data,
 			const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,
 			const GPSPoint& origin, RoadNetwork& map, const bool& bSpecialFlag = false);
+
+	static void ConstructRoadNetworkFromRosMessageV2(const std::vector<UtilityHNS::AisanLanesFileReader::AisanLane>& lanes_data,
+			const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points_data,
+				const std::vector<UtilityHNS::AisanCenterLinesFileReader::AisanCenterLine>& dt_data,
+				const std::vector<UtilityHNS::AisanIntersectionFileReader::AisanIntersection>& intersection_data,
+				const std::vector<UtilityHNS::AisanAreasFileReader::AisanArea>& area_data,
+				const std::vector<UtilityHNS::AisanLinesFileReader::AisanLine>& line_data,
+				const std::vector<UtilityHNS::AisanStopLineFileReader::AisanStopLine>& stop_line_data,
+				const std::vector<UtilityHNS::AisanSignalFileReader::AisanSignal>& signal_data,
+				const std::vector<UtilityHNS::AisanVectorFileReader::AisanVector>& vector_data,
+				const std::vector<UtilityHNS::AisanCurbFileReader::AisanCurb>& curb_data,
+				const std::vector<UtilityHNS::AisanRoadEdgeFileReader::AisanRoadEdge>& roadedge_data,
+				const std::vector<UtilityHNS::AisanWayareaFileReader::AisanWayarea>& wayarea_data,
+				const std::vector<UtilityHNS::AisanCrossWalkFileReader::AisanCrossWalk>& crosswalk_data,
+				const std::vector<UtilityHNS::AisanNodesFileReader::AisanNode>& nodes_data,
+				const std::vector<UtilityHNS::AisanDataConnFileReader::DataConn>& conn_data,
+				UtilityHNS::AisanLanesFileReader* pLaneData,
+				UtilityHNS::AisanPointsFileReader* pPointsData,
+				UtilityHNS::AisanNodesFileReader* pNodesData,
+				const GPSPoint& origin, RoadNetwork& map, const bool& bSpecialFlag = false);
 
 	static void ConstructRoadNetworkFromDataFiles(const std::string vectoMapPath, RoadNetwork& map, const bool& bZeroOrigin = false);
 
@@ -51,6 +72,10 @@ public:
 			const std::vector<UtilityHNS::AisanCenterLinesFileReader::AisanCenterLine>& dtpoints,
 			const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points,
 			const GPSPoint& origin, WayPoint& way_point);
+
+	static bool GetWayPointV2(const int& id, const int& laneID,const double& refVel, const int& pid,
+			const std::vector<UtilityHNS::AisanPointsFileReader::AisanPoints>& points,
+				const GPSPoint& origin, WayPoint& way_point);
 
 	//static void WriteKML(const std::string& kmlFile, const std::string& kmlTemplat, RoadNetwork& ap);
 	static void LoadKML(const std::string& kmlMap, RoadNetwork& map);
@@ -132,7 +157,49 @@ public:
 
 	static int ReplaceMyID(int& id, const std::vector<std::pair<int,int> >& rep_list);
 
+	static void GetLanesStartPoints(UtilityHNS::AisanLanesFileReader* pLaneData,
+				std::vector<int>& m_LanesStartIds);
+
+	static void GetLanePoints(UtilityHNS::AisanLanesFileReader* pLaneData,
+				UtilityHNS::AisanPointsFileReader* pPointsData,
+				UtilityHNS::AisanNodesFileReader* pNodesData, int lnID,
+				PlannerHNS::Lane& out_lane);
+
+	static void CreateLanes(UtilityHNS::AisanLanesFileReader* pLaneData,
+			UtilityHNS::AisanPointsFileReader* pPointsData,
+			UtilityHNS::AisanNodesFileReader* pNodesData,
+			std::vector<PlannerHNS::Lane>& out_lanes);
+
+	static void ConnectLanes(UtilityHNS::AisanLanesFileReader* pLaneData,
+			std::vector<PlannerHNS::Lane>& lanes);
+
+	static bool GetPointFromDataList(UtilityHNS::AisanPointsFileReader* pPointsData,const int& pid, WayPoint& out_wp);
+
+	static int GetBeginPointIdFromLaneNo(UtilityHNS::AisanLanesFileReader* pLaneData,
+			UtilityHNS::AisanPointsFileReader* pPointsData,
+			UtilityHNS::AisanNodesFileReader* pNodesData, const int& LnID);
+	static int GetEndPointIdFromLaneNo(UtilityHNS::AisanLanesFileReader* pLaneData,
+			UtilityHNS::AisanPointsFileReader* pPointsData,
+			UtilityHNS::AisanNodesFileReader* pNodesData,const int& LnID);
+
+	static bool IsStartLanePoint(UtilityHNS::AisanLanesFileReader* pLaneData, UtilityHNS::AisanLanesFileReader::AisanLane* pL);
+	static bool IsEndLanePoint(UtilityHNS::AisanLanesFileReader* pLaneData, UtilityHNS::AisanLanesFileReader::AisanLane* pL);
+
+	static void FixRedundantPointsLanes(std::vector<Lane>& lanes);
+	static void FixTwoPointsLanes(std::vector<Lane>& lanes);
+	static void FixTwoPointsLane(Lane& lanes);
+	static void FixUnconnectedLanes(std::vector<Lane>& lanes);
+	static void InsertWayPointToBackOfLane(const WayPoint& wp, Lane& lane, int& global_id);
+	static void InsertWayPointToFrontOfLane(const WayPoint& wp, Lane& lane, int& global_id);
+
+	static void LinkLanesPointers(PlannerHNS::RoadNetwork& map);
+
 	static double m_USING_VER_ZERO;
+
+	static int g_max_point_id;
+	static int g_max_lane_id;
+	static int g_max_stop_line_id;
+	static int g_max_traffic_light_id ;
 
 };
 
