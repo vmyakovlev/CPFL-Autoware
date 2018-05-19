@@ -1129,7 +1129,7 @@ bool AisanWayareaFileReader::ReadNextLine(AisanWayarea& data)
 
 		data.ID 	= strtol(lineData.at(0).at(0).c_str(), NULL, 10);
 		data.AID 	= strtol(lineData.at(0).at(1).c_str(), NULL, 10);
-		data.LinkID = strtol(lineData.at(0).at(3).c_str(), NULL, 10);
+		data.LinkID = strtol(lineData.at(0).at(2).c_str(), NULL, 10);
 
 		return true;
 
