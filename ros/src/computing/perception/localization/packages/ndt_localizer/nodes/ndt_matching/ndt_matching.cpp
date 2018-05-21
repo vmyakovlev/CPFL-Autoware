@@ -154,6 +154,8 @@ static geometry_msgs::PoseStamped predict_pose_imu_odom_msg;
 static ros::Publisher ndt_pose_pub;
 static geometry_msgs::PoseStamped ndt_pose_msg;
 
+static ros::Publisher ndt_stable_pose_pub;
+static geometry_msgs::PoseStamped ndt_stable_pose_msg;
 // current_pose is published by vel_pose_mux
 /*
 static ros::Publisher current_pose_pub;
@@ -804,6 +806,20 @@ static double wrapToPmPi(const double a_angle_rad)
   return wrapToPm(a_angle_rad, M_PI);
 }
 
+static double calcAddForRadian(const double lhs_rad, const double rhs_rad)
+{
+  double add_rad = lhs_rad + rhs_rad;
+  if (std::abs(lhs_rad - rhs_rad) > M_PI/2.0)
+  {
+      if(add_rad > 0)
+        add_rad = (lhs_rad - rhs_rad) - 2 * M_PI;
+      else
+        add_rad = (lhs_rad - rhs_rad) + 2 * M_PI;
+  }
+  std::cout << lhs_rad << " " << rhs_rad << " " << std::fabs(lhs_rad - rhs_rad) << " " << add_rad << std::endl;
+  return add_rad;
+}
+
 static double calcDiffForRadian(const double lhs_rad, const double rhs_rad)
 {
   double diff_rad = lhs_rad - rhs_rad;
@@ -898,6 +914,38 @@ static void imu_callback(const sensor_msgs::Imu::Ptr& input)
   previous_imu_yaw = imu_yaw;
 }
 
+static double lowPassFilter(double prev_value, double new_value, double alpha)
+{
+    if(alpha <= 1.0 && alpha >= 0) {
+        return alpha * prev_value + (1.0 - alpha) * new_value;
+    }
+    else {
+        return 0;
+    }
+}
+
+static double lowPassFilterRad(double prev_value, double new_value, double alpha)
+{
+    if(alpha <= 1.0 && alpha >= 0) {
+        return calcAddForRadian(alpha * prev_value, (1.0 - alpha) * new_value);
+    }
+    else {
+        return 0;
+    }
+}
+
+static pose lowPassFilter(pose prev_pose, pose new_pose, double alpha)
+{
+    pose low_pass_pose;
+    low_pass_pose.x = lowPassFilter(prev_pose.x, new_pose.x, alpha);
+    low_pass_pose.y = lowPassFilter(prev_pose.y, new_pose.y, alpha);
+    low_pass_pose.z = lowPassFilter(prev_pose.z, new_pose.z, alpha);
+    low_pass_pose.roll = lowPassFilterRad(prev_pose.roll, new_pose.roll, alpha);
+    low_pass_pose.pitch = lowPassFilterRad(prev_pose.pitch, new_pose.pitch, alpha);
+    low_pass_pose.yaw = lowPassFilterRad(prev_pose.yaw, new_pose.yaw, alpha);
+    return low_pass_pose;
+}
+
 static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 {
   if (map_loaded == 1 && init_pos_set == 1)
@@ -906,7 +954,7 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 
     static tf::TransformBroadcaster br;
     tf::Transform transform;
-    tf::Quaternion predict_q, ndt_q, current_q, localizer_q;
+    tf::Quaternion predict_q, ndt_q, ndt_stable_q, current_q, localizer_q;
 
     pcl::PointXYZ p;
     pcl::PointCloud<pcl::PointXYZ> filtered_scan;
@@ -1135,6 +1183,15 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
       current_pose.yaw = predict_pose_for_ndt.yaw;
     }
 
+    pose ndt_stable_pose;
+    if(ndt_pose.x != 0.0 && ndt_pose.y != 0.0 && ndt_pose.z != 0.0)
+    {
+        static pose previous_ndt_stable_pose = ndt_pose;
+        const double alpha = 0.7;
+        ndt_stable_pose = lowPassFilter(previous_ndt_stable_pose, ndt_pose, alpha);
+        previous_ndt_stable_pose = ndt_stable_pose;
+    }
+
     // Compute the velocity and acceleration
     diff_x = current_pose.x - previous_pose.x;
     diff_y = current_pose.y - previous_pose.y;
@@ -1286,6 +1343,17 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
       ndt_pose_msg.pose.orientation.w = ndt_q.w();
     }
 
+    ndt_stable_q.setRPY(ndt_stable_pose.roll, ndt_stable_pose.pitch, ndt_stable_pose.yaw);
+    ndt_stable_pose_msg.header.frame_id = "/map";
+    ndt_stable_pose_msg.header.stamp = current_scan_time;
+    ndt_stable_pose_msg.pose.position.x = ndt_stable_pose.x;
+    ndt_stable_pose_msg.pose.position.y = ndt_stable_pose.y;
+    ndt_stable_pose_msg.pose.position.z = ndt_stable_pose.z;
+    ndt_stable_pose_msg.pose.orientation.x = ndt_stable_q.x();
+    ndt_stable_pose_msg.pose.orientation.y = ndt_stable_q.y();
+    ndt_stable_pose_msg.pose.orientation.z = ndt_stable_q.z();
+    ndt_stable_pose_msg.pose.orientation.w = ndt_stable_q.w();
+
     current_q.setRPY(current_pose.roll, current_pose.pitch, current_pose.yaw);
     // current_pose is published by vel_pose_mux
     /*
@@ -1330,11 +1398,14 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 
     predict_pose_pub.publish(predict_pose_msg);
     ndt_pose_pub.publish(ndt_pose_msg);
+    ndt_stable_pose_pub.publish(ndt_stable_pose_msg);
     // current_pose is published by vel_pose_mux
     //    current_pose_pub.publish(current_pose_msg);
     localizer_pose_pub.publish(localizer_pose_msg);
 
     // Send TF "/base_link" to "/map"
+    // transform.setOrigin(tf::Vector3(ndt_stable_pose.x, ndt_stable_pose.y, ndt_stable_pose.z));
+    // transform.setRotation(ndt_stable_q);
     transform.setOrigin(tf::Vector3(current_pose.x, current_pose.y, current_pose.z));
     transform.setRotation(current_q);
     //    br.sendTransform(tf::StampedTransform(transform, current_scan_time, "/map", "/base_link"));
@@ -1403,6 +1474,8 @@ static void points_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
         << predict_pose_error << "," << iteration << "," << fitness_score << "," << trans_probability << ","
         << ndt_reliability.data << "," << current_velocity << "," << current_velocity_smooth << "," << current_accel
         << "," << angular_velocity << "," << time_ndt_matching.data << "," << align_time << "," << getFitnessScore_time
+        << "," << ndt_stable_pose.x  << "," << ndt_stable_pose.y << "," << ndt_stable_pose.z
+        << "," << ndt_stable_pose.roll << "," << ndt_stable_pose.pitch << "," << ndt_stable_pose.yaw
         << std::endl;
 
     std::cout << "-----------------------------------------------------------------" << std::endl;
@@ -1607,6 +1680,7 @@ int main(int argc, char** argv)
   predict_pose_odom_pub = nh.advertise<geometry_msgs::PoseStamped>("/predict_pose_odom", 10);
   predict_pose_imu_odom_pub = nh.advertise<geometry_msgs::PoseStamped>("/predict_pose_imu_odom", 10);
   ndt_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/ndt_pose", 10);
+  ndt_stable_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/ndt_stable_pose", 10);
   // current_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/current_pose", 10);
   localizer_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/localizer_pose", 10);
   estimate_twist_pub = nh.advertise<geometry_msgs::TwistStamped>("/estimate_twist", 10);
