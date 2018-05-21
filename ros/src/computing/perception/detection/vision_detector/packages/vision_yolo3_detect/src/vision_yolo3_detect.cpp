@@ -167,12 +167,30 @@ void Yolo3DetectorNode::convert_rect_to_image_obj(std::vector< RectClassScore<fl
                    || in_objects[i].class_type == Yolo3::DOG
                    || in_objects[i].class_type == Yolo3::CAT
                    || in_objects[i].class_type == Yolo3::HORSE
-                   )
-                  )
+              )
+            ) || (in_class == "car_and_person"
+              && (in_objects[i].class_type == Yolo3::CAR
+                  || in_objects[i].class_type == Yolo3::BUS
+                  || in_objects[i].class_type == Yolo3::TRUCK
+                  || in_objects[i].class_type == Yolo3::MOTORBIKE
+                  || in_objects[i].class_type == Yolo3::PERSON
+                )
+            )
         )
         {
             autoware_msgs::image_rect rect;
 
+            if(in_objects[i].class_type == Yolo3::CAR
+                || in_objects[i].class_type == Yolo3::BUS
+                || in_objects[i].class_type == Yolo3::TRUCK
+                || in_objects[i].class_type == Yolo3::MOTORBIKE)
+                {
+                  rect.type = "car";
+                }
+            else if(in_objects[i].class_type == Yolo3::PERSON)
+            {
+              rect.type = "person";
+            }
             rect.x = (in_objects[i].x /image_ratio_) - image_left_right_border_/image_ratio_;
             rect.y = (in_objects[i].y /image_ratio_) - image_top_bottom_border_/image_ratio_;
             rect.width = in_objects[i].w /image_ratio_;
@@ -272,17 +290,24 @@ void Yolo3DetectorNode::image_callback(const sensor_msgs::ImageConstPtr& in_imag
     //Prepare Output message
     autoware_msgs::image_obj output_car_message;
     autoware_msgs::image_obj output_person_message;
+    autoware_msgs::image_obj output_car_and_person_message;
+
     output_car_message.header = in_image_message->header;
     output_car_message.type = "car";
 
     output_person_message.header = in_image_message->header;
     output_person_message.type = "person";
 
+    output_car_and_person_message.header = in_image_message->header;
+    output_car_and_person_message.type = "car_and_person";
+
     convert_rect_to_image_obj(detections, output_car_message, "car");
     convert_rect_to_image_obj(detections, output_person_message, "person");
+    convert_rect_to_image_obj(detections, output_car_and_person_message, "car_and_person");
 
     publisher_car_objects_.publish(output_car_message);
     publisher_person_objects_.publish(output_person_message);
+    publisher_car_and_person_objects_.publish(output_car_and_person_message);
 
     free(darknet_image_.data);
 }
@@ -344,6 +369,7 @@ void Yolo3DetectorNode::Run()
 
     publisher_car_objects_ = node_handle_.advertise<autoware_msgs::image_obj>("/obj_car/image_obj", 1);
     publisher_person_objects_ = node_handle_.advertise<autoware_msgs::image_obj>("/obj_person/image_obj", 1);
+    publisher_car_and_person_objects_ = node_handle_.advertise<autoware_msgs::image_obj>("/objects/image_obj", 1);
 
     ROS_INFO("Subscribing to... %s", image_raw_topic_str.c_str());
     subscriber_image_raw_ = node_handle_.subscribe(image_raw_topic_str, 1, &Yolo3DetectorNode::image_callback, this);
