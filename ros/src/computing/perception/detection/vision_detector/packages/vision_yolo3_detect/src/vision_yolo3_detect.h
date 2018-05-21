@@ -116,6 +116,7 @@ class Yolo3DetectorNode {
     ros::Subscriber subscriber_yolo_config_;
     ros::Publisher publisher_car_objects_;
     ros::Publisher publisher_person_objects_;
+    ros::Publisher publisher_car_and_person_objects_;
     ros::NodeHandle node_handle_;
 
     darknet::Yolo3Detector yolo_detector_;

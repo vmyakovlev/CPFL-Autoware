@@ -16,7 +16,7 @@ namespace integrated_viewer
   const int        DrawRects::kRectangleThickness = 3;
   const cv::Scalar DrawRects::kBlue               = CV_RGB(0, 0, 255);
   const cv::Scalar DrawRects::kGreen              = CV_RGB(0, 255, 0);
-  
+
   DrawRects::DrawRects(void) {
     // Generate color map to represent tracked object
 #if (CV_MAJOR_VERSION == 3)
@@ -40,12 +40,27 @@ namespace integrated_viewer
     } else {
       rectangle_color = kGreen;
     }
-    
+
     // Draw rectangles for each objects
     for (const auto& rectangle : rect_data->obj) {
       // Make label shown on a rectangle
       std::ostringstream label;
-      label << rect_data->type << ":" << std::setprecision(2) << rectangle.score;
+      if(rect_data->type == "car_and_person")
+      {
+        label << rectangle.type << ":" << std::setprecision(2) << rectangle.score;
+        if(rectangle.type == "car")
+        {
+          rectangle_color = kBlue;
+        }
+        else
+        {
+          rectangle_color = kGreen;
+        }
+      }
+      else
+      {
+        label << rect_data->type << ":" << std::setprecision(2) << rectangle.score;
+      }
 
       // Draw object information label
       DrawLabel(label.str(), cv::Point(rectangle.x, rectangle.y), image);
@@ -74,7 +89,7 @@ namespace integrated_viewer
     } else {
       rectangle_color = kGreen;
     }
-    
+
     // Draw rectangles for each objects
     for (const auto& ojbect : rect_data->obj) {
       // Make label shown on a rectangle
@@ -112,7 +127,7 @@ namespace integrated_viewer
 
       // Draw object information label
       DrawLabel(label.str(), cv::Point(object.rect.x, object.rect.y), image);
-      
+
       // Draw rectangle
       cv::rectangle(image,
                     cv::Point(object.rect.x, object.rect.y),
@@ -157,6 +172,6 @@ namespace integrated_viewer
                 font_face,
                 font_scale,
                 CV_RGB(255, 255, 255));
-        
+
   } // DrawRects::DrawLabel()
 } // end namespace integrated_viewer
