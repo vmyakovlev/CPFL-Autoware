@@ -221,6 +221,12 @@ subs :
         gui  :
           sync :
             func : self.button_synchronization.GetValue()
+      - name : lidar_naive_l_shape_detect
+        desc : lidar_naive_l_shape_detect desc sample
+        cmd  : roslaunch lidar_naive_l_shape_detect lidar_naive_l_shape_detect.launch
+        gui  :
+          sync :
+            func : self.button_synchronization.GetValue()
       - name : lidar_svm_detect
         desc : lidar_svm_detect desc sample
         cmd  : roslaunch lidar_svm_detect lidar_svm_detect.launch
