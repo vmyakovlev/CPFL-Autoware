@@ -49,10 +49,10 @@ void ClusterFilter::callBack(autoware_msgs::CloudClusterArray input) {
   pub_cloud_array_.publish(out_cluster);
   // std::cout << input.clusters[2].centroid_point.point.x<<std::endl;
   g_count++;
-  std::cout << "Frame " << g_count
-            << "------------------------------------------------" << std::endl;
-  std::cout << "cluster size putpuy " << out_cluster.clusters.size()
-            << std::endl;
+  // std::cout << "Frame " << g_count
+  //           << "------------------------------------------------" << std::endl;
+  // std::cout << "cluster size putpuy " << out_cluster.clusters.size()
+  //           << std::endl;
 }
 
 void ClusterFilter::getPointsInPcFrame(cv::Point2f rect_points[],
@@ -295,8 +295,13 @@ void ClusterFilter::getBBoxes(
 
       pc_points[0] = cv::Point2f(min_mx, min_my);
       pc_points[1] = cv::Point2f(max_dx, max_dy);
-      pc_points[2] = cv::Point2f(max_dx, max_my);
+      pc_points[2] = cv::Point2f(max_mx, max_my);
       pc_points[3] = cv::Point2f(last_x, last_y);
+
+      // std:: cout << "(min_mx, min_my) " << min_mx << " "<<min_my << std::endl;
+      // std:: cout << "(max_mx, max_my) " << max_dx << " "<<max_dy << std::endl;
+      // std:: cout << "(max_mx, max_my) " << max_mx << " "<<max_my << std::endl;
+      // std:: cout << "(last_x, last_y) " << last_x << " "<<last_y << std::endl;
       // bool is_promising = ruleBasedFilter(pc_points, max_z, num_points);
       // if (!is_promising)
       //   continue;
@@ -382,14 +387,14 @@ void ClusterFilter::getBBoxes(
                                      in_cluster_array.clusters[i_cluster]);
 
     out_cluster_array.clusters.push_back(in_cluster_array.clusters[i_cluster]);
-    std::cout
-        << "x: "
-        << in_cluster_array.clusters[i_cluster].bounding_box.pose.position.x
-        << std::endl;
-    std::cout
-        << "y: "
-        << in_cluster_array.clusters[i_cluster].bounding_box.pose.position.y
-        << std::endl;
+    // std::cout
+    //     << "x: "
+    //     << in_cluster_array.clusters[i_cluster].bounding_box.pose.position.x
+    //     << std::endl;
+    // std::cout
+    //     << "y: "
+    //     << in_cluster_array.clusters[i_cluster].bounding_box.pose.position.y
+    //     << std::endl;
   }
   // cout << clusterArray.clusters[2].centroid_point.point.x<<endl;
 }
