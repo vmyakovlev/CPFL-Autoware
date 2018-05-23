@@ -1,0 +1,6 @@
+<!-- Launch file for L shape box fitting -->
+<launch>
+
+  <node pkg="lidar_naive_l_shape_detect" type="lidar_naive_l_shape_detect" name="lidar_naive_l_shape_detect" />
+
+</launch>

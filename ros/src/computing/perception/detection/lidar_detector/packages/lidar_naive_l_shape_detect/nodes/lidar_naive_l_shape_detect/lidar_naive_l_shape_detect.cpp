@@ -2,22 +2,22 @@
 // Created by kosuke on 11/29/17.
 //
 #include <ros/ros.h>
-
+//
 #include <array>
 #include <opencv2/opencv.hpp>
 #include <pcl/io/pcd_io.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <random>
-
+//
 #include <tf/transform_datatypes.h>
-
+//
 #include "autoware_msgs/CloudCluster.h"
 #include "autoware_msgs/CloudClusterArray.h"
 
-#include "naive_L_shape.h"
+#include "lidar_naive_l_shape_detect.h"
 
-// using namespace std;
-// using namespace pcl;
+using namespace std;
+using namespace pcl;
 
 int g_count = 0;
 
@@ -34,26 +34,10 @@ ClusterFilter::ClusterFilter() {
   // float sensor_height_ = 1.73;
   sensor_height_ = 2.35;
 
-  // rule-based filter params
-  height_min_ = 1.0;
-  // tHeightMin_ = 1.2
-  height_max_ = 2.6;
-  // tWidthMin_ = 0.5;
-  // tWidthMin_ = 0.4;
-  width_min_ = 0.25;
-  width_max_ = 3.5;
-  len_min_ = 0.5;
-  len_max_ = 14.0;
-  area_max_ = 20.0;
-  ratio_min_ = 1.3;
-  ratio_max_ = 5.0;
-  min_len_ratio_ = 3.0;
-  pt_num_per_vol_ = 8; // point c
-
   sub_cloud_array_ = node_handle_.subscribe("/cloud_clusters", 1,
                                             &ClusterFilter::callBack, this);
   pub_cloud_array_ = node_handle_.advertise<autoware_msgs::CloudClusterArray>(
-      "/bbox_cluster_array", 1);
+      "/bbox_cloud_clusters", 1);
 }
 
 void ClusterFilter::callBack(autoware_msgs::CloudClusterArray input) {
@@ -95,60 +79,6 @@ void ClusterFilter::getPointsInPcFrame(cv::Point2f rect_points[],
   }
 }
 
-bool ClusterFilter::ruleBasedFilter(std::vector<cv::Point2f> pc_points,
-                                    float max_z, int num_points) {
-  bool is_promising = false;
-  // minnimam points thresh
-  if (num_points < 100)
-    return is_promising;
-  // length is longest side of the rectangle while width is the shorter side.
-  float width, length, height, area, ratio, mass;
-
-  float x1 = pc_points[0].x;
-  float y1 = pc_points[0].y;
-  float x2 = pc_points[1].x;
-  float y2 = pc_points[1].y;
-  float x3 = pc_points[2].x;
-  float y3 = pc_points[2].y;
-
-  float dist1 = sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-  float dist2 = sqrt((x3 - x2) * (x3 - x2) + (y3 - y2) * (y3 - y2));
-  if (dist1 > dist2) {
-    length = dist1;
-    width = dist2;
-  } else {
-    length = dist2;
-    width = dist1;
-  }
-  // assuming ground = sensor height
-  height = max_z + sensor_height_;
-  // assuming right angle
-  area = dist1 * dist2;
-  mass = area * height;
-  ratio = length / width;
-
-  // start rule based filtering
-  if (height > height_min_ && height < height_max_) {
-    if (width > width_min_ && width < width_max_) {
-      if (length > len_min_ && length < len_max_) {
-        if (area < area_max_) {
-          if (num_points > mass * pt_num_per_vol_) {
-            if (length > min_len_ratio_) {
-              if (ratio > ratio_min_ && ratio < ratio_max_) {
-                is_promising = true;
-                return is_promising;
-              }
-            } else {
-              is_promising = true;
-              return is_promising;
-            }
-          }
-        }
-      }
-    }
-  } else
-    return is_promising;
-}
 
 void ClusterFilter::updateCpFromPoints(std::vector<cv::Point2f> pc_points,
                                        autoware_msgs::CloudCluster &cluster) {
@@ -174,7 +104,7 @@ void ClusterFilter::toRightAngleBBox(std::vector<cv::Point2f> &pc_points) {
   cv::Point2f p1 = pc_points[0];
   cv::Point2f p2 = pc_points[1];
   cv::Point2f p3 = pc_points[2];
-  cv::Point2f p4 = pc_points[3];
+  // cv::Point2f p4 = pc_points[3];
 
   double vec1x = p2.x - p1.x;
   double vec1y = p2.y - p1.y;
@@ -249,7 +179,7 @@ void ClusterFilter::getBBoxes(
 
   out_cluster_array.header = in_cluster_array.header;
 
-  for (int i_cluster = 0; i_cluster < in_cluster_array.clusters.size();
+  for (size_t i_cluster = 0; i_cluster < in_cluster_array.clusters.size();
        i_cluster++) {
     pcl::PointCloud<pcl::PointXYZ> cloud;
     // Convert from ros msg to PCL::PointCloud data type

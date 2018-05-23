@@ -12,8 +12,8 @@
 #include <pcl/io/pcd_io.h>
 #include <vector>
 
-#include "autoware_msgs/CloudCluster.h"
 #include "autoware_msgs/CloudClusterArray.h"
+
 
 class ClusterFilter {
 private:
