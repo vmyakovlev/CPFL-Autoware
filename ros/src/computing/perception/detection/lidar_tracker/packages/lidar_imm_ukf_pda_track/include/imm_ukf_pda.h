@@ -62,6 +62,8 @@ private:
   ros::Publisher pub_jskbbox_array_;
 
   void callback(const autoware_msgs::CloudClusterArray& input);
+  void relayJskbbox(const autoware_msgs::CloudClusterArray& input,
+                          jsk_recognition_msgs::BoundingBoxArray& jskbboxes_output);
   void transformPoseToGlobal(const autoware_msgs::CloudClusterArray& input,
                                    autoware_msgs::CloudClusterArray& transformed_input);
   void transformPoseToLocal(jsk_recognition_msgs::BoundingBoxArray& jskbboxes_output,
