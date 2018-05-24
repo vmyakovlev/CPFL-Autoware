@@ -752,8 +752,8 @@ void ImmUkfPda::tracker(const autoware_msgs::CloudClusterArray& input,
 {
   double timestamp = input.header.stamp.toSec();
 
-  double det_explode_param = 10;
-  double cov_explode_param = 1000;
+  const double det_explode_param = 10;
+  const double cov_explode_param = 1000;
 
   if (!init_)
   {
