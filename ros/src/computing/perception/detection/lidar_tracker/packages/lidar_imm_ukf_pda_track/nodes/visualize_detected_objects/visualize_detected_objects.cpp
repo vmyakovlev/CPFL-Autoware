@@ -55,9 +55,10 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
 
     id.scale.z = 1.0;
 
-    std::setprecision(3);
+    std::string s_velocity = std::to_string(tv*3.6);
+    std::string modified_sv = s_velocity.substr(0, s_velocity.find(".")+3);
     std::string text = "<" + std::to_string(input.objects[i].id) + "> " +
-                             std::to_string(tv) + " km/h";
+                             modified_sv + " km/h";
     // id.text = std::to_string(input.objects[i].id);
     id.text = text;
 
@@ -94,7 +95,8 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
     arrow.pose.orientation.w = q_tf.getW();
 
     // Set the scale of the arrow -- 1x1x1 here means 1m on a side
-    arrow.scale.x = tv;
+    // arrow.scale.x = tv;
+    arrow.scale.x = 3;
     arrow.scale.y = 0.1;
     arrow.scale.z = 0.1;
 
