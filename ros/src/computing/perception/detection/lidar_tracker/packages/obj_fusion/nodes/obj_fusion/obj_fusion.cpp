@@ -93,7 +93,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
   }
 
   std::vector<autoware_msgs::CloudCluster> v_cloud_cluster;
-  std_msgs::Header header = sensor_header;
+  std_msgs::Header header = in_cloud_cluster_array_ptr->header;
   std::vector<geometry_msgs::Point> centroids;
 
   for (int i(0); i < (int)in_cloud_cluster_array_ptr->clusters.size(); ++i)
@@ -103,7 +103,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     tf::Vector3 pt(cloud_cluster.centroid_point.point.x, cloud_cluster.centroid_point.point.y,
                    cloud_cluster.centroid_point.point.z);
     tf::Vector3 converted = tform * pt;
-    sensor_header = cloud_cluster.header;
+    // header = cloud_cluster.header;
     v_cloud_cluster.push_back(cloud_cluster);
     geometry_msgs::Point point_in_map;
     point_in_map.x = converted.x();
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
   message_filters::Subscriber<autoware_msgs::obj_label> obj_label_sub(n, "obj_label", SUBSCRIBE_QUEUE_SIZE);
   message_filters::Subscriber<autoware_msgs::CloudClusterArray> cluster_centroids_sub(n, "/cloud_clusters",
                                                                                       SUBSCRIBE_QUEUE_SIZE);
-  message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(SUBSCRIBE_QUEUE_SIZE), obj_label_sub,
+  message_filters::Synchronizer<SyncPolicy> sync(SyncPolicy(10), obj_label_sub,
                                                  cluster_centroids_sub);
   sync.registerCallback(boost::bind(&fusion_cb, _1, _2));
 
