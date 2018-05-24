@@ -55,7 +55,11 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
 
     id.scale.z = 1.0;
 
-    id.text = std::to_string(input.objects[i].id);
+    std::setprecision(3);
+    std::string text = "<" + std::to_string(input.objects[i].id) + "> " +
+                             std::to_string(tv) + " km/h";
+    // id.text = std::to_string(input.objects[i].id);
+    id.text = text;
 
     pub_id_.publish(id);
 
