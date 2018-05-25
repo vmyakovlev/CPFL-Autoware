@@ -44,6 +44,8 @@ static ros::ServiceClient vmap_server;
 static bool use_vmap;
 static double vmap_threshold;
 
+static tf::TransformListener* g_tflister_ptr;
+
 struct obj_label_t
 {
   std::vector<geometry_msgs::Point> reprojected_positions;
@@ -69,12 +71,12 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
                const autoware_msgs::CloudClusterArray::ConstPtr &in_cloud_cluster_array_ptr)
 {
   tf::StampedTransform tform;
-  tf::TransformListener tflistener;
+  // tf::TransformListener tflistener;
   try
   {
     ros::Time latest_time = ros::Time(0);
-    tflistener.waitForTransform("/map", "/velodyne", latest_time, ros::Duration(10));
-    tflistener.lookupTransform("/map", "/velodyne", latest_time, tform);
+    g_tflister_ptr->waitForTransform("/map", "/velodyne", latest_time, ros::Duration(10));
+    g_tflister_ptr->lookupTransform("/map", "/velodyne", latest_time, tform);
   }
   catch (tf::TransformException ex)
   {
@@ -166,30 +168,37 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
   visualization_msgs::MarkerArray marker_array_msg;
   int marker_id = 0;
 
-  for (unsigned int i = 0; i < obj_label.obj_id.size(); ++i)
+  // for (unsigned int i = 0; i < obj_label.obj_id.size(); ++i)
+  for (unsigned int i = 0; i < v_cloud_cluster.size(); ++i)
   {
-    if (obj_indices.at(i) == -1)
+    bool is_obj = false;
+    unsigned int obj_label_id = 0;
+    for (unsigned int j = 0; j < obj_label.obj_id.size(); ++j)
     {
-      continue;
+      if (obj_indices.at(j) == (int)i && obj_indices.at(j) != -1)
+      {
+        is_obj = true;
+        obj_label_id = j;
+        break;
+      }
     }
 
-    v_cloud_cluster.at(obj_indices.at(i)).label = object_type;
-    if (object_type == "car")
+    if(!is_obj)
     {
-      v_cloud_cluster.at(obj_indices.at(i)).bounding_box.label = Car;
+      v_cloud_cluster.at(i).bounding_box.label = Unknown;
+      pub_msg.boxes.push_back(v_cloud_cluster.at(i).bounding_box);
+      continue;
     }
-    else if (object_type == "person")
+    else if(object_type == "car")
     {
-      v_cloud_cluster.at(obj_indices.at(i)).bounding_box.label = Person;
+      v_cloud_cluster.at(i).bounding_box.label = Car;
     }
-    else
-    {
-      v_cloud_cluster.at(obj_indices.at(i)).bounding_box.label = Unknown;
-      v_cloud_cluster.at(obj_indices.at(i)).label = "unknown";
+    else if(object_type == "person"){
+      v_cloud_cluster.at(i).bounding_box.label = Person;
     }
 
     jsk_recognition_msgs::BoundingBox bounding_box;
-    bounding_box = v_cloud_cluster.at(obj_indices.at(i)).bounding_box;
+    bounding_box = v_cloud_cluster.at(i).bounding_box;
 
     /* adjust object rotation using lane in vector_map */
     tf::Quaternion q_obj(bounding_box.pose.orientation.x, bounding_box.pose.orientation.y,
@@ -265,7 +274,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
         std::swap(bounding_box.dimensions.x, bounding_box.dimensions.y);
       }
       // cloud clusters
-      v_cloud_cluster.at(obj_indices.at(i)).bounding_box = bounding_box;
+      v_cloud_cluster.at(i).bounding_box = bounding_box;
     }
 
     // x-axis
@@ -325,9 +334,9 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
       marker_array_msg.markers.push_back(marker);
     }
 
-    v_cloud_cluster.at(obj_indices.at(i)).bounding_box.value = obj_label.obj_id.at(i);
+    v_cloud_cluster.at(i).bounding_box.value = obj_label.obj_id.at(obj_label_id);
     pub_msg.boxes.push_back(bounding_box);
-    cloud_clusters_msg.clusters.push_back(v_cloud_cluster.at(obj_indices.at(i)));
+    cloud_clusters_msg.clusters.push_back(v_cloud_cluster.at(i));
   }
 
   marker_array_pub.publish(marker_array_msg);
@@ -342,12 +351,13 @@ int main(int argc, char *argv[])
 {
   /* ROS initialization */
   ros::init(argc, argv, "obj_fusion");
+  g_tflister_ptr = new tf::TransformListener();
 
   ros::NodeHandle n;
   ros::NodeHandle private_n("~");
 
   private_n.param("min_dist", threshold_min_dist, 2.0);
-  private_n.param("use_vmap", use_vmap, true);
+  private_n.param("use_vmap", use_vmap, false);
   private_n.param("vmap_threshold", vmap_threshold, 5.0);
   vmap_threshold *= vmap_threshold;  // squared
 
