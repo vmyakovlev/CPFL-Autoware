@@ -9,8 +9,8 @@ VisualizeDetectedObjects::VisualizeDetectedObjects()
   private_nh_.param<std::string>("pointcloud_frame", pointcloud_frame_, "velodyne");
 
   sub_cloud_array_ = node_handle_.subscribe("/detected_objects", 1, &VisualizeDetectedObjects::callBack, this);
-  pub_arrow_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/velocity_arrow", 1);
-  pub_id_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/target_id", 1);
+  pub_arrow_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/velocity_arrow", 10);
+  pub_id_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/target_id", 10);
 }
 
 void VisualizeDetectedObjects::callBack(const autoware_msgs::DetectedObjectArray& input)
@@ -25,9 +25,20 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
     double tv = input.objects[i].velocity.linear.x;
     double tyaw = input.objects[i].velocity.linear.y;
 
+    if(tv < -0.1)
+    {
+      tv *= -1;
+      tyaw += M_PI;
+      //normalize angle
+      while (tyaw > M_PI)
+        tyaw -= 2. * M_PI;
+      while (tyaw < -M_PI)
+        tyaw += 2. * M_PI;
+    }
+
     visualization_msgs::Marker id;
 
-    id.lifetime = ros::Duration(0.15);
+    id.lifetime = ros::Duration(0.2);
     id.header.frame_id = pointcloud_frame_;
     id.header.stamp = input.header.stamp;
     id.ns = "id";
@@ -55,6 +66,11 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
 
     id.scale.z = 1.0;
 
+    // not to visualize '-0.0'
+    if(abs(tv) < 0.1)
+    {
+      tv = 0.0;
+    }
     std::string s_velocity = std::to_string(tv*3.6);
     std::string modified_sv = s_velocity.substr(0, s_velocity.find(".")+3);
     std::string text = "<" + std::to_string(input.objects[i].id) + "> " +

@@ -414,7 +414,7 @@ void UKF::randomMotion(const double p_x, const double p_y, const double v, const
 {
   double px_p = p_x;
   double py_p = p_y;
-  double v_p = v;
+  double v_p = v*0.9; // aim to converge velocity for static objects
 
   double yaw_p = yaw;
   double yawd_p = yawd;

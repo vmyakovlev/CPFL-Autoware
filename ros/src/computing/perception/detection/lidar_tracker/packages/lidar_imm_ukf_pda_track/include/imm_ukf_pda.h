@@ -40,7 +40,7 @@ private:
   // bbox update params
   double bb_yaw_change_thres_;  // 0.2;
 
-  double static_distance_thres_;
+  double static_velocity_thres_;
 
   double init_yaw_;
 

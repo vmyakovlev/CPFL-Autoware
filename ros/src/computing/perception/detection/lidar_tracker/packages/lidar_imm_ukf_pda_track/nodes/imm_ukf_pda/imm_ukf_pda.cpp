@@ -19,7 +19,7 @@ ImmUkfPda::ImmUkfPda()
   private_nh_.param<double>("gate_probability", gate_probability_, 0.99);
   private_nh_.param<double>("detection_probability", detection_probability_, 0.9);
   private_nh_.param<double>("distance_thres", distance_thres_, 99);
-  private_nh_.param<double>("static_distance_thres", static_distance_thres_, 3.0);
+  private_nh_.param<double>("static_velocity_thres", static_velocity_thres_, 0.5);
 
   init_ = false;
 
@@ -679,12 +679,21 @@ void ImmUkfPda::staticClassification()
 {
   for (size_t i = 0; i < targets_.size(); i++)
   {
-    if (!targets_[i].is_static_ && targets_[i].tracking_num_ == TrackingState::Stable &&
+    targets_[i].vel_history_.push_back(targets_[i].x_merge_(2));
+    if (targets_[i].tracking_num_ == TrackingState::Stable &&
         targets_[i].lifetime_ > life_time_thres_)
     {
-      if ((targets_[i].dist_from_init_ < static_distance_thres_) &&
-          (targets_[i].mode_prob_rm_ > targets_[i].mode_prob_cv_ ||
-           targets_[i].mode_prob_rm_ > targets_[i].mode_prob_ctrv_))
+      double sum_vel = 0;
+      double avg_vel = 0;
+      for (int ind = 1; ind < life_time_thres_; ind++)
+      {
+        sum_vel += targets_[i].vel_history_.end()[-ind];
+      }
+      avg_vel = double(sum_vel/life_time_thres_);
+
+      if ((avg_vel< static_velocity_thres_) &&
+         (targets_[i].mode_prob_rm_ > targets_[i].mode_prob_cv_ ||
+          targets_[i].mode_prob_rm_ > targets_[i].mode_prob_ctrv_))
       {
         targets_[i].is_static_ = true;
       }
@@ -771,6 +780,7 @@ void ImmUkfPda::tracker(const autoware_msgs::CloudClusterArray& input,
   {
     // reset is_vis_bb_ to false
     targets_[i].is_vis_bb_ = false;
+    targets_[i].is_static_ = false;
 
     // todo: modify here. This skips irregular measurement and nan
     if (targets_[i].tracking_num_ == TrackingState::Die)

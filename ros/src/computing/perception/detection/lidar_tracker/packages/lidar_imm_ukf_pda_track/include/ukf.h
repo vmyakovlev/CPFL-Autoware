@@ -155,9 +155,11 @@ public:
   // for env classification
   Eigen::VectorXd init_meas_;
   double dist_from_init_;
+  std::vector<double> vel_history_;
 
   std::vector<Eigen::VectorXd> local2local_;
   std::vector<double> local2localYawVec_;
+
 
   double x_merge_yaw_;
 
