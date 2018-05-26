@@ -7,7 +7,7 @@
   <group if="$(arg car)">
     <group ns="obj_car">
 
-      <node pkg="obj_fusion" name="fusion" type="obj_fusion">
+      <node pkg="obj_fusion" name="fusion" type="obj_fusion" output="screen">
         <param name="min_dist" value="2.0" />
         <remap from="/obj_car/obj_label" to="/sync_obj_fusion/obj_car/obj_label" if="$(arg sync)" />
         <remap from="/cluster_centroids" to="/sync_obj_fusion/obj_car/cluster_centroids" if="$(arg sync)" />

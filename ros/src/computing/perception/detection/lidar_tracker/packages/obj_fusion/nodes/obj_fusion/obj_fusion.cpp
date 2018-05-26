@@ -71,7 +71,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
                const autoware_msgs::CloudClusterArray::ConstPtr &in_cloud_cluster_array_ptr)
 {
   tf::StampedTransform tform;
-  // tf::TransformListener tflistener;
+  // std::cout << "input cluster size: "<<in_cloud_cluster_array_ptr->clusters.size() << std::endl;
   try
   {
     ros::Time latest_time = ros::Time(0);
@@ -115,21 +115,21 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     centroids.push_back(point_in_map);
   }
 
-  if (centroids.empty() || obj_label.reprojected_positions.empty() || obj_label.obj_id.empty())
-  {
-    jsk_recognition_msgs::BoundingBoxArray pub_msg;
-    pub_msg.header = header;
-    std_msgs::Time time;
-    obj_pose_pub.publish(pub_msg);
-    autoware_msgs::CloudClusterArray cloud_clusters_msg;
-    cloud_clusters_msg.header = header;
-    cluster_class_pub.publish(cloud_clusters_msg);
-    visualization_msgs::MarkerArray marker_array_msg;
-    marker_array_pub.publish(marker_array_msg);
-    time.data = obj_pose_timestamp;
-    obj_pose_timestamp_pub.publish(time);
-    return;
-  }
+  // if (centroids.empty() || obj_label.reprojected_positions.empty() || obj_label.obj_id.empty())
+  // {
+  //   jsk_recognition_msgs::BoundingBoxArray pub_msg;
+  //   pub_msg.header = header;
+  //   std_msgs::Time time;
+  //   obj_pose_pub.publish(pub_msg);
+  //   autoware_msgs::CloudClusterArray cloud_clusters_msg;
+  //   cloud_clusters_msg.header = header;
+  //   cluster_class_pub.publish(cloud_clusters_msg);
+  //   visualization_msgs::MarkerArray marker_array_msg;
+  //   marker_array_pub.publish(marker_array_msg);
+  //   time.data = obj_pose_timestamp;
+  //   obj_pose_timestamp_pub.publish(time);
+  //   return;
+  // }
 
   std::vector<int> obj_indices;
   for (unsigned int i = 0; i < obj_label.obj_id.size(); ++i)
@@ -187,6 +187,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     {
       v_cloud_cluster.at(i).bounding_box.label = Unknown;
       pub_msg.boxes.push_back(v_cloud_cluster.at(i).bounding_box);
+      cloud_clusters_msg.clusters.push_back(v_cloud_cluster.at(i));
       continue;
     }
     else if(object_type == "car")
@@ -339,6 +340,7 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     cloud_clusters_msg.clusters.push_back(v_cloud_cluster.at(i));
   }
 
+  // std::cout << "output cluster size: "<<cloud_clusters_msg.clusters.size() << std::endl;
   marker_array_pub.publish(marker_array_msg);
   obj_pose_pub.publish(pub_msg);
   cluster_class_pub.publish(cloud_clusters_msg);
