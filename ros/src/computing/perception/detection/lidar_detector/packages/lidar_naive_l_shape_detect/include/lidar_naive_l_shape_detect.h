@@ -41,19 +41,19 @@ private:
   ros::Subscriber sub_cloud_array_;
   ros::Publisher pub_cloud_array_;
 
-  void callBack(autoware_msgs::CloudClusterArray input);
-  void updateCpFromPoints(std::vector<cv::Point2f> pc_points,
+  void callBack(const autoware_msgs::CloudClusterArray& input);
+  void updateCpFromPoints(const std::vector<cv::Point2f>& pc_points,
                           autoware_msgs::CloudCluster &cluster);
   void toRightAngleBBox(std::vector<cv::Point2f> &pc_points);
-  void updateDimentionAndEstimatedAngle(std::vector<cv::Point2f> pcPoints,
+  void updateDimentionAndEstimatedAngle(const std::vector<cv::Point2f>& pcPoints,
                                         autoware_msgs::CloudCluster &cluster);
   void getPointsInPcFrame(cv::Point2f rect_points[],
                           std::vector<cv::Point2f> &pc_points, int offset_x,
                           int offset_y);
   bool ruleBasedFilter(std::vector<cv::Point2f> pc_points, float max_z,
                        int num_points);
-  void getBBoxes(autoware_msgs::CloudClusterArray in_cluster_array,
-                 autoware_msgs::CloudClusterArray &out_cluster_array);
+  void getBBoxes(autoware_msgs::CloudClusterArray& in_cluster_array,
+                 autoware_msgs::CloudClusterArray& out_cluster_array);
 
 public:
   ClusterFilter();

@@ -40,19 +40,15 @@ ClusterFilter::ClusterFilter() {
       "/bbox_cloud_clusters", 1);
 }
 
-void ClusterFilter::callBack(autoware_msgs::CloudClusterArray input) {
+void ClusterFilter::callBack(const autoware_msgs::CloudClusterArray& input) {
   // std::cout << input.clusters[2].centroid_point.point.x<<std::endl;
   autoware_msgs::CloudClusterArray out_cluster;
-  getBBoxes(input, out_cluster);
-  // std::cout << input.header << std::endl;
+  autoware_msgs::CloudClusterArray copy_in_cluster;
+  copy_in_cluster = input;
+  getBBoxes(copy_in_cluster, out_cluster);
   out_cluster.header = input.header;
   pub_cloud_array_.publish(out_cluster);
-  // std::cout << input.clusters[2].centroid_point.point.x<<std::endl;
   g_count++;
-  // std::cout << "Frame " << g_count
-  //           << "------------------------------------------------" << std::endl;
-  // std::cout << "cluster size putpuy " << out_cluster.clusters.size()
-  //           << std::endl;
 }
 
 void ClusterFilter::getPointsInPcFrame(cv::Point2f rect_points[],
@@ -80,7 +76,7 @@ void ClusterFilter::getPointsInPcFrame(cv::Point2f rect_points[],
 }
 
 
-void ClusterFilter::updateCpFromPoints(std::vector<cv::Point2f> pc_points,
+void ClusterFilter::updateCpFromPoints(const std::vector<cv::Point2f>& pc_points,
                                        autoware_msgs::CloudCluster &cluster) {
   cv::Point2f p1 = pc_points[0];
   cv::Point2f p2 = pc_points[1];
@@ -138,7 +134,7 @@ void ClusterFilter::toRightAngleBBox(std::vector<cv::Point2f> &pc_points) {
 }
 
 void ClusterFilter::updateDimentionAndEstimatedAngle(
-    std::vector<cv::Point2f> pc_points, autoware_msgs::CloudCluster &cluster) {
+    const std::vector<cv::Point2f>& pc_points, autoware_msgs::CloudCluster &cluster) {
 
   cv::Point2f p1 = pc_points[0];
   cv::Point2f p2 = pc_points[1];
@@ -174,8 +170,8 @@ void ClusterFilter::updateDimentionAndEstimatedAngle(
 }
 
 void ClusterFilter::getBBoxes(
-    autoware_msgs::CloudClusterArray in_cluster_array,
-    autoware_msgs::CloudClusterArray &out_cluster_array) {
+    autoware_msgs::CloudClusterArray& in_cluster_array,
+    autoware_msgs::CloudClusterArray& out_cluster_array) {
 
   out_cluster_array.header = in_cluster_array.header;
 
@@ -199,7 +195,10 @@ void ClusterFilter::getBBoxes(
     int num_points = cloud.size();
     std::vector<cv::Point> point_vec(num_points);
     std::vector<cv::Point2f> pc_points(4);
-    float min_mx, min_my, max_mx, max_my;
+    float min_mx = 0;
+    float min_my = 0;
+    float max_mx = 0;
+    float max_my = 0;
     float min_m = 999;
     float max_m = -999;
     float max_z = -99;
@@ -262,12 +261,13 @@ void ClusterFilter::getBBoxes(
     // lSlopeDist_ = 2.0m
     if (slope_dist > slope_dist_ && num_points > num_points_) {
       float max_dist = 0;
-      float max_dx, max_dy;
+      float max_dx = 0;
+      float max_dy = 0;
 
       // 80 random points, get max distance
       for (int i = 0; i < ram_points_; i++) {
         int p_ind = rand_points(mt);
-        assert(p_ind >= 0 && p_ind < cloud.size());
+        assert(p_ind >= 0 && p_ind < (cloud.size()-1));
         float x_i = cloud[p_ind].x;
         float y_i = cloud[p_ind].y;
 

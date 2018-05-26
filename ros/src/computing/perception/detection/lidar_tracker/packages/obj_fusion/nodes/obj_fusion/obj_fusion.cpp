@@ -339,14 +339,24 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     pub_msg.boxes.push_back(bounding_box);
     cloud_clusters_msg.clusters.push_back(v_cloud_cluster.at(i));
   }
-
-  // std::cout << "output cluster size: "<<cloud_clusters_msg.clusters.size() << std::endl;
   marker_array_pub.publish(marker_array_msg);
   obj_pose_pub.publish(pub_msg);
   cluster_class_pub.publish(cloud_clusters_msg);
   std_msgs::Time time;
   time.data = obj_pose_timestamp;
   obj_pose_timestamp_pub.publish(time);
+
+  // for debug
+  // jsk_recognition_msgs::BoundingBoxArray jskbboxes_output;
+  // jskbboxes_output.header = in_cloud_cluster_array_ptr->header;
+  // for (size_t i = 0; i < in_cloud_cluster_array_ptr->clusters.size(); i++)
+  // {
+  //   jsk_recognition_msgs::BoundingBox bb;
+  //   bb.header = in_cloud_cluster_array_ptr->header;
+  //   bb = in_cloud_cluster_array_ptr->clusters[i].bounding_box;
+  //   jskbboxes_output.boxes.push_back(bb);
+  // }
+  // obj_pose_pub.publish(jskbboxes_output);
 }
 
 int main(int argc, char *argv[])
