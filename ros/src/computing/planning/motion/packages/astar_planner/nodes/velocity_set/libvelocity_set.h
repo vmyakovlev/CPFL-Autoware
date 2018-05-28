@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include <boost/circular_buffer.hpp>
+
 #include <geometry_msgs/Point.h>
 #include <ros/ros.h>
 #include <vector_map/vector_map.h>
@@ -163,7 +165,10 @@ public:
   {
     decelerate_points_.push_back(p);
   }
+
   geometry_msgs::Point getObstaclePoint(const EControl &kind) const;
+  geometry_msgs::Point getNearestObstaclePoint(const geometry_msgs::Point &current_position) const;
+
   void clearStopPoints()
   {
     stop_points_.clear();
@@ -175,6 +180,224 @@ public:
 
   ObstaclePoints() : stop_points_(0), decelerate_points_(0)
   {
+  }
+};
+
+// threshold to determine initializing tracking
+#define UNTRACKING_DISTANCE_THRESHOLD 8.0
+// threshold to change the state to tracking
+#define TRACKING_STATE_CHANGE_THRESHOLD 2
+// threshold allowed for negative dx
+#define ALLOWED_NEGATIVE_DX_COUNT 2
+
+class ObstacleTracker
+{
+private:
+  enum class ETrackingState
+  {
+    INITIALIZE = 1,
+    TRACKING = 2,
+    LOST = 3,
+  };
+
+  class KalmanFilter
+  {
+  private:
+    double x_, p_, k_, Q_, R_;
+  public:
+    KalmanFilter(double Q = 1e-5, double R = 1e-3)
+    : x_(1e-0), p_(1e-1), k_(1e-1)
+    { Q_ = Q; R_ = R; }
+    void init(double x0) { x_ = x0; }
+    void predict() {
+      x_ = x_;
+      p_ = p_ + Q_;
+    }
+    double update(const double z)
+    {
+      k_ = p_ / (p_ + R_);
+      x_ = x_ + k_ * (z - x_);
+      p_ = (1.0 - k_) * p_;
+      return x_;
+    }
+  };
+
+  bool use_tracking_;
+  int negative_dx_counter_;
+  double moving_thres_;
+
+  int tracking_counter_, lost_counter_;
+  int waypoint_;
+  double velocity_;
+  double prev_velocity_;
+  tf::Vector3 position_;
+  ETrackingState state_;
+  ros::Time time_;
+
+  boost::circular_buffer<tf::Vector3> position_buf_;
+  boost::circular_buffer<ros::Time> time_buf_;
+
+  KalmanFilter kf_;
+
+  double calcVelocity(const geometry_msgs::Point& cpos)
+  {
+    double v;
+    ros::Duration dt = time_buf_[1]-time_buf_[0];
+    double dx;
+    double raw_velocity;
+    // dt can be 0, when this function is called with out calling update()
+    // if dt is non zero
+    if (dt != ros::Duration(0.0)) {
+      // compute dx
+      tf::Vector3 cx;
+      tf::pointMsgToTF(cpos, cx);
+      dx = (position_buf_[1] - cx).length() - (position_buf_[0] - cx).length();
+
+      // this condition is to handle when the front part of the car is tracked in a frame and
+      // by next frame if we detect the back part of the car ==> dx is negative
+      if (prev_velocity_ > moving_thres_ && dx < 0 && negative_dx_counter_< ALLOWED_NEGATIVE_DX_COUNT)
+      {
+        negative_dx_counter_++;
+
+        raw_velocity = 0.0f;
+        // update KF
+        kf_.predict();
+        kf_.update(raw_velocity);
+        // but ignore the estimated value
+        v = prev_velocity_;
+      }
+      else {
+        // KF estimate
+        kf_.predict();
+        raw_velocity =  dx/dt.toSec();
+
+        // truncate negative values to 0
+        raw_velocity = (raw_velocity < 0.0f) ? 0.0f : raw_velocity;
+
+        v = kf_.update(raw_velocity);
+        v = (v > moving_thres_) ? v : 0.0f;
+
+        // update previous velocity
+        prev_velocity_ = v;
+        negative_dx_counter_=0;
+      }
+    }
+    else
+    {
+      v = prev_velocity_;
+    }
+    return v;
+  }
+
+public:
+  ObstacleTracker(const bool& use_tracking, double moving_thres)
+  {
+    position_buf_.set_capacity(2);
+    time_buf_.set_capacity(2);
+    use_tracking_ = use_tracking;
+    moving_thres_ = moving_thres;
+    reset();
+  }
+
+  void update(const int& stop_waypoint, const ObstaclePoints* obstacle_points, const double& init_velocity, const geometry_msgs::Point current_position, double obstacle_stop_distance_hard)
+  {
+    if (!use_tracking_)
+    {
+      waypoint_ = stop_waypoint;
+      velocity_ = 0.0;
+      return;
+    }
+
+    lost_counter_ = 0;
+    tracking_counter_++;
+    time_ = ros::Time::now();
+    tf::pointMsgToTF(obstacle_points->getObstaclePoint(EControl::STOP), position_);
+    //tf::pointMsgToTF(obstacle_points->getNearestObstaclePoint(current_position), position_);
+
+    // obstacle_distance
+    tf::Vector3 current;
+    tf::pointMsgToTF(current_position, current);
+    double distance_to_obstacle = (current-position_).length();
+
+    // if the obstacle is very near no point in tracking
+    if (distance_to_obstacle < obstacle_stop_distance_hard)
+    {
+      // reset tracking
+      reset();
+      // set velocity to zero and hold stop waypoint till obstacle is lost
+      waypoint_ = stop_waypoint;
+      velocity_ = 0.0f;
+      return;
+    }
+
+    position_buf_.push_back(position_);
+    time_buf_.push_back(time_);
+
+    // this is to handle if a car cuts in front of us and if we are already tracking a car way ahead of us
+    if (tracking_counter_ >= TRACKING_STATE_CHANGE_THRESHOLD && (position_buf_[1]-position_buf_[0]).length() > UNTRACKING_DISTANCE_THRESHOLD)
+    {
+      //reset();
+      return;
+    }
+
+    if (state_ == ETrackingState::INITIALIZE)
+    {
+      if (tracking_counter_ >= TRACKING_STATE_CHANGE_THRESHOLD) {
+        // wrap the counter
+        tracking_counter_ = TRACKING_STATE_CHANGE_THRESHOLD;
+
+        // change the state to tracking
+        state_ = ETrackingState::TRACKING;
+        prev_velocity_ = init_velocity;  // initialise prev_velocity with init velocity (current ego car velocity)
+
+        // compute the obstacle velocity
+        double velocity = calcVelocity(current_position);
+        kf_.init(velocity);         // initialise the KF with obstacle velocity
+        waypoint_ = stop_waypoint;
+        velocity_ = velocity;       // obstacle velocity
+      }
+    }
+    else if (state_ == ETrackingState::TRACKING)
+    {
+      waypoint_ = stop_waypoint;
+      velocity_ = calcVelocity(current_position);
+    }
+  }
+
+  void update()
+  {
+    lost_counter_++;
+    kf_.predict();
+    if (lost_counter_ >= 5)
+    {
+      lost_counter_ = 0;
+      reset();
+    }
+  }
+
+  void reset()
+  {
+    state_ = ETrackingState::INITIALIZE;
+    tracking_counter_ = 0;
+    lost_counter_ = 0;
+    negative_dx_counter_ = 0;
+    waypoint_ = -1;
+    velocity_ = 0.0;
+    prev_velocity_ = 0.0;
+    position_ = tf::Vector3(0.0, 0.0, 0.0);
+    position_buf_.clear();
+    time_buf_.clear();
+    kf_.init(0.0);
+  }
+
+  int getWaypointIdx()
+  {
+    return waypoint_;
+  }
+
+  double getVelocity()
+  {
+    return velocity_;
   }
 };
 
