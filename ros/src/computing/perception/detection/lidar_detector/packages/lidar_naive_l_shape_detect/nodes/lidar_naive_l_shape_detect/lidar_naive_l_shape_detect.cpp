@@ -23,7 +23,9 @@ int g_count = 0;
 
 ClusterFilter::ClusterFilter() {
   // float picScale = 30;
+  // roi_m_ = 60;
   roi_m_ = 60;
+  // pic_scale_ = 900 / roi_m_;
   pic_scale_ = 900 / roi_m_;
   ram_points_ = 80;
 
@@ -175,12 +177,16 @@ void ClusterFilter::getBBoxes(
 
   out_cluster_array.header = in_cluster_array.header;
 
+  // std::cout << "-------------" << std::endl;
   for (size_t i_cluster = 0; i_cluster < in_cluster_array.clusters.size();
        i_cluster++) {
     pcl::PointCloud<pcl::PointXYZ> cloud;
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
     // Convert from ros msg to PCL::PointCloud data type
+    assert(i_cluster <= in_cluster_array.clusters.size());
+    // std::cout << i_cluster << "th cluster in size of " << in_cluster_array.clusters.size()<<std::endl;
     pcl::fromROSMsg(in_cluster_array.clusters[i_cluster].cloud, cloud);
-
+    // std::cout << i_cluster << "th cluster"<<std::endl;
     // calculating offset so that shape fitting would be visualized nicely
     cv::Mat m(pic_scale_ * roi_m_, pic_scale_ * roi_m_, CV_8UC1, cv::Scalar(0));
     float init_px = cloud[0].x + roi_m_ / 2;
@@ -205,7 +211,7 @@ void ClusterFilter::getBBoxes(
 
     // for center of gravity
     // float sumX = 0; float sumY = 0;
-
+    // std::cout << i_cluster << "before second loop"<<std::endl;
     for (int i_point = 0; i_point < num_points; i_point++) {
       float p_x = cloud[i_point].x;
       float p_y = cloud[i_point].y;
@@ -222,30 +228,38 @@ void ClusterFilter::getBBoxes(
       // offset so that the object would be locate at the center
       int offset_x = pic_x + offset_init_x;
       int offset_y = pic_y + offset_init_y;
+      if(offset_x > (pic_scale_ * roi_m_) || offset_y > (pic_scale_ * roi_m_)){
+        // std::cout << offset_x <<" "<<offset_y <<" are not in the image coordinate" << std::endl;
+        continue;
+      }
       m.at<uchar>(offset_y, offset_x) = 255;
       point_vec[i_point] = cv::Point(offset_x, offset_y);
+      // std::cout << i_point << "inside loop size of "<< num_points<<std::endl;
       // calculate min and max slope for x1, x3(edge points)
-      float m = p_y / p_x;
-      if (m < min_m) {
-        min_m = m;
+      float delta_m = p_y / p_x;
+      if (delta_m < min_m) {
+        min_m = delta_m;
         min_mx = p_x;
         min_my = p_y;
       }
-      if (m > max_m) {
-        max_m = m;
+
+      if (delta_m > max_m) {
+        max_m = delta_m;
         max_mx = p_x;
         max_my = p_y;
       }
 
       // get maxZ
       if (p_z > max_z)
+      {
         max_z = p_z;
+      }
 
       // for center of gravity
       // sumX += offsetX;
       // sumY += offsetY;
     }
-
+    // std::cout << i_cluster << "after second loop"<<std::endl;
     // L shape fitting parameters
     float x_dist = max_mx - min_mx;
     float y_dist = max_my - min_my;
@@ -255,8 +269,10 @@ void ClusterFilter::getBBoxes(
     // random variable
     std::mt19937_64 mt;
     mt.seed(in_cluster_array.header.stamp.toSec());
+    // mt.seed(0);
     std::uniform_int_distribution<> rand_points(0, num_points - 1);
 
+    // std::cout << i_cluster << "after random"<<std::endl;
     // start l shape fitting for car like object
     // lSlopeDist_ = 2.0m
     if (slope_dist > slope_dist_ && num_points > num_points_) {
@@ -377,6 +393,7 @@ void ClusterFilter::getBBoxes(
       //            waitKey(0);
     }
 
+    // std::cout << i_cluster << "th cluster"<<std::endl;
     updateCpFromPoints(pc_points, in_cluster_array.clusters[i_cluster]);
     // std::cout << iCluster << "th cx
     // "<<inClusterArray.clusters[iCluster].centroid_point.point.x << std::endl;
@@ -395,6 +412,7 @@ void ClusterFilter::getBBoxes(
     //     << "y: "
     //     << in_cluster_array.clusters[i_cluster].bounding_box.pose.position.y
     //     << std::endl;
+    // std::cout << i_cluster << "th cluster"<<std::endl;
   }
   // cout << clusterArray.clusters[2].centroid_point.point.x<<endl;
 }
