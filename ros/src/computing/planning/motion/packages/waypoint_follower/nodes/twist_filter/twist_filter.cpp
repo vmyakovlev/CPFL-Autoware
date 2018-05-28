@@ -37,6 +37,28 @@
 
 namespace {
 
+class KalmanFilter
+{
+private:
+  double x_, p_, k_, Q_, R_;
+public:
+  KalmanFilter(double Q = 1e-2, double R = 3e-1)
+  : x_(1e-0), p_(1e-2), k_(1e-0)
+  { Q_ = Q; R_ = R; }
+  void init(double x0) { x_ = x0; }
+  void predict() {
+    x_ = x_;
+    p_ = p_ + Q_;
+  }
+  double update(const double z)
+  {
+    k_ = p_ / (p_ + R_);
+    x_ = x_ + k_ * (z - x_);
+    p_ = (1.0 - k_) * p_;
+    return x_;
+  }
+};
+
 //Publisher
 ros::Publisher g_twist_pub;
 double g_lateral_accel_limit = 5.0;
@@ -44,6 +66,7 @@ double g_lowpass_gain_linear_x = 0.0;
 double g_lowpass_gain_angular_z = 0.0;
 constexpr double RADIUS_MAX = 9e10;
 constexpr double ERROR = 1e-8;
+KalmanFilter g_kf;
 
 void configCallback(const autoware_msgs::ConfigTwistFilterConstPtr &config)
 {
@@ -60,6 +83,10 @@ void TwistCmdCallback(const geometry_msgs::TwistStampedConstPtr &msg)
 
   double v = msg->twist.linear.x;
   double omega = msg->twist.angular.z;
+
+  // update kalman filter
+  g_kf.predict();
+  v = g_kf.update(v);
 
   if(fabs(omega) < ERROR){
     g_twist_pub.publish(*msg);
