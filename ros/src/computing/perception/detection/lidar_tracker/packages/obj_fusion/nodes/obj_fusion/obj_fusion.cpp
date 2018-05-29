@@ -197,10 +197,6 @@ void fusion_cb(const autoware_msgs::obj_label::ConstPtr &obj_label_msg,
     else if(object_type == "person"){
       v_cloud_cluster.at(i).bounding_box.label = Person;
     }
-    else
-    {
-      v_cloud_cluster.at(i).bounding_box.label = Unknown;
-    }
 
     jsk_recognition_msgs::BoundingBox bounding_box;
     bounding_box = v_cloud_cluster.at(i).bounding_box;
