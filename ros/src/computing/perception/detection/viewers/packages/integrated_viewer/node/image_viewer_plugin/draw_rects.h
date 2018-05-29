@@ -17,12 +17,13 @@ namespace integrated_viewer {
 
   protected:
     static const int kRectangleThickness;
-  
+
   private:
     void DrawLabel(const std::string& label, const cv::Point& rectangle_origin, cv::Mat& image);
     std::vector<cv::Scalar> color_map_;
     static const cv::Scalar kBlue;
     static const cv::Scalar kGreen;
+    static const cv::Scalar kRed;
   };
 }
 #endif // DRAW_RECTS_H

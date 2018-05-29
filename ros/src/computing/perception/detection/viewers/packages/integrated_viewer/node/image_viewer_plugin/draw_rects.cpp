@@ -16,6 +16,7 @@ namespace integrated_viewer
   const int        DrawRects::kRectangleThickness = 3;
   const cv::Scalar DrawRects::kBlue               = CV_RGB(0, 0, 255);
   const cv::Scalar DrawRects::kGreen              = CV_RGB(0, 255, 0);
+  const cv::Scalar DrawRects::kRed                = CV_RGB(255, 0, 0);
 
   DrawRects::DrawRects(void) {
     // Generate color map to represent tracked object
@@ -50,7 +51,7 @@ namespace integrated_viewer
         label << rectangle.type << ":" << std::setprecision(2) << rectangle.score;
         if(rectangle.type == "car")
         {
-          rectangle_color = kBlue;
+          rectangle_color = kRed;
         }
         else
         {
