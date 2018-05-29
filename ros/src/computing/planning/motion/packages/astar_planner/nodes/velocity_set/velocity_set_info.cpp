@@ -115,6 +115,16 @@ void VelocitySetInfo::detectionCallback(const std_msgs::Int32 &msg)
     wpidx_detectionResultByOtherNodes_ = msg.data;
 }
 
+void VelocitySetInfo::stateCallback(const std_msgs::StringConstPtr &msg)
+{
+    current_state_ = msg->data;
+}
+
+void VelocitySetInfo::statesCallback(const autoware_msgs::stateConstPtr &msg)
+{
+    current_state_ = msg->behavior_state;
+}
+
 void VelocitySetInfo::controlPoseCallback(const geometry_msgs::PoseStampedConstPtr &msg)
 {
   control_pose_ = *msg;

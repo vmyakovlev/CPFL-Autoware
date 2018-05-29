@@ -30,6 +30,27 @@ enum class EObstacleType
   STOPLINE = 3,
 };
 
+struct OtherDetectionPoint
+{
+  OtherDetectionPoint()
+    : radius(0)
+  {
+    center.x = 0;
+    center.y = 0;
+    center.z = 0;
+  };
+  OtherDetectionPoint(double x, double y, double z, double radius)
+    : radius(radius)
+  {
+    center.x = x;
+    center.y = y;
+    center.z = z;
+  };
+
+  geometry_msgs::Point center;
+  double radius;
+};
+
 struct CrossWalkPoints
 {
   std::vector<geometry_msgs::Point> points;

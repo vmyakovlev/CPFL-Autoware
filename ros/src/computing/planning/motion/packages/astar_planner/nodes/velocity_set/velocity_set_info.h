@@ -31,12 +31,16 @@
 #ifndef VELOCITY_SET_INFO_H
 #define VELOCITY_SET_INFO_H
 
+#include <string>
+
 #include <ros/ros.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Int32.h>
+#include <std_msgs/String.h>
 
 #include "autoware_msgs/ConfigVelocitySet.h"
+#include "autoware_msgs/state.h"
 
 class VelocitySetInfo
 {
@@ -54,6 +58,7 @@ class VelocitySetInfo
   double velocity_change_limit_;    // (m/s)
   double temporal_waypoints_size_;  // (meter)
   int	wpidx_detectionResultByOtherNodes_; // waypoints index@finalwaypoints
+  std::string current_state_;
 
   // ROS param
   double remove_points_upto_;
@@ -76,7 +81,8 @@ class VelocitySetInfo
   void localizerPoseCallback(const geometry_msgs::PoseStampedConstPtr &msg);
   void obstacleSimCallback(const sensor_msgs::PointCloud2ConstPtr &msg);
   void detectionCallback(const std_msgs::Int32 &msg);
-
+  void stateCallback(const std_msgs::StringConstPtr &msg);
+  void statesCallback(const autoware_msgs::stateConstPtr &msg);
   void clearPoints();
 
 
@@ -159,6 +165,12 @@ class VelocitySetInfo
   {
     return set_pose_;
   }
+
+  std::string getCurretState() const
+  {
+    return current_state_;
+  }
+
 };
 
 #endif // VELOCITY_SET_INFO_H
