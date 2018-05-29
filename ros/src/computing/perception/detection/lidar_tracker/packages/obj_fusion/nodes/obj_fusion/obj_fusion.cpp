@@ -55,9 +55,9 @@ obj_label_t obj_label;
 
 enum ObjLabel
 {
+  Unknown,
   Car,
-  Person,
-  Unknown
+  Person
 };
 
 static double euclid_distance(const geometry_msgs::Point pos1, const geometry_msgs::Point pos2)
