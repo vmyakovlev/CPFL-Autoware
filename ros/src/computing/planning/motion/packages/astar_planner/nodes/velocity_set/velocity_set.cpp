@@ -138,6 +138,7 @@ void displayDetectionRange(const autoware_msgs::lane& lane, const CrossWalk& cro
   crosswalk_marker.id = 0;
   crosswalk_marker.type = visualization_msgs::Marker::SPHERE_LIST;
   crosswalk_marker.action = visualization_msgs::Marker::ADD;
+  waypoint_marker_stop = crosswalk_marker;
   waypoint_marker_decelerate = crosswalk_marker;
   stop_line = crosswalk_marker;
   stop_line.type = visualization_msgs::Marker::CUBE;
