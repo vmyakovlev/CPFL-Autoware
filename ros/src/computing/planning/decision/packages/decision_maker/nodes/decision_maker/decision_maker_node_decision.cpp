@@ -19,7 +19,7 @@
 namespace decision_maker
 {
 /* do not use this within callback */
-bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag)
+bool DecisionMakerNode::waitForEvent(cstring_t& key, const bool& flag)
 {
   const uint32_t monitoring_rate = 20;  // Hz
 
@@ -35,7 +35,7 @@ bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag)
   return true;
 }
 
-bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag, const double &timeout_sec)
+bool DecisionMakerNode::waitForEvent(cstring_t& key, const bool& flag, const double& timeout_sec)
 {
   const uint32_t monitoring_rate = 20;  // Hz
   ros::Rate loop_rate(monitoring_rate);
@@ -56,7 +56,7 @@ bool DecisionMakerNode::waitForEvent(cstring_t &key, const bool &flag, const dou
   }
   return false;
 }
-double DecisionMakerNode::calcIntersectWayAngle(const autoware_msgs::lane &laneinArea)
+double DecisionMakerNode::calcIntersectWayAngle(const autoware_msgs::lane& laneinArea)
 {
   double diff = 0.0;
   if (laneinArea.waypoints.empty())
@@ -74,7 +74,7 @@ double DecisionMakerNode::calcIntersectWayAngle(const autoware_msgs::lane &lanei
   return diff;
 }
 
-bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_current_point)
+bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point& _current_point)
 {
   static std::vector<double> distances;
   static uint32_t distances_count = 0;
@@ -92,12 +92,12 @@ bool DecisionMakerNode::isLocalizationConvergence(const geometry_msgs::Point &_c
   }
 
   distances.push_back(amathutils::find_distance(prev_point, _current_point));
-  if (++distances_count > param_convergence_count_)
+  if (++distances_count > 10) /* num of count to judge convergence*/
   {
     distances.erase(distances.begin());
     distances_count--;
     double avg_distances = std::accumulate(distances.begin(), distances.end(), 0) / distances.size();
-    if (avg_distances <= param_convergence_threshold_)
+    if (avg_distances <= 2) /*meter*/
     {
       ret = true;
     }

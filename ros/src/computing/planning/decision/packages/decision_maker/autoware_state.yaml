@@ -254,8 +254,11 @@ autoware_states:
     StateName: MissionComplete
     Transition:
       -
-        Key: on_wait_order
+        Key: goto_wait_order
         Target: WaitOrder
+      -
+        Key: re_enter_mission
+        Target: DriveReady
     Parent: ~
   -
     StateName: MissionAborted

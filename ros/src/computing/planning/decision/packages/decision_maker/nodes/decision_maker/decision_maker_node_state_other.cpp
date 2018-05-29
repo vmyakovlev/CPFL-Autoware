@@ -2,7 +2,7 @@
 
 namespace decision_maker
 {
-void DecisionMakerNode::entryWaitMissionOrderState(cstring_t &state_name, int status)
+void DecisionMakerNode::entryWaitMissionOrderState(cstring_t& state_name, int status)
 {
   publishOperatorHelpMessage("Please load mission order (waypoints).");
   if (!isSubscriberRegistered("lane_waypoints_array"))
@@ -12,7 +12,7 @@ void DecisionMakerNode::entryWaitMissionOrderState(cstring_t &state_name, int st
   }
 }
 
-void DecisionMakerNode::updateWaitMissionOrderState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateWaitMissionOrderState(cstring_t& state_name, int status)
 {
   if (isEventFlagTrue("received_based_lane_waypoint"))
   {
@@ -20,11 +20,11 @@ void DecisionMakerNode::updateWaitMissionOrderState(cstring_t &state_name, int s
     tryNextState("received_mission_order");
   }
 }
-void DecisionMakerNode::exitWaitMissionOrderState(cstring_t &state_name, int status)
+void DecisionMakerNode::exitWaitMissionOrderState(cstring_t& state_name, int status)
 {
 }
 
-void DecisionMakerNode::entryMissionCheckState(cstring_t &state_name, int status)
+void DecisionMakerNode::entryMissionCheckState(cstring_t& state_name, int status)
 {
   publishOperatorHelpMessage("Received mission, DM is checking this mission, please wait.");
   current_status_.using_lane_array = current_status_.based_lane_array;
@@ -35,7 +35,7 @@ void DecisionMakerNode::entryMissionCheckState(cstring_t &state_name, int status
         nh_.subscribe("final_waypoints", 100, &DecisionMakerNode::callbackFromFinalWaypoint, this);
   }
 }
-void DecisionMakerNode::updateMissionCheckState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateMissionCheckState(cstring_t& state_name, int status)
 {
   if (isEventFlagTrue("received_finalwaypoints") && current_status_.closest_waypoint != -1)
   {
@@ -43,17 +43,17 @@ void DecisionMakerNode::updateMissionCheckState(cstring_t &state_name, int statu
   }
 }
 
-void DecisionMakerNode::updateMissionAbortedState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateMissionAbortedState(cstring_t& state_name, int status)
 {
   tryNextState("goto_wait_order");
 }
 
-void DecisionMakerNode::entryDriveReadyState(cstring_t &state_name, int status)
+void DecisionMakerNode::entryDriveReadyState(cstring_t& state_name, int status)
 {
   publishOperatorHelpMessage("Please order to engage");
 }
 
-void DecisionMakerNode::updateDriveReadyState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateDriveReadyState(cstring_t& state_name, int status)
 {
   const bool start_flag = false;
   if (start_flag /*isEventFlagTrue("")*/)
@@ -62,9 +62,10 @@ void DecisionMakerNode::updateDriveReadyState(cstring_t &state_name, int status)
   }
 }
 
-void DecisionMakerNode::updateMissionCompleteState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateMissionCompleteState(cstring_t& state_name, int status)
 {
   sleep(1);
-  tryNextState("goto_wait_order");
+  //  tryNextState("goto_wait_order");
+  tryNextState("re_enter_mission");
 }
 }

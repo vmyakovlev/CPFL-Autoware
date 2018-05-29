@@ -1919,88 +1919,17 @@ params :
     topic : /config/decision_maker
     msg   : ConfigDecisionMaker
     vars  :
-    - name : enable_force_state_change
-      desc : enable force state change flag
-      label: enable_force_state_change
-      kind : checkbox
-      v    : False
     - name : enable_display_marker
       desc : enable display marker flag
       label: enable_display_marker
       kind : checkbox
       v    : False
-    - name : convergence_threshold
-      desc : Convergence threshold to DRIVE_STATE from LOCATE_VEHICLE_STATE.(Meter)
-      label: convergence_threshold
-      min  : 0.0
-      max  : 10.0
-      v    : 0.01
-    - name : convergence_count
-      desc : Number of values used for convergence determination
-      label: convergence_count
-      min  : 1
-      max  : 30
-      v    : 5
-    - name : target_waypoint
-      desc : decision maker load wp_state except stopline by target_waypoint
-      label: target_waypoint
+    - name : num_of_steer_behind
+      desc : e
+      label: num_of_steer_behind
       min  : 0
       max  : 50
-      v    : 14
-    - name : stopline_target_waypoint
-      desc : stopline
-      label: stopline_target_waypoint
-      min  : 0
-      max  : 50
-      v    : 10
-    - name : stopline_target_ratio
-      desc : stopline
-      label: stopline_target_ratio
-      min  : 0.0
-      max  : 0.99
-      v    : 0.0
-    - name : shift_width
-      desc : lane shift width
-      label: shift_width
-      min  : -5.0
-      max  : 5.0
-      v    : 1.0
-    - name : detection_area_rate
-      desc : detection_area_rate
-      label: detection_area_rate
-      min  : 0.0
-      max  : 3.0
-      v    : 1.0
-    - name : crawl_velocity
-      desc : crawl_velocity
-      label: crawl_velocity
-      min  : 0.0
-      max  : 10.0
-      v    : 4.0
-    - name : detection_area_x1
-      desc : detection_area_x1
-      label: detection_area_x1
-      min  : -200.0
-      max  : 200.0
-      v    : 80.0
-    - name : detection_area_x2
-      desc : detection_area_x2
-      label: detection_area_x2
-      min  : -200.0
-      max  : 200.0
-      v    : 0.0
-    - name : detection_area_y1
-      desc : detection_area_y1
-      label: detection_area_y1
-      min  : -200.0
-      max  : 200.0
-      v    : 50.0
-    - name : detection_area_y2
-      desc : detection_area_y2
-      label: detection_area_y2
-      min  : -200.0
-      max  : 200.0
-      v    : -50.0
+      v    : 20
 
     - name : points_topic
       desc : points_topic

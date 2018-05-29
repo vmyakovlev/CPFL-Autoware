@@ -19,7 +19,7 @@
 
 namespace decision_maker
 {
-void DecisionMakerNode::callbackFromFilteredPoints(const sensor_msgs::PointCloud2::ConstPtr &msg)
+void DecisionMakerNode::callbackFromFilteredPoints(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
   setEventFlag("received_pointcloud_for_NDT", true);
 
@@ -27,21 +27,21 @@ void DecisionMakerNode::callbackFromFilteredPoints(const sensor_msgs::PointCloud
   /* create timer for flags reset   */
 }
 
-void DecisionMakerNode::callbackFromSimPose(const geometry_msgs::PoseStamped &msg)
+void DecisionMakerNode::callbackFromSimPose(const geometry_msgs::PoseStamped& msg)
 {
   ROS_INFO("Received system is going to simulation mode");
   // handleStateCmd(state_machine::DRIVE_STATE);
   Subs["sim_pose"].shutdown();
 }
 
-void DecisionMakerNode::callbackFromStateCmd(const std_msgs::String &msg)
+void DecisionMakerNode::callbackFromStateCmd(const std_msgs::String& msg)
 {
   ROS_INFO("Received State Command");
   tryNextState(msg.data);
   // handleStateCmd((uint64_t)1ULL << (uint64_t)msg.data);
 }
 
-void DecisionMakerNode::callbackFromLaneChangeFlag(const std_msgs::Int32 &msg)
+void DecisionMakerNode::callbackFromLaneChangeFlag(const std_msgs::Int32& msg)
 {
 #if 0
   if (msg.data == enumToInteger<E_ChangeFlags>(E_ChangeFlags::LEFT) &&
@@ -64,30 +64,14 @@ void DecisionMakerNode::callbackFromLaneChangeFlag(const std_msgs::Int32 &msg)
 #endif
 }
 
-void DecisionMakerNode::callbackFromConfig(const autoware_msgs::ConfigDecisionMaker &msg)
+void DecisionMakerNode::callbackFromConfig(const autoware_msgs::ConfigDecisionMaker& msg)
 {
-#if 0
   ROS_INFO("Param setted by Runtime Manager");
   enableDisplayMarker = msg.enable_display_marker;
-  ctx->setEnableForceSetState(msg.enable_force_state_change);
-
-  param_target_waypoint_ = msg.target_waypoint;
-  param_stopline_target_waypoint_ = msg.stopline_target_waypoint;
-  param_stopline_target_ratio_ = msg.stopline_target_ratio;
-  param_shift_width_ = msg.shift_width;
-
-  param_crawl_velocity_ = msg.crawl_velocity;
-  param_detection_area_rate_ = msg.detection_area_rate;
-  param_baselink_tf_ = msg.baselink_tf;
-
-  detectionArea_.x1 = msg.detection_area_x1;
-  detectionArea_.x2 = msg.detection_area_x2;
-  detectionArea_.y1 = msg.detection_area_y1;
-  detectionArea_.y2 = msg.detection_area_y2;
-#endif
+  param_num_of_steer_behind_ = msg.num_of_steer_behind;
 }
 
-void DecisionMakerNode::callbackFromLightColor(const ros::MessageEvent<autoware_msgs::traffic_light const> &event)
+void DecisionMakerNode::callbackFromLightColor(const ros::MessageEvent<autoware_msgs::traffic_light const>& event)
 {
 #if 0
   const autoware_msgs::traffic_light *light = event.getMessage().get();
@@ -111,7 +95,7 @@ void DecisionMakerNode::callbackFromLightColor(const ros::MessageEvent<autoware_
 #endif
 }
 
-void DecisionMakerNode::callbackFromObjectDetector(const autoware_msgs::CloudClusterArray &msg)
+void DecisionMakerNode::callbackFromObjectDetector(const autoware_msgs::CloudClusterArray& msg)
 {
 #if 0
   // This function is a quick hack implementation.
@@ -158,19 +142,19 @@ void DecisionMakerNode::callbackFromObjectDetector(const autoware_msgs::CloudClu
 #endif
 }
 
-void DecisionMakerNode::insertPointWithinCrossRoad(const std::vector<CrossRoadArea> &_intersects,
-                                                   autoware_msgs::LaneArray &lane_array)
+void DecisionMakerNode::insertPointWithinCrossRoad(const std::vector<CrossRoadArea>& _intersects,
+                                                   autoware_msgs::LaneArray& lane_array)
 {
-  for (auto &lane : lane_array.lanes)
+  for (auto& lane : lane_array.lanes)
   {
-    for (auto &wp : lane.waypoints)
+    for (auto& wp : lane.waypoints)
     {
       geometry_msgs::Point pp;
       pp.x = wp.pose.pose.position.x;
       pp.y = wp.pose.pose.position.y;
       pp.z = wp.pose.pose.position.z;
 
-      for (auto &area : intersects)
+      for (auto& area : intersects)
       {
         if (CrossRoadArea::isInsideArea(&area, pp))
         {
@@ -197,13 +181,13 @@ inline double getDistance(double ax, double ay, double bx, double by)
   return std::hypot(ax - bx, ay - by);
 }
 
-void DecisionMakerNode::setWaypointState(autoware_msgs::LaneArray &lane_array)
+void DecisionMakerNode::setWaypointState(autoware_msgs::LaneArray& lane_array)
 {
   insertPointWithinCrossRoad(intersects, lane_array);
   // STR
-  for (auto &area : intersects)
+  for (auto& area : intersects)
   {
-    for (auto &laneinArea : area.insideLanes)
+    for (auto& laneinArea : area.insideLanes)
     {
       // To straight/left/right recognition by using angle
       // between first-waypoint and end-waypoint in intersection area.
@@ -217,26 +201,30 @@ void DecisionMakerNode::setWaypointState(autoware_msgs::LaneArray &lane_array)
       else
         steering_state = autoware_msgs::WaypointState::STR_STRAIGHT;
 
-      for (auto &wp_lane : laneinArea.waypoints)
-        for (auto &lane : lane_array.lanes)
-          for (auto &wp : lane.waypoints)
+      for (auto& wp_lane : laneinArea.waypoints)
+        for (auto& lane : lane_array.lanes)
+          for (auto& wp : lane.waypoints)
             if (wp.gid == wp_lane.gid && wp.wpstate.aid == area.area_id)
             {
               wp.wpstate.steering_state = steering_state;
             }
+            else if (wp.wpstate.steering_state == 0)
+            {
+              wp.wpstate.steering_state = autoware_msgs::WaypointState::STR_STRAIGHT;
+            }
     }
   }
   // STOP
-  std::vector<StopLine> stoplines = g_vmap.findByFilter([&](const StopLine &stopline) {
+  std::vector<StopLine> stoplines = g_vmap.findByFilter([&](const StopLine& stopline) {
     return ((g_vmap.findByKey(Key<RoadSign>(stopline.signid)).type &
              (autoware_msgs::WaypointState::TYPE_STOP | autoware_msgs::WaypointState::TYPE_STOPLINE)) != 0);
   });
 
-  for (auto &lane : lane_array.lanes)
+  for (auto& lane : lane_array.lanes)
   {
     for (size_t wp_idx = 0; wp_idx < lane.waypoints.size() - 1; wp_idx++)
     {
-      for (auto &stopline : stoplines)
+      for (auto& stopline : stoplines)
       {
         geometry_msgs::Point bp =
             VMPoint2GeoPoint(g_vmap.findByKey(Key<Point>(g_vmap.findByKey(Key<Line>(stopline.lid)).bpid)));
@@ -275,17 +263,17 @@ void DecisionMakerNode::setWaypointState(autoware_msgs::LaneArray &lane_array)
 }
 
 // for based waypoint
-void DecisionMakerNode::callbackFromLaneWaypoint(const autoware_msgs::LaneArray &msg)
+void DecisionMakerNode::callbackFromLaneWaypoint(const autoware_msgs::LaneArray& msg)
 {
   ROS_INFO("[%s]:LoadedWaypointLaneArray\n", __func__);
 
   current_status_.based_lane_array = msg;
   // indexing
   int gid = 0;
-  for (auto &lane : current_status_.based_lane_array.lanes)
+  for (auto& lane : current_status_.based_lane_array.lanes)
   {
     int lid = 0;
-    for (auto &wp : lane.waypoints)
+    for (auto& wp : lane.waypoints)
     {
       wp.gid = gid++;
       wp.lid = lid++;
@@ -310,7 +298,7 @@ void DecisionMakerNode::callbackFromLaneWaypoint(const autoware_msgs::LaneArray 
     return state_machine::DRIVE_STR_STRAIGHT_STATE;
 #endif
 
-void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane &msg)
+void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane& msg)
 {
   current_status_.finalwaypoints = msg;
   setEventFlag("received_finalwaypoints", true);
@@ -428,21 +416,21 @@ void DecisionMakerNode::callbackFromFinalWaypoint(const autoware_msgs::lane &msg
   publishToVelocityArray();
 #endif
 }
-void DecisionMakerNode::callbackFromTwistCmd(const geometry_msgs::TwistStamped &msg)
+void DecisionMakerNode::callbackFromTwistCmd(const geometry_msgs::TwistStamped& msg)
 {
 }
 
-void DecisionMakerNode::callbackFromClosestWaypoint(const std_msgs::Int32 &msg)
+void DecisionMakerNode::callbackFromClosestWaypoint(const std_msgs::Int32& msg)
 {
   current_status_.closest_waypoint = msg.data;
 }
 
-void DecisionMakerNode::callbackFromCurrentPose(const geometry_msgs::PoseStamped &msg)
+void DecisionMakerNode::callbackFromCurrentPose(const geometry_msgs::PoseStamped& msg)
 {
   current_status_.pose = msg.pose;
 }
 
-void DecisionMakerNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStamped &msg)
+void DecisionMakerNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStamped& msg)
 {
   current_status_.velocity = amathutils::mps2kmph(msg.twist.linear.x);
 }

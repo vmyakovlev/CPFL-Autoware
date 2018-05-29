@@ -14,17 +14,16 @@
 
 #include <autoware_msgs/lane.h>
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
-#include <visualization_msgs/MarkerArray.h>
 #include <random>
+#include <visualization_msgs/MarkerArray.h>
 
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 
-namespace decision_maker
-{
-void DecisionMakerNode::tryNextState(const std::string &key)
-{
+namespace decision_maker {
+void DecisionMakerNode::tryNextState(const std::string &key) {
+  fprintf(stderr, "DEBUG_INFO: %s: %s\n", __func__, key.c_str());
   ctx->nextState(key);
 #if 0
   std_msgs::String msg;
@@ -32,19 +31,16 @@ void DecisionMakerNode::tryNextState(const std::string &key)
 #endif
 }
 
-void DecisionMakerNode::update(void)
-{
+void DecisionMakerNode::update(void) {
   update_msgs();
   if (ctx)
     ctx->onUpdate();
 }
 
-void DecisionMakerNode::run(void)
-{
+void DecisionMakerNode::run(void) {
   ros::Rate loop_rate(5);
 
-  while (ros::ok())
-  {
+  while (ros::ok()) {
     update();
     if (enableDisplayMarker)
       displayMarker();

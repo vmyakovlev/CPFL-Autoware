@@ -2,11 +2,11 @@
 
 namespace decision_maker
 {
-void DecisionMakerNode::entryDriveState(cstring_t &state_name, int status)
+void DecisionMakerNode::entryDriveState(cstring_t& state_name, int status)
 {
   publishOperatorHelpMessage("< Engaged");
 }
-void DecisionMakerNode::updateDriveState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateDriveState(cstring_t& state_name, int status)
 {
   if (isArrivedGoal())
   {
@@ -26,7 +26,7 @@ void DecisionMakerNode::updateDriveState(cstring_t &state_name, int status)
 
 uint8_t DecisionMakerNode::getSteeringStateFromWaypoint(void)
 {
-  static const double distance_to_target = 30.0;  // 30m in front of intersection: Follow the Japanese Law
+  static const double distance_to_target = param_num_of_steer_behind_;
   static const size_t ignore_idx = 0;
 
   double distance = 0.0;
@@ -89,13 +89,16 @@ std::pair<uint8_t, int> DecisionMakerNode::getStopSignStateFromWaypoint(void)
   }
   return ret;
 }
-void DecisionMakerNode::updateLaneAreaState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateLaneAreaState(cstring_t& state_name, int status)
 {
+  fprintf(stderr, "DEBUG_INFO: %s: ", __func__);
+
   if (current_status_.finalwaypoints.waypoints.empty())
   {
     ROS_WARN("\"/final_waypoints.\" is not contain waypoints");
     return;
   }
+
   switch (getSteeringStateFromWaypoint())
   {
     case autoware_msgs::WaypointState::STR_LEFT:
@@ -112,26 +115,31 @@ void DecisionMakerNode::updateLaneAreaState(cstring_t &state_name, int status)
   }
 }
 
-void DecisionMakerNode::updateFreeAreaState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateFreeAreaState(cstring_t& state_name, int status)
 {
 }
 
-void DecisionMakerNode::entryTurnState(cstring_t &state_name, int status)
+void DecisionMakerNode::entryTurnState(cstring_t& state_name, int status)
 {
   tryNextState("clear");
 }
 
-void DecisionMakerNode::updateLeftTurnState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateLeftTurnState(cstring_t& state_name, int status)
 {
   publishLampCmd(E_Lamp::LAMP_LEFT);
 }
 
-void DecisionMakerNode::updateRightTurnState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateStraightState(cstring_t& state_name, int status)
+{
+  publishLampCmd(E_Lamp::LAMP_CLEAR);
+}
+
+void DecisionMakerNode::updateRightTurnState(cstring_t& state_name, int status)
 {
   publishLampCmd(E_Lamp::LAMP_RIGHT);
 }
 
-void DecisionMakerNode::updateGoState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateGoState(cstring_t& state_name, int status)
 {
   std::pair<uint8_t, int> got_stopsign = getStopSignStateFromWaypoint();
   if (got_stopsign.first != 0)
@@ -141,13 +149,13 @@ void DecisionMakerNode::updateGoState(cstring_t &state_name, int status)
   }
 }
 
-void DecisionMakerNode::updateWaitState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateWaitState(cstring_t& state_name, int status)
 {
   /* clear,*/
   publishStoplineWaypointIdx(current_status_.closest_waypoint + 1);
 }
 
-void DecisionMakerNode::updateStoplineState(cstring_t &state_name, int status)
+void DecisionMakerNode::updateStoplineState(cstring_t& state_name, int status)
 {
   publishStoplineWaypointIdx(current_status_.found_stopsign_idx);
   /* clear found_risk*/
@@ -158,16 +166,17 @@ void DecisionMakerNode::updateStoplineState(cstring_t &state_name, int status)
   if (current_status_.velocity == 0.0 && !timerflag)
   {
     stopping_timer = nh_.createTimer(ros::Duration(0.5),
-                                     [&](const ros::TimerEvent &) {
+                                     [&](const ros::TimerEvent&) {
                                        timerflag = false;
                                        tryNextState("clear");
-                                       /*if found risk, tryNextState("found_risk");*/
+                                       /*if found risk,
+                                        * tryNextState("found_risk");*/
                                      },
                                      this, true);
     timerflag = true;
   }
 }
-void DecisionMakerNode::exitStopState(cstring_t &state_name, int status)
+void DecisionMakerNode::exitStopState(cstring_t& state_name, int status)
 {
   current_status_.found_stopsign_idx = -1;
   publishStoplineWaypointIdx(current_status_.found_stopsign_idx);

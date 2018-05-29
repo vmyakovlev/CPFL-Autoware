@@ -67,6 +67,10 @@ void DecisionMakerNode::setupStateCallback(void)
                    std::bind(&DecisionMakerNode::entryTurnState, this, std::placeholders::_1, 0));
   ctx->setCallback(state_machine::CallbackType::ENTRY, "RightTurn",
                    std::bind(&DecisionMakerNode::entryTurnState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::ENTRY, "Straight",
+                   std::bind(&DecisionMakerNode::entryTurnState, this, std::placeholders::_1, 0));
+  ctx->setCallback(state_machine::CallbackType::UPDATE, "Straight",
+                   std::bind(&DecisionMakerNode::updateStraightState, this, std::placeholders::_1, 0));
 
   ctx->setCallback(state_machine::CallbackType::UPDATE, "Go",
                    std::bind(&DecisionMakerNode::updateGoState, this, std::placeholders::_1, 0));
@@ -308,14 +312,14 @@ void DecisionMakerNode::initVectorMap(void)
 {
   int _index = 0;
 
-  const std::vector<CrossRoad> crossroads = g_vmap.findByFilter([](const CrossRoad &crossroad) { return true; });
+  const std::vector<CrossRoad> crossroads = g_vmap.findByFilter([](const CrossRoad& crossroad) { return true; });
   if (crossroads.empty())
   {
     ROS_INFO("crossroads have not found\n");
     return;
   }
 
-  for (const auto &cross_road : crossroads)
+  for (const auto& cross_road : crossroads)
   {
     geometry_msgs::Point _prev_point;
     Area area = g_vmap.findByKey(Key<Area>(cross_road.aid));
@@ -329,12 +333,12 @@ void DecisionMakerNode::initVectorMap(void)
     int points_count = 0;
 
     const std::vector<Line> lines =
-        g_vmap.findByFilter([&area](const Line &line) { return area.slid <= line.lid && line.lid <= area.elid; });
-    for (const auto &line : lines)
+        g_vmap.findByFilter([&area](const Line& line) { return area.slid <= line.lid && line.lid <= area.elid; });
+    for (const auto& line : lines)
     {
       const std::vector<Point> points =
-          g_vmap.findByFilter([&line](const Point &point) { return line.bpid == point.pid; });
-      for (const auto &point : points)
+          g_vmap.findByFilter([&line](const Point& point) { return line.bpid == point.pid; });
+      for (const auto& point : points)
       {
         geometry_msgs::Point _point;
         _point.x = point.ly;
