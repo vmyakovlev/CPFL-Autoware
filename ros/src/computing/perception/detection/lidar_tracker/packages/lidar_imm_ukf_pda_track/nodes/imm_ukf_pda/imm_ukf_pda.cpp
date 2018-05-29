@@ -747,6 +747,7 @@ void ImmUkfPda::makeOutput(const autoware_msgs::CloudClusterArray& input,
       dd.id = i;
       dd.velocity.linear.x = tv;
       dd.pose = targets_[i].jsk_bb_.pose;
+      dd.dimensions = targets_[i].jsk_bb_.dimensions;
       // Store tyaw in velocity.linear.y since nowhere to store estimated_yaw
       dd.velocity.linear.y = tyaw;
       updateLabel(targets_[i], dd);

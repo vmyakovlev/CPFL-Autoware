@@ -26,6 +26,7 @@ private:
 
   ros::Publisher pub_arrow_;
   ros::Publisher pub_id_;
+  ros::Publisher pub_box_;
 
   void visMarkers(const autoware_msgs::DetectedObjectArray& input);
   void callBack(const autoware_msgs::DetectedObjectArray& input);

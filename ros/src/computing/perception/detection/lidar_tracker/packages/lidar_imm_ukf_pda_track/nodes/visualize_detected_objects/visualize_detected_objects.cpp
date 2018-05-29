@@ -9,6 +9,7 @@ VisualizeDetectedObjects::VisualizeDetectedObjects()
   private_nh_.param<std::string>("pointcloud_frame", pointcloud_frame_, "velodyne");
 
   sub_cloud_array_ = node_handle_.subscribe("/detected_objects", 1, &VisualizeDetectedObjects::callBack, this);
+  pub_box_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/bounding_box", 10);
   pub_arrow_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/velocity_arrow", 10);
   pub_id_ = node_handle_.advertise<visualization_msgs::Marker>("/detected_objects/target_id", 10);
 }
@@ -25,6 +26,7 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
     double tv = input.objects[i].velocity.linear.x;
     double tyaw = input.objects[i].velocity.linear.y;
 
+    // in the case motion model fit opposite direction
     if(tv < -0.1)
     {
       tv *= -1;
@@ -35,6 +37,46 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
       while (tyaw < -M_PI)
         tyaw += 2. * M_PI;
     }
+
+    visualization_msgs::Marker box;
+
+    box.lifetime = ros::Duration(0.2);
+    box.header.frame_id = pointcloud_frame_;
+    box.header.stamp = input.header.stamp;
+    box.ns = "box";
+    box.action = visualization_msgs::Marker::ADD;
+    box.type = visualization_msgs::Marker::CUBE;
+    // green
+    box.color.g = 1.0f;
+    box.color.a = 1.0;
+    box.id = i;
+
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    box.pose.position.x = input.objects[i].pose.position.x;
+    box.pose.position.y = input.objects[i].pose.position.y;
+    box.pose.position.z = input.objects[i].pose.position.z;
+
+    // convert from RPY to quartenion
+    tf::Matrix3x3 obs_mat;
+    obs_mat.setEulerYPR(tyaw, 0, 0);  // yaw, pitch, roll
+    tf::Quaternion q_tf;
+    obs_mat.getRotation(q_tf);
+    // box.pose.orientation.x = q_tf.getX();
+    // box.pose.orientation.y = q_tf.getY();
+    // box.pose.orientation.z = q_tf.getZ();
+    // box.pose.orientation.w = q_tf.getW();
+    box.pose.orientation.x = input.objects[i].pose.orientation.x;
+    box.pose.orientation.y = input.objects[i].pose.orientation.y;
+    box.pose.orientation.z = input.objects[i].pose.orientation.z;
+    box.pose.orientation.w = input.objects[i].pose.orientation.w;
+
+
+    box.scale.x = input.objects[i].dimensions.x;
+    box.scale.y = input.objects[i].dimensions.y;
+    box.scale.z = input.objects[i].dimensions.z;
+
+    pub_box_.publish(box);
+
 
     visualization_msgs::Marker id;
 
@@ -55,14 +97,14 @@ void VisualizeDetectedObjects::visMarkers(const autoware_msgs::DetectedObjectArr
     id.pose.position.z = 1.5;
 
     // convert from RPY to quartenion
-    tf::Matrix3x3 obs_mat;
-    obs_mat.setEulerYPR(tyaw, 0, 0);  // yaw, pitch, roll
-    tf::Quaternion q_tf;
-    obs_mat.getRotation(q_tf);
-    id.pose.orientation.x = q_tf.getX();
-    id.pose.orientation.y = q_tf.getY();
-    id.pose.orientation.z = q_tf.getZ();
-    id.pose.orientation.w = q_tf.getW();
+    // tf::Matrix3x3 obs_mat;
+    // obs_mat.setEulerYPR(tyaw, 0, 0);  // yaw, pitch, roll
+    // tf::Quaternion q_tf;
+    // obs_mat.getRotation(q_tf);
+    // id.pose.orientation.x = q_tf.getX();
+    // id.pose.orientation.y = q_tf.getY();
+    // id.pose.orientation.z = q_tf.getZ();
+    // id.pose.orientation.w = q_tf.getW();
 
     id.scale.z = 1.0;
 
