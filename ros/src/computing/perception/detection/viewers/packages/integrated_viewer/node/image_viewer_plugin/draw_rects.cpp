@@ -51,11 +51,11 @@ namespace integrated_viewer
         label << rectangle.type << ":" << std::setprecision(2) << rectangle.score;
         if(rectangle.type == "car")
         {
-          rectangle_color = kRed;
+          rectangle_color = kBlue;
         }
         else
         {
-          rectangle_color = kGreen;
+          rectangle_color = kRed;
         }
       }
       else
