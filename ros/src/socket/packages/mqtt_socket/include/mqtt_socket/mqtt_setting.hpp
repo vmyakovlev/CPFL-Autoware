@@ -29,5 +29,6 @@ static string mqtt_client_id;
 static string mqtt_address;
 static int mqtt_port;
 static string mqtt_topic;
+static string mqtt_signal_topic;
 static int mqtt_qos;
 static int mqtt_timeout;

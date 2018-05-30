@@ -40,8 +40,10 @@
 using namespace std;
 #include "mqtt_socket/mqtt_setting.hpp"
 #include "autoware_msgs/RemoteCmd.h"
+#include "autoware_msgs/traffic_light.h"
 
 static ros::Publisher remote_cmd_pub;
+static ros::Publisher traffic_light_pub;
 
 class MqttReceiver
 {
@@ -62,6 +64,7 @@ MqttReceiver::MqttReceiver() :
 {
   // ROS Publisher
   remote_cmd_pub = node_handle_.advertise<autoware_msgs::RemoteCmd>("/remote_cmd", 1);
+  traffic_light_pub = node_handle_.advertise<autoware_msgs::traffic_light>("/light_color", 1);
 
   // Load Config
   MqttReceiver::load_config();
@@ -96,6 +99,7 @@ static void MqttReceiver::on_connect(struct mosquitto *mosq, void *obj, int resu
 {
   ROS_INFO("on_connect: %s(%d)\n", __FUNCTION__, __LINE__);
   mosquitto_subscribe(mqtt_client, NULL, mqtt_topic.c_str(), mqtt_qos);
+  mosquitto_subscribe(mqtt_client, NULL, mqtt_signal_topic.c_str(), mqtt_qos);
 }
 
 static void MqttReceiver::on_disconnect(struct mosquitto *mosq, void *obj, int rc)
@@ -115,6 +119,7 @@ static void MqttReceiver::load_config()
   mqtt_port = config["mqtt"]["PORT"].as<int>();
   mqtt_qos = config["mqtt"]["QOS"].as<int>();
   mqtt_topic = "vehicle/" + to_string(vehicle_id) + "/remote_cmd";
+  mqtt_signal_topic = "vehicle/" + to_string(vehicle_id) + "/signal";
   mqtt_timeout = config["mqtt"]["TIMEOUT"].as<int>();
 
   accel_max_val = config["mqtt"]["ACCEL_MAX_VAL"].as<int>();
@@ -132,49 +137,58 @@ static void MqttReceiver::load_config()
 
 static void MqttReceiver::on_message(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message)
 {
-  if(message->payloadlen) {
-    string delim (",");
-    string msg_str((char *)message->payload, message->payloadlen);
-    vector<string> cmds;
-    boost::algorithm::split(cmds, msg_str, boost::is_any_of(","));
 
-    if(cmds.size() == 8) {
-      autoware_msgs::RemoteCmd msg;
-      msg.vehicle_cmd.steer_cmd.steer = stof(cmds[0]) * steer_max_val;
-      msg.vehicle_cmd.accel_cmd.accel = stof(cmds[1]) * accel_max_val;
-      msg.vehicle_cmd.brake_cmd.brake = stof(cmds[2]) * brake_max_val;
-      msg.vehicle_cmd.gear = stoi(cmds[3]);
-      // lamp
-      switch(stoi(cmds[4])) {
-        msg.vehicle_cmd.lamp_cmd.l = 0;
-        msg.vehicle_cmd.lamp_cmd.r = 0;
-        case 0:
-          break;
-        case 1:
-          msg.vehicle_cmd.lamp_cmd.l = 1;
-          break;
-        case 2:
-          msg.vehicle_cmd.lamp_cmd.r = 1;
-          break;
-        case 3:
-          msg.vehicle_cmd.lamp_cmd.l = 1;
-          msg.vehicle_cmd.lamp_cmd.r = 1;
-          break;
-        default:
-          ROS_WARN("Invalid lamp_cmd");
-          break;
-      }
-      msg.vehicle_cmd.twist_cmd.twist.linear.x = stof(cmds[1]) * linear_x_max_val;
-      msg.vehicle_cmd.twist_cmd.twist.angular.z = stof(cmds[0]);
-      msg.vehicle_cmd.ctrl_cmd.linear_velocity = stof(cmds[1]) * linear_x_max_val;
-      msg.vehicle_cmd.ctrl_cmd.steering_angle = stof(cmds[0]) * steer_max_val;
-      msg.vehicle_cmd.mode = stoi(cmds[5]);
-      msg.vehicle_cmd.emergency = stoi(cmds[7]);
-      msg.control_mode = stoi(cmds[6]);
-      remote_cmd_pub.publish(msg);
+  if(message->payloadlen) {
+    if(strcmp(message->topic, mqtt_signal_topic.c_str()) == 0) {
+      string msg_str((char *)message->payload, message->payloadlen);
+      autoware_msgs::traffic_light msg;
+      msg.traffic_light = std::atoi(msg_str.c_str());
+      traffic_light_pub.publish(msg);
     }
-    else {
-      ROS_INFO("Failed to parse remote command.\n");
+    else if(strcmp(message->topic, mqtt_topic.c_str()) == 0) {
+      string delim (",");
+      string msg_str((char *)message->payload, message->payloadlen);
+      vector<string> cmds;
+      boost::algorithm::split(cmds, msg_str, boost::is_any_of(","));
+
+      if(cmds.size() == 8) {
+        autoware_msgs::RemoteCmd msg;
+        msg.vehicle_cmd.steer_cmd.steer = stof(cmds[0]) * steer_max_val;
+        msg.vehicle_cmd.accel_cmd.accel = stof(cmds[1]) * accel_max_val;
+        msg.vehicle_cmd.brake_cmd.brake = stof(cmds[2]) * brake_max_val;
+        msg.vehicle_cmd.gear = stoi(cmds[3]);
+        // lamp
+        switch(stoi(cmds[4])) {
+          msg.vehicle_cmd.lamp_cmd.l = 0;
+          msg.vehicle_cmd.lamp_cmd.r = 0;
+          case 0:
+            break;
+          case 1:
+            msg.vehicle_cmd.lamp_cmd.l = 1;
+            break;
+          case 2:
+            msg.vehicle_cmd.lamp_cmd.r = 1;
+            break;
+          case 3:
+            msg.vehicle_cmd.lamp_cmd.l = 1;
+            msg.vehicle_cmd.lamp_cmd.r = 1;
+            break;
+          default:
+            ROS_WARN("Invalid lamp_cmd");
+            break;
+        }
+        msg.vehicle_cmd.twist_cmd.twist.linear.x = stof(cmds[1]) * linear_x_max_val;
+        msg.vehicle_cmd.twist_cmd.twist.angular.z = stof(cmds[0]);
+        msg.vehicle_cmd.ctrl_cmd.linear_velocity = stof(cmds[1]) * linear_x_max_val;
+        msg.vehicle_cmd.ctrl_cmd.steering_angle = stof(cmds[0]) * steer_max_val;
+        msg.vehicle_cmd.mode = stoi(cmds[5]);
+        msg.vehicle_cmd.emergency = stoi(cmds[7]);
+        msg.control_mode = stoi(cmds[6]);
+        remote_cmd_pub.publish(msg);
+      }
+      else {
+        ROS_INFO("Failed to parse remote command.\n");
+      }
     }
   }
 }
