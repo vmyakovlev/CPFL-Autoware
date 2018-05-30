@@ -37,6 +37,7 @@
 #include <std_msgs/String.h>
 #include <std_msgs/Int32.h>
 
+#include "autoware_msgs/VehicleCmd.h"
 #include "g30esli_interface_util.h"
 #include "can_utils/cansend.h"
 #include "can_utils/cansend_util.h"
@@ -64,34 +65,21 @@ uint16_t g_manual_target_velocity_ui16;
 int16_t g_steering_angle_deg_i16;
 int16_t g_manual_steering_angle_deg_i16;
 double g_current_vel_kmph = 0.0;
+double g_target_vel_kmph = 0.0;
 bool g_terminate_thread = false;
 bool g_automode = false;
 unsigned char g_shift = 0;
 unsigned char g_brake = 0;
-bool g_is_moving = false;
-bool g_mic_on = false;
 bool g_keep_state = true;
 ros::Time g_joy_time;
 
 // cansend tool
 mycansend::CanSender g_cansender;
 
-void current_nextrimer_callback(const std_msgs::StringConstPtr &msg)
-{
-  std::cout << "received" << std::endl;
-  if (msg->data == "go")
-  {
-    static ros::Timer stopping_timer = g_nh->createTimer(
-	ros::Duration(1), [&](const ros::TimerEvent &) {
-		g_automode = true;
-		std::cout << "automode" << std::endl;
-	}, true);
-  }
-}
-
 void twist_cmd_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
   double target_velocity = msg->twist.linear.x * 3.6; // [m/s] -> [km/h]
+  g_target_vel_kmph = target_velocity;
   double target_steering_angle_deg = ymc::computeTargetSteeringAngleDegree(msg->twist.angular.z, msg->twist.linear.x, g_wheel_base);
   target_steering_angle_deg += 8.0;
   // factor
@@ -102,22 +90,25 @@ void twist_cmd_callback(const geometry_msgs::TwistStampedConstPtr &msg)
   g_steering_angle_deg_i16  = target_steering_angle_deg * -1.0;
 }
 
+void vehicle_cmd_callback(const autoware_msgs::VehicleCmdConstPtr &msg)
+{
+  double target_velocity = msg->twist_cmd.twist.linear.x * 3.6; // [m/s] -> [km/h]
+  g_target_vel_kmph = target_velocity;
+  double target_steering_angle_deg = ymc::computeTargetSteeringAngleDegree(msg->twist_cmd.twist.angular.z, msg->twist_cmd.twist.linear.x, g_wheel_base);
+  target_steering_angle_deg += 8.0;
+  // factor
+  target_velocity           *= 10.0;
+  target_steering_angle_deg *= 10.0;
+
+  g_target_velocity_ui16    = target_velocity;
+  g_steering_angle_deg_i16  = target_steering_angle_deg * -1.0;
+
+  g_brake = (msg->emergency == 1) ? 2 : 0;
+}
+
 void current_vel_callback(const geometry_msgs::TwistStampedConstPtr &msg)
 {
   g_current_vel_kmph = msg->twist.linear.x * 3.6;
-
-  if (g_current_vel_kmph > 0.1)
-  {
-    g_is_moving = true;
-  }
-  else if (g_is_moving && !g_keep_state) // after stop
-  {
-    std::cout << "arrive !" << std::endl;
-    g_is_moving = false;
-    std_msgs::String msg;
-    msg.data = "arrived";
-    g_nextremer_command_pub.publish(msg);
-  }
 }
 
 void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
@@ -149,6 +140,12 @@ void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
     target_velocity = 0.0;
   }
 
+  if (msg->buttons[3] == 1) // square
+  {
+    g_brake = 2;
+    target_velocity = 0.0;
+  }
+
   g_shift = msg->buttons[5];  // R1
 
   if (msg->buttons[8] == 1) // share
@@ -159,24 +156,6 @@ void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
   if (msg->buttons[9] == 1) // option
   {
     g_mode = 8;
-  }
-
-  if (msg->buttons[2] == 1 && !g_mic_on)  //  circle
-  {
-    g_mic_on = true;
-    std_msgs::String msg;
-    msg.data = "start";
-    g_nextremer_command_pub.publish(msg);
-  }
-
-  if (msg->buttons[3] == 1 && g_mic_on)  //  triangle
-  {
-    g_mic_on = false;
-    std_msgs::String msg;
-    msg.data = "stop";
-    g_nextremer_command_pub.publish(msg);
-    g_nextremer_command_pub.publish(msg);
-    g_nextremer_command_pub.publish(msg);
   }
 
   if (msg->axes[10] == 1)
@@ -205,7 +184,7 @@ void current_joy_callback(const sensor_msgs::JoyConstPtr &msg)
   {
     std::cout << "automode" << std::endl;
     g_automode = true;
-    g_shift = 0;
+    // g_shift = 0;
   }
 }
 
@@ -299,21 +278,15 @@ int main(int argc, char *argv[])
 
   // subscriber
   ros::Subscriber twist_cmd_sub = n.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 1, twist_cmd_callback);
+  ros::Subscriber vehicle_cmd_sub = n.subscribe<autoware_msgs::VehicleCmd>("vehicle_cmd", 1, vehicle_cmd_callback);
   ros::Subscriber current_vel_sub = n.subscribe<geometry_msgs::TwistStamped>("current_velocity", 1, current_vel_callback);
   ros::Subscriber current_joy_sub = n.subscribe<sensor_msgs::Joy>("joy", 1, current_joy_callback);
-  ros::Subscriber nextremer_result_sub = n.subscribe<std_msgs::String>("/nextremer/result", 1, current_nextrimer_callback);
 
   // publisher
   g_current_twist_pub = n.advertise<geometry_msgs::TwistStamped>("ymc_current_twist", 10);
-  g_nextremer_command_pub = n.advertise<std_msgs::String>("/nextremer/command", 10);
   g_state_command_pub = n.advertise<std_msgs::Int32>("/state_cmd", 10);
 
   ros::Timer timer = n.createTimer(ros::Duration(0.1), joy_check_callback);
-
-  std_msgs::String msg;
-  msg.data = "stop";
-  g_nextremer_command_pub.publish(msg);
-  g_mic_on = false;
 
   // read can data from candump
   FILE *fp = popen("candump can0", "r");
@@ -329,37 +302,26 @@ int main(int argc, char *argv[])
     // data
     unsigned char mode              = static_cast<unsigned char>(g_mode);
     unsigned char shift             = g_shift;
-;
+
     uint16_t target_velocity_ui16   = (g_automode) ? g_target_velocity_ui16 : g_manual_target_velocity_ui16;
     int16_t steering_angle_deg_i16  = (g_automode) ? g_steering_angle_deg_i16 : g_manual_steering_angle_deg_i16;
-    static unsigned char brake      = g_brake;
-    static unsigned char heart_beat = 0;
+    unsigned char brake      = g_brake;
+    unsigned char heart_beat = 0;
 
-    // // change to STOP MODE...
-    // if (target_velocity_ui16 == 0 || g_mode == 3)
-    //   stopping_flag = true;
-    //
-    // // STOPPING
-    // static int stop_count = 0;
-    // if (stopping_flag && g_mode == 8)
-    // {
-    //   // TODO: change steering angle according to current velocity ?
-    //   target_velocity_ui16 = 0;
-    //   brake = 1;
-    //
-    //   // vehicle is stopping or not
-    //   double stopping_threshold = 1.0;
-    //   g_current_vel_kmph < stopping_threshold ? stop_count++ : stop_count = 0;
-    //
-    //   // std::cout << "stop count: " << stop_count << std::endl;
-    //   // vehicle has stopped, so we can restart
-    //   if (stop_count > g_loop_rate * g_stop_time_sec)
-    //   {
-    //     brake = 0;
-    //     stop_count = 0;
-    //     stopping_flag = false;
-    //   }
-    // }
+    if (g_automode)
+    {
+      double velocity_diff = g_current_vel_kmph - g_target_vel_kmph;
+      if (velocity_diff > 10.0)
+      {
+        ROS_ERROR("Brake 2nd !!");
+        brake = 2;
+      }
+      else if (velocity_diff > 3.0)
+      {
+        ROS_ERROR("Brake 1st !! ");
+        brake = 1;
+      }
+    }
 
     // Insert data to 8 byte array
     unsigned char data[8] = {};
@@ -371,6 +333,24 @@ int main(int argc, char *argv[])
     char can_cmd[256];
     std::strcpy(can_cmd, mycansend::makeCmdArgument(data, data_size, send_id).c_str());
     g_cansender.send(can_cmd);
+
+    unsigned char data_emergency[1] = {};
+    unsigned char emergency = brake;
+    std::memcpy(data_emergency, &emergency, sizeof(emergency));
+    size_t data_size_emergency = sizeof(data_emergency) / sizeof(data_emergency[0]);
+    char can_cmd_emergency[256];
+    std::strcpy(can_cmd_emergency, mycansend::makeCmdArgument(data_emergency, data_size_emergency, std::string("2FF")).c_str());
+    g_cansender.send(can_cmd_emergency);
+
+    // unsigned char data_blinker[2] = {};
+    // unsigned char blinker01 = 0;
+    // unsigned char blinker02 = 4;
+    // std::memcpy(data_blinker, &blinker01, sizeof(blinker01));
+    // std::memcpy(data_blinker+1, &blinker02, sizeof(blinker02));
+    // size_t data_size_blinker = sizeof(data_blinker) / sizeof(data_blinker[0]);
+    // char can_cmd_blinker[256];
+    // std::strcpy(can_cmd_blinker, mycansend::makeCmdArgument(data_blinker, data_size_blinker, std::string("201")).c_str());
+    // g_cansender.send(can_cmd_blinker);
 
     // wait for callbacks
     ros::spinOnce();
