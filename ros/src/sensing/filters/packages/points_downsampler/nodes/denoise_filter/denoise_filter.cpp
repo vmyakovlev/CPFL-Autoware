@@ -21,6 +21,8 @@ private:
   ros::Publisher cloud_publisher_;
   ros::Subscriber cloud_subscriber_;
   std::string output_frame_;
+  int mean_k_ = 50;
+  double stddev_ = 1.0;
 
   void callback(const PointCloudMsgT::ConstPtr& msg);
 };
@@ -29,6 +31,8 @@ DenoiseFilter::DenoiseFilter()
   : nh_(), private_nh_("~"), output_frame_("velodyne")
 {
   private_nh_.param("output_frame", output_frame_, output_frame_);
+  private_nh_.param("mean_k", mean_k_, mean_k_);
+  private_nh_.param("stddev", stddev_, stddev_);
   cloud_subscriber_ = nh_.subscribe("points_no_ground", 1, &DenoiseFilter::callback, this);
   cloud_publisher_ = nh_.advertise<PointCloudMsgT>("denoised_points", 1);
 }
@@ -43,8 +47,8 @@ void DenoiseFilter::callback(const PointCloudMsgT::ConstPtr& msg)
 
   pcl::StatisticalOutlierRemoval<PointT> sor;
   sor.setInputCloud(cloud_src);
-  sor.setMeanK(50);
-  sor.setStddevMulThresh(1.0);
+  sor.setMeanK(mean_k_);
+  sor.setStddevMulThresh(stddev_);
   sor.filter(*cloud_dst);
 
   cloud_dst->header = pcl_conversions::toPCL(msg->header);
