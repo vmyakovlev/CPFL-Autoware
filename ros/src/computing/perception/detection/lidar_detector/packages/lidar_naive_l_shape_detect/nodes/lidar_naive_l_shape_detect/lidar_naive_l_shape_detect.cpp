@@ -23,10 +23,10 @@ int g_count = 0;
 
 ClusterFilter::ClusterFilter() {
   // float picScale = 30;
+  roi_m_ = 120;
   // roi_m_ = 60;
-  roi_m_ = 60;
   // pic_scale_ = 900 / roi_m_;
-  pic_scale_ = 900 / roi_m_;
+  pic_scale_ = 1800 / roi_m_;
   ram_points_ = 80;
 
   // l-shape fitting params
@@ -228,7 +228,12 @@ void ClusterFilter::getBBoxes(
       // offset so that the object would be locate at the center
       int offset_x = pic_x + offset_init_x;
       int offset_y = pic_y + offset_init_y;
-      if(offset_x > (pic_scale_ * roi_m_) || offset_y > (pic_scale_ * roi_m_)){
+
+      //Make sure points are inside the image size
+      if(offset_x > (pic_scale_ * roi_m_) ||
+         offset_x < 0                     ||
+         offset_y < 0                     ||
+         offset_y > (pic_scale_ * roi_m_)){
         // std::cout << offset_x <<" "<<offset_y <<" are not in the image coordinate" << std::endl;
         continue;
       }
@@ -414,5 +419,5 @@ void ClusterFilter::getBBoxes(
     //     << std::endl;
     // std::cout << i_cluster << "th cluster"<<std::endl;
   }
-  // cout << clusterArray.clusters[2].centroid_point.point.x<<endl;
+  // std::cout << "end call back" <<std::endl;
 }
