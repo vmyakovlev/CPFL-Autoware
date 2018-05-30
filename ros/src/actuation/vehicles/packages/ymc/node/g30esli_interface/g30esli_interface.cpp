@@ -277,7 +277,7 @@ int main(int argc, char *argv[])
   g_cansender.init(g_device);
 
   // subscriber
-  ros::Subscriber twist_cmd_sub = n.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 1, twist_cmd_callback);
+  // ros::Subscriber twist_cmd_sub = n.subscribe<geometry_msgs::TwistStamped>("twist_cmd", 1, twist_cmd_callback);
   ros::Subscriber vehicle_cmd_sub = n.subscribe<autoware_msgs::VehicleCmd>("vehicle_cmd", 1, vehicle_cmd_callback);
   ros::Subscriber current_vel_sub = n.subscribe<geometry_msgs::TwistStamped>("current_velocity", 1, current_vel_callback);
   ros::Subscriber current_joy_sub = n.subscribe<sensor_msgs::Joy>("joy", 1, current_joy_callback);
