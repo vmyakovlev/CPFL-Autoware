@@ -134,6 +134,12 @@ static double       _max_boundingbox_side;
 static double       _remove_points_upto;
 static double       _cluster_merge_threshold;
 
+static double       _clustering_distances_thres_first;
+static double       _clustering_distances_thres_second;
+static double       _clustering_distances_thres_third;
+static double       _clustering_distances_thres_fourth;
+static double       _clustering_distances_thres_fifth;
+
 static bool         _use_gpu;
 static std::chrono::system_clock::time_point _start, _end;
 
@@ -1143,6 +1149,11 @@ int main (int argc, char** argv)
 	private_nh.param("keep_lane_right_distance", _keep_lane_right_distance, 5.0);
 	ROS_INFO("keep_lane_right_distance: %f", _keep_lane_right_distance);
 	private_nh.param("clustering_thresholds", _clustering_thresholds);
+	private_nh.param("clustering_thres_first", _clustering_distances_thres_first, 0.5);
+	private_nh.param("clustering_thres_second", _clustering_distances_thres_second, 1.1);
+	private_nh.param("clustering_thres_third", _clustering_distances_thres_third, 1.6);
+	private_nh.param("clustering_thres_fourth", _clustering_distances_thres_fourth, 2.1);
+	private_nh.param("clustering_thres_fifth", _clustering_distances_thres_fifth, 2.6);
 	private_nh.param("clustering_distances", _clustering_distances);
 	private_nh.param("max_boundingbox_side", _max_boundingbox_side, 10.0);
 	ROS_INFO("max_boundingbox_side: %f", _max_boundingbox_side);
@@ -1170,7 +1181,12 @@ int main (int argc, char** argv)
 	}
 	if (_clustering_thresholds.size()!=5)
 	{
-		_clustering_thresholds = {0.5, 1.1, 1.6, 2.1, 2.6};//Nearest neighbor distance threshold for each segment
+		// _clustering_thresholds = {0.5, 1.1, 1.6, 2.1, 2.6};//Nearest neighbor distance threshold for each segment
+		_clustering_thresholds = {_clustering_distances_thres_first,
+                              _clustering_distances_thres_second,
+                              _clustering_distances_thres_third,
+                              _clustering_distances_thres_fourth,
+                              _clustering_distances_thres_fifth};
 	}
 
 	std::cout << "_clustering_thresholds: "; for (auto i = _clustering_thresholds.begin(); i != _clustering_thresholds.end(); ++i)  std::cout << *i << ' '; std::cout << std::endl;

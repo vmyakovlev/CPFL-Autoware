@@ -4220,6 +4220,51 @@ params :
       cmd_param :
         dash        : ''
         delim       : ':='
+    - name    : clustering_thres_first
+      desc    : clustering_thresholds desc sample
+      label   : 'clustering_thresholds first'
+      min       : 0
+      max       : 10
+      v       : 0.5
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name    : clustering_thres_second
+      desc    : clustering_thresholds desc sample
+      label   : 'clustering_thresholds second'
+      min       : 0
+      max       : 10
+      v       : 1.1
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name    : clustering_thres_third
+      desc    : clustering_thresholds desc sample
+      label   : 'clustering_thresholds third'
+      min       : 0
+      max       : 10
+      v       : 1.6
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name    : clustering_thres_fourth
+      desc    : clustering_thresholds desc sample
+      label   : 'clustering_thresholds fourth'
+      min       : 0
+      max       : 10
+      v       : 2.1
+      cmd_param :
+        dash        : ''
+        delim       : ':='
+    - name    : clustering_thres_fifth
+      desc    : clustering_thresholds desc sample
+      label   : 'clustering_thresholds fifth'
+      min       : 0
+      max       : 10
+      v       : 2.6
+      cmd_param :
+        dash        : ''
+        delim       : ':='
     - name    : cluster_merge_threshold
       desc    : cluster_merge_threshold desc sample
       label   : 'cluster_merge_threshold'
