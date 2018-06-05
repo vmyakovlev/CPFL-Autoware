@@ -16,6 +16,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl_ros/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
@@ -26,13 +27,19 @@ static std::string POINTS_TOPIC;
 static int SCAN_NUM;
 static std::string OUTPUT_DIR;
 
-static pcl::PointCloud<velodyne_pointcloud::PointXYZIR> map;
+//static pcl::PointCloud<velodyne_pointcloud::PointXYZIR> map;
 static tf::TransformListener *tf_listener;
 static std::string filename;
 
 static int added_scan_num = 0;
 static int map_id = 0;
 static int count = 0;
+
+static int c = 0;
+
+static ros::Publisher points_transformed_pub;
+
+static pcl::PointCloud<pcl::PointXYZI> map;
 
 void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
 {
@@ -43,7 +50,8 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
   std_msgs::Header header;
   pcl_conversions::fromPCL(input->header, header);
 
-  if(CHILD_FRAME == "velodyne" && POINTS_TOPIC == "hokuyo_3d/hokuyo_cloud2")
+//  if(CHILD_FRAME == "velodyne" && POINTS_TOPIC == "hokuyo_3d/hokuyo_cloud2")
+  if(CHILD_FRAME == "gps" && POINTS_TOPIC == "points_raw")
   {
 	  /*
     tf::Vector3 v(1.7, 0, 1.5);
@@ -51,37 +59,36 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
     q.setRPY(3.141592, 0.05, -0.05);
     tf::Transform tf_baselink_to_localizer(q, v);
     */
-    tf::Vector3 v(-0.5, 0, 0.5);
+    tf::Vector3 v(0.15, 0.27, 0.3);
     tf::Quaternion q;
-    q.setRPY(3.141592, 0.05, -0.05);
+    q.setRPY(0.0, M_PI/2.0, M_PI);
+//    q.setRPY(0.0, 0.0, 0.0);
     tf::Transform tf_baselink_to_localizer(q, v);
     pcl_ros::transformPointCloud(*input, *transformed_input, tf_baselink_to_localizer);
+
   }
 
   tf::StampedTransform transform;
-  if(input->size() > 0)
-  {
-    try
-    {
+  if(input->size() > 0) {
+    try {
       tf_listener->waitForTransform(PARENT_FRAME, CHILD_FRAME, header.stamp, ros::Duration(1));
       tf_listener->lookupTransform(PARENT_FRAME, CHILD_FRAME, header.stamp, transform);
     }
-    catch (tf::TransformException ex)
-    {
+    catch (tf::TransformException ex) {
       std::cout << "Transform not found" << std::endl;
       return;
     }
 
+    std::cout << std::fixed << std::setprecision(5) << transform.getOrigin().x() << std::endl;
+
 //    if(CHILD_FRAME == "gps" && POINTS_TOPIC == "hokuyo_3d/hokuyo_cloud2")
-      if(CHILD_FRAME == "velodyne" && POINTS_TOPIC == "hokuyo_3d/hokuyo_cloud2")
-    {
-      for (int i = 0; i < (int)transformed_input->size(); i++)
-      {
+    if (CHILD_FRAME == "gps" && POINTS_TOPIC == "points_raw") {
+      for (int i = 0; i < (int) transformed_input->size(); i++) {
         tf::Point pt(transformed_input->points[i].x, transformed_input->points[i].y, transformed_input->points[i].z);
         tf::Point pt_world = transform * pt;
         pcl::PointXYZI wp;
         double distance = pt.x() * pt.x() + pt.y() * pt.y() + pt.z() * pt.z();
-        if (distance < 3 * 3)
+        if (distance < 1.0)
           continue;
         wp.x = pt_world.x();
         wp.y = pt_world.y();
@@ -92,13 +99,12 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
       }
       pcl_out.header = transformed_input->header;
     } else {
-      for (int i = 0; i < (int)input->size(); i++)
-      {
+      for (int i = 0; i < (int) input->size(); i++) {
         tf::Point pt(input->points[i].x, input->points[i].y, input->points[i].z);
         tf::Point pt_world = transform * pt;
         pcl::PointXYZI wp;
         double distance = pt.x() * pt.x() + pt.y() * pt.y() + pt.z() * pt.z();
-        if (distance < 3 * 3)
+        if (distance < 1.0)
           continue;
         wp.x = pt_world.x();
         wp.y = pt_world.y();
@@ -112,6 +118,29 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
 
     pcl_out.header.frame_id = "map";
 
+    map += pcl_out;
+    map.header.frame_id = "/map";
+
+    sensor_msgs::PointCloud2::Ptr points_transformed_ptr(new sensor_msgs::PointCloud2);
+    pcl::toROSMsg(pcl_out, *points_transformed_ptr);
+    points_transformed_pub.publish(*points_transformed_ptr);
+
+    /*
+    if (c % 5 == 1) {
+      pcl::VoxelGrid<pcl::PointXYZI> voxel_grid_filter;
+      voxel_grid_filter.setLeafSize(0.3, 0.3, 0.3);
+      pcl::PointCloud<pcl::PointXYZI>::Ptr map_ptr(new pcl::PointCloud<pcl::PointXYZI>(map));
+      voxel_grid_filter.setInputCloud(map_ptr);
+      voxel_grid_filter.filter(map);
+    }
+
+    if (c % 10 == 0) {
+      sensor_msgs::PointCloud2::Ptr map_ptr(new sensor_msgs::PointCloud2);
+      pcl::toROSMsg(map, *map_ptr);
+      points_transformed_pub.publish(*map_ptr);
+    }
+     */
+    c++;
     // Set log file name.
     std::ofstream ofs;
     std::string lidar;
@@ -121,7 +150,8 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
     } else if(POINTS_TOPIC == "hokuyo_3d/hokuyo_cloud2"){
       lidar = "hokuyo";
     }
-    filename = OUTPUT_DIR + PARENT_FRAME + "-" + CHILD_FRAME + "_" + lidar + "_"+ std::to_string(map_id) + ".csv";
+//    filename = OUTPUT_DIR + PARENT_FRAME + "-" + CHILD_FRAME + "_" + lidar + "_"+ std::to_string(map_id) + ".csv";
+    filename = OUTPUT_DIR + "map.csv";
     ofs.open(filename.c_str(), std::ios::app);
 
     if (!ofs)
@@ -137,6 +167,7 @@ void points_callback(const pcl::PointCloud<pcl::PointXYZI>::ConstPtr &input)
           << std::fixed << std::setprecision(5) << pcl_out.points[i].z << ","
           << pcl_out.points[i].intensity << std::endl;
     }
+
     std::cout << "Wrote " << pcl_out.size() << " points to " << filename << "." << std::endl;
     added_scan_num++;
     if(added_scan_num == SCAN_NUM)
@@ -166,6 +197,8 @@ int main(int argc, char **argv)
   std::cout << "output_dir: " << OUTPUT_DIR << std::endl;
 
   tf_listener = new tf::TransformListener();
+
+  points_transformed_pub = nh.advertise<sensor_msgs::PointCloud2>("/points_transformed", 1000);
 
   ros::Subscriber points_sub = nh.subscribe(POINTS_TOPIC, 10, points_callback);
 

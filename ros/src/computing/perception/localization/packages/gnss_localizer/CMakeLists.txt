@@ -5,6 +5,8 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         std_msgs
         nmea_msgs
+        nav_msgs
+        sensor_msgs
         gnss
         tf
         )

@@ -7,7 +7,7 @@
   <!-- <arg name="child_frame" default="velodyne" /> -->
   <arg name="points_topic" default="points_raw" />
   <arg name="scan_num" default="100" />
-  <arg name="output_dir" default="/tmp/" />
+  <arg name="output_dir" default="/media/kitsukawa/work/winser/test2/" />
   
   <node pkg="lidar_localizer" type="tf_mapping" name="tf_mapping" output="screen">
     <param name="parent_frame" value="$(arg parent_frame)" />

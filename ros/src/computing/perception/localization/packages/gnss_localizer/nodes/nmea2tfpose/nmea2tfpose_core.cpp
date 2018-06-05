@@ -6,7 +6,8 @@
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
  *
- *  * Redistributions of source code must retain the above copyright notice, this
+ *  * Redistributions of source code must retain the above copyright notice,
+ this
  *    list of conditions and the following disclaimer.
  *
  *  * Redistributions in binary form must reproduce the above copyright notice,
@@ -19,120 +20,139 @@
  *
  *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE
  *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
  *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  *  DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
  *  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ LIABILITY,
+ *  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ USE
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include "nmea2tfpose_core.h"
 
-namespace gnss_localizer
-{
+double previous_yaw = 0.0;
+double diff_yaw = 0.0;
+
+namespace gnss_localizer {
 // Constructor
 Nmea2TFPoseNode::Nmea2TFPoseNode()
-  : private_nh_("~")
-  , MAP_FRAME_("map")
-  , GPS_FRAME_("gps")
-  , roll_(0)
-  , pitch_(0)
-  , yaw_(0)
-  , orientation_time_(0)
-  , position_time_(0)
-  , current_time_(0)
-  , orientation_stamp_(0)
-{
+    : private_nh_("~"), MAP_FRAME_("map"), GPS_FRAME_("gps"), roll_(0),
+      pitch_(0), yaw_(0), orientation_time_(0), position_time_(0),
+      current_time_(0), orientation_stamp_(0) {
   initForROS();
   geo_.set_plane(plane_number_);
 }
 
 // Destructor
-Nmea2TFPoseNode::~Nmea2TFPoseNode()
-{
-}
+Nmea2TFPoseNode::~Nmea2TFPoseNode() {}
 
-void Nmea2TFPoseNode::initForROS()
-{
+void Nmea2TFPoseNode::initForROS() {
   // ros parameter settings
   private_nh_.getParam("plane", plane_number_);
 
   // setup subscriber
-  sub1_ = nh_.subscribe("nmea_sentence", 100, &Nmea2TFPoseNode::callbackFromNmeaSentence, this);
+  sub1_ = nh_.subscribe("nmea_sentence", 100,
+                        &Nmea2TFPoseNode::callbackFromNmeaSentence, this);
 
   // setup publisher
   pub1_ = nh_.advertise<geometry_msgs::PoseStamped>("gnss_pose", 10);
+  pub2_ = nh_.advertise<nav_msgs::Odometry>("vo", 10);
+  pub3_ = nh_.advertise<sensor_msgs::Imu>("imu_data", 10);
 }
 
-void Nmea2TFPoseNode::run()
-{
-  ros::spin();
-}
+void Nmea2TFPoseNode::run() { ros::spin(); }
 
-void Nmea2TFPoseNode::publishPoseStamped()
-{
+void Nmea2TFPoseNode::publishPoseStamped() {
   geometry_msgs::PoseStamped pose;
   pose.header.frame_id = MAP_FRAME_;
   pose.header.stamp = current_time_;
   pose.pose.position.x = geo_.y();
   pose.pose.position.y = geo_.x();
   pose.pose.position.z = geo_.z();
-  pose.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(roll_, pitch_, yaw_);
+  pose.pose.orientation =
+      tf::createQuaternionMsgFromRollPitchYaw(roll_, pitch_, yaw_);
   pub1_.publish(pose);
 }
 
-void Nmea2TFPoseNode::publishTF()
-{
+void Nmea2TFPoseNode::publishOdometry() {
+  nav_msgs::Odometry odom;
+  odom.header.frame_id = "vo";
+  odom.header.stamp = current_time_;
+  odom.pose.pose.position.x = geo_.y();
+  odom.pose.pose.position.y = geo_.x();
+  odom.pose.pose.position.z = geo_.z();
+  odom.pose.pose.orientation =
+      tf::createQuaternionMsgFromRollPitchYaw(roll_, pitch_, yaw_);
+  odom.pose.covariance = {10, 0, 0,  0, 0,     0, 0, 10, 0, 0,     0, 0,
+                          0,  0, 10, 0, 0,     0, 0, 0,  0, 99999, 0, 0,
+                          0,  0, 0,  0, 99999, 0, 0, 0,  0, 0,     0, 99999};
+  pub2_.publish(odom);
+}
+
+void Nmea2TFPoseNode::publishImu() {
+  sensor_msgs::Imu imu;
+  /*
+  sensor_msgs/Imu message definition
+  std_msgs/Header header
+  geometry_msgs/Quaternion orientation
+  float64[9] orientation_covariance
+  geometry_msgs/Vector3 angular_velocity
+  float64[9] angular_velocity_covariance
+  geometry_msgs/Vector3 linear_acceleration
+  float64[9] linear_acceleration_covariance
+  */
+  imu.header.frame_id = "imu";
+  imu.orientation =
+      tf::createQuaternionMsgFromRollPitchYaw(roll_, pitch_, yaw_);
+
+  pub3_.publish(imu);
+}
+
+void Nmea2TFPoseNode::publishTF() {
   tf::Transform transform;
   transform.setOrigin(tf::Vector3(geo_.y(), geo_.x(), geo_.z()));
   tf::Quaternion quaternion;
   quaternion.setRPY(roll_, pitch_, yaw_);
   transform.setRotation(quaternion);
-  br_.sendTransform(tf::StampedTransform(transform, current_time_, MAP_FRAME_, GPS_FRAME_));
+  br_.sendTransform(
+      tf::StampedTransform(transform, current_time_, MAP_FRAME_, GPS_FRAME_));
 }
 
-void Nmea2TFPoseNode::createOrientation()
-{
+void Nmea2TFPoseNode::createOrientation() {
   yaw_ = atan2(geo_.x() - last_geo_.x(), geo_.y() - last_geo_.y());
   roll_ = 0;
   pitch_ = 0;
 }
 
-void Nmea2TFPoseNode::convert(std::vector<std::string> nmea, ros::Time current_stamp)
-{
-  try
-  {
-    if (nmea.at(0).compare(0, 2, "QQ") == 0)
-    {
+void Nmea2TFPoseNode::convert(std::vector<std::string> nmea,
+                              ros::Time current_stamp) {
+  try {
+    if (nmea.at(0).compare(0, 2, "QQ") == 0) {
       orientation_time_ = stod(nmea.at(3));
       roll_ = stod(nmea.at(4)) * M_PI / 180.;
       pitch_ = -1 * stod(nmea.at(5)) * M_PI / 180.;
       yaw_ = -1 * stod(nmea.at(6)) * M_PI / 180. + M_PI / 2;
       orientation_stamp_ = current_stamp;
       ROS_INFO("QQ is subscribed.");
-    }
-    else if (nmea.at(0) == "$PASHR")
-    {
+    } else if (nmea.at(0) == "$PASHR") {
       orientation_time_ = stod(nmea.at(1));
       roll_ = stod(nmea.at(4)) * M_PI / 180.;
       pitch_ = -1 * stod(nmea.at(5)) * M_PI / 180.;
       yaw_ = -1 * stod(nmea.at(2)) * M_PI / 180. + M_PI / 2;
       ROS_INFO("PASHR is subscribed.");
-    }
-    else if(nmea.at(0).compare(3, 3, "GGA") == 0)
-    {
+    } else if (nmea.at(0).compare(3, 3, "GGA") == 0) {
       position_time_ = stod(nmea.at(1));
       double lat = stod(nmea.at(2));
       double lon = stod(nmea.at(4));
       double h = stod(nmea.at(9));
       geo_.set_llh_nmea_degrees(lat, lon, h);
       ROS_INFO("GGA is subscribed.");
-    }
-    else if(nmea.at(0) == "$GPRMC")
-    {
+    } else if (nmea.at(0) == "$GPRMC") {
       position_time_ = stoi(nmea.at(1));
       double lat = stod(nmea.at(3));
       double lon = stod(nmea.at(5));
@@ -140,27 +160,30 @@ void Nmea2TFPoseNode::convert(std::vector<std::string> nmea, ros::Time current_s
       geo_.set_llh_nmea_degrees(lat, lon, h);
       ROS_INFO("GPRMC is subscribed.");
     }
-  }catch (const std::exception &e)
-  {
+  } catch (const std::exception &e) {
     ROS_WARN_STREAM("Message is invalid : " << e.what());
   }
+  double diff_yaw = yaw_ - previous_yaw;
+  std::cout << "diff_yaw: " << diff_yaw << std::endl;
+  previous_yaw = yaw_;
 }
 
-void Nmea2TFPoseNode::callbackFromNmeaSentence(const nmea_msgs::Sentence::ConstPtr &msg)
-{
+void Nmea2TFPoseNode::callbackFromNmeaSentence(
+    const nmea_msgs::Sentence::ConstPtr &msg) {
   current_time_ = msg->header.stamp;
   convert(split(msg->sentence), msg->header.stamp);
 
   double timeout = 10.0;
-  if (fabs(orientation_stamp_.toSec() - msg->header.stamp.toSec()) > timeout)
-  {
-    double dt = sqrt(pow(geo_.x() - last_geo_.x(), 2) + pow(geo_.y() - last_geo_.y(), 2));
+  if (fabs(orientation_stamp_.toSec() - msg->header.stamp.toSec()) > timeout) {
+    double dt = sqrt(pow(geo_.x() - last_geo_.x(), 2) +
+                     pow(geo_.y() - last_geo_.y(), 2));
     double threshold = 0.2;
-    if (dt > threshold)
-    {
+    if (dt > threshold) {
       ROS_INFO("QQ is not subscribed. Orientation is created by atan2");
       createOrientation();
       publishPoseStamped();
+      publishOdometry();
+      publishImu();
       publishTF();
       last_geo_ = geo_;
     }
@@ -168,16 +191,16 @@ void Nmea2TFPoseNode::callbackFromNmeaSentence(const nmea_msgs::Sentence::ConstP
   }
 
   double e = 1e-2;
-  if (fabs(orientation_time_ - position_time_) < e)
-  {
+  if (fabs(orientation_time_ - position_time_) < e) {
     publishPoseStamped();
+    publishOdometry();
+    publishImu();
     publishTF();
     return;
   }
 }
 
-std::vector<std::string> split(const std::string &string)
-{
+std::vector<std::string> split(const std::string &string) {
   std::vector<std::string> str_vec_ptr;
   std::string token;
   std::stringstream ss(string);
@@ -188,4 +211,4 @@ std::vector<std::string> split(const std::string &string)
   return str_vec_ptr;
 }
 
-}  // gnss_localizer
+} // gnss_localizer
