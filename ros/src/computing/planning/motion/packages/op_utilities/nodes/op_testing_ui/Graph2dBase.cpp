@@ -11,7 +11,7 @@
 using namespace PlannerHNS;
 
 
-namespace Graphics
+namespace OP_TESTING_NS
 {
 
 #define BORDER_MARGIN 20
@@ -198,4 +198,6 @@ void Graph2dBase::UpdateComment(const std::string& str_com)
 	str_comment = str_com;
 }
 
-} /* namespace Graphics */
+}
+
+

@@ -5,13 +5,17 @@
  *      Author: hatem
  */
 
+#ifndef WINDOWWRAPPER_TEST
+#define WINDOWWRAPPER_TEST
 
 #include <string>
 #include "DrawObjBase.h"
 #include <vector>
 #include <ros/ros.h>
 
-namespace Graphics {
+
+namespace OP_TESTING_NS
+{
 
 enum DisplayMode{DISPLAY_FREE, DISPLAY_TOP_FREE, DISPLAY_FOLLOW};
 
@@ -129,8 +133,6 @@ public:
 	//Menu functions
 	static void CreateRightClickMenu();
 	static void MenuCommand(int value);
-	static void ProcessMenuStatus(int status, int x, int y);
-	static void ModifyPopupMenu();
 
 	static void InitLighting();
 	static void FromScreenToModelCoordinate(int sx, int sy, double& modelX, double& modelY);
@@ -139,7 +141,6 @@ public:
 	static void DrawGrid(const double& x, const double& y, const double& w, const double& h, const double& cell_l);
 
 	static void CleanUp();
-	void RedisplayAll();
 
 private:
 	static DrawObjBase* m_DrawAndControl;
@@ -157,4 +158,7 @@ private:
 
 
 };
-} /* namespace Graphics */
+
+}
+
+#endif

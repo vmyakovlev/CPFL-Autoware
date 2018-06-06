@@ -5,16 +5,18 @@
  *      Author: hatem
  */
 
-#ifndef GRAPH2DBASE_H_
-#define GRAPH2DBASE_H_
+#ifndef GRAPH2DBASE
+#define GRAPH2DBASE
 
 #include "DrawingHelpers.h"
 #include "RoadNetwork.h"
 #include <vector>
 
-namespace Graphics {
+namespace OP_TESTING_NS
+{
 
-class Graph2dBase {
+class Graph2dBase
+{
 public:
 	void ReInitGraphResolution(double width, double height, int nMaxPoints, double a_color[], double g_color[]);
 	Graph2dBase(double width, double height, int nMaxPoints, double max_y, double min_y, std::string str_title, std::string str_x, std::string str_y, double a_color[], double g_color[]);
@@ -44,6 +46,6 @@ protected:
 	timespec m_PrevTimeStamp;
 };
 
-} /* namespace Graphics */
+}
 
-#endif /* GRAPH2DBASE_H_ */
+#endif

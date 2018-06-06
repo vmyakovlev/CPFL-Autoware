@@ -31,6 +31,7 @@ public:
 	static std::string SimulationFolderName;
 	static std::string KmlMapsFolderName;
 	static std::string PredictionFolderName;
+	static std::string TrackingFolderName;
 
 
 	static void WriteKMLFile(const std::string& fileName, const std::vector<std::string>& gps_list);

@@ -29,43 +29,33 @@
 */
 #include "../include/kf_contour_tracker_core.h"
 #include "op_RosHelpers.h"
-
+#include "PolygonGenerator.h"
+#include "MatrixOperations.h"
 
 namespace ContourTrackerNS
 {
 
 ContourTracker::ContourTracker()
 {
-	bNewClusters = false;
+	m_MapFilterDistance = 0;
+	m_dt = 0;
+	m_tracking_time = 0;
+	m_nOriginalPoints = 0;
+	m_FilteringTime = 0 ;
+	m_FilteringTime = 0;
+	m_FilteringTime = 0;
+	m_nContourPoints = 0;
+	m_PolyEstimationTime = 0;
+	m_MapType = PlannerHNS::MAP_KML_FILE;
+	bMap = false;
 	bNewCurrentPos = false;
-	ros::NodeHandle _nh;
-	_nh.getParam("/kf_contour_tracker/vehicle_width" 			, m_Params.VehicleWidth);
-	_nh.getParam("/kf_contour_tracker/vehicle_length" 			, m_Params.VehicleLength);
-	_nh.getParam("/kf_contour_tracker/horizon" 					, m_Params.DetectionRadius);
-	_nh.getParam("/kf_contour_tracker/min_object_size" 			, m_Params.MinObjSize);
-	_nh.getParam("/kf_contour_tracker/max_object_size" 			, m_Params.MaxObjSize);
-	_nh.getParam("/kf_contour_tracker/polygon_quarters" 		, m_Params.nQuarters);
-	_nh.getParam("/kf_contour_tracker/polygon_resolution" 		, m_Params.PolygonRes);
-	_nh.getParam("/kf_contour_tracker/enableSimulationMode" 	, m_Params.bEnableSimulation);
-	_nh.getParam("/kf_contour_tracker/max_association_distance" , m_ObstacleTracking.m_MAX_ASSOCIATION_DISTANCE);
-	_nh.getParam("/kf_contour_tracker/max_association_size_diff" , m_ObstacleTracking.m_MAX_ASSOCIATION_SIZE_DIFF);
+	ReadNodeParams();
+	ReadCommonParams();
 
-	int tracking_type = 0;
-	_nh.getParam("/kf_contour_tracker/tracking_type" 			, tracking_type);
-	if(tracking_type==0)
-		m_Params.trackingType = SimulationNS::ASSOCIATE_ONLY;
-	else if (tracking_type == 1)
-		m_Params.trackingType = SimulationNS::SIMPLE_TRACKER;
-	else if(tracking_type == 2)
-		m_Params.trackingType = SimulationNS::CONTOUR_TRACKER;
-
-	_nh.getParam("/kf_contour_tracker/max_remeber_time" 			, m_ObstacleTracking.m_MaxKeepTime);
-	_nh.getParam("/kf_contour_tracker/trust_counter" 				, m_ObstacleTracking.m_nMinTrustAppearances	);
-	_nh.getParam("/kf_contour_tracker/contours_circle_resolutions" 	, m_ObstacleTracking.m_CirclesResolution);
-
-	m_ObstacleTracking.m_dt = 0.12;
+	m_ObstacleTracking.m_dt = 0.1;
 	m_ObstacleTracking.m_bUseCenterOnly = true;
 	m_ObstacleTracking.m_Horizon = m_Params.DetectionRadius;
+	m_ObstacleTracking.m_bEnableStepByStep = m_Params.bEnableStepByStep;
 	m_ObstacleTracking.InitSimpleTracker();
 
 	sub_cloud_clusters 		= nh.subscribe("/cloud_clusters", 1, &ContourTracker::callbackGetCloudClusters, this);
@@ -89,22 +79,174 @@ ContourTracker::ContourTracker()
 
 ContourTracker::~ContourTracker()
 {
+	if(m_Params.bEnableLogging == true)
+	{
+		UtilityHNS::DataRW::WriteLogData(UtilityHNS::UtilityH::GetHomeDirectory()+UtilityHNS::DataRW::LoggingMainfolderName+UtilityHNS::DataRW::TrackingFolderName, "contour_tracker",
+					"time,dt,num_Tracked_Objects,num_new_objects,num_matched_objects,num_Cluster_Points,num_Contour_Points,t_filtering,t_poly_calc,t_Tracking,t_total",m_LogData);
+	}
 }
 
+void ContourTracker::ReadNodeParams()
+{
+	ros::NodeHandle _nh;
+	_nh.getParam("/kf_contour_tracker/vehicle_width" 			, m_Params.VehicleWidth);
+	_nh.getParam("/kf_contour_tracker/vehicle_length" 			, m_Params.VehicleLength);
+	_nh.getParam("/kf_contour_tracker/min_object_size" 			, m_Params.MinObjSize);
+	_nh.getParam("/kf_contour_tracker/max_object_size" 			, m_Params.MaxObjSize);
+	_nh.getParam("/kf_contour_tracker/polygon_quarters" 		, m_Params.nQuarters);
+	_nh.getParam("/kf_contour_tracker/polygon_resolution" 		, m_Params.PolygonRes);
+	_nh.getParam("/kf_contour_tracker/enableSimulationMode" 	, m_Params.bEnableSimulation);
+	_nh.getParam("/kf_contour_tracker/enableStepByStepMode" 	, m_Params.bEnableStepByStep);
+
+
+	_nh.getParam("/kf_contour_tracker/max_association_distance" , m_ObstacleTracking.m_MAX_ASSOCIATION_DISTANCE);
+	_nh.getParam("/kf_contour_tracker/max_association_size_diff" , m_ObstacleTracking.m_MAX_ASSOCIATION_SIZE_DIFF);
+	_nh.getParam("/kf_contour_tracker/enableLogging" , m_Params.bEnableLogging);
+	int tracking_type = 0;
+	_nh.getParam("/kf_contour_tracker/tracking_type" 			, tracking_type);
+	if(tracking_type==0)
+		m_Params.trackingType = SimulationNS::ASSOCIATE_ONLY;
+	else if (tracking_type == 1)
+		m_Params.trackingType = SimulationNS::SIMPLE_TRACKER;
+	else if(tracking_type == 2)
+		m_Params.trackingType = SimulationNS::CONTOUR_TRACKER;
+
+	_nh.getParam("/kf_contour_tracker/max_remeber_time" 			, m_ObstacleTracking.m_MaxKeepTime);
+	_nh.getParam("/kf_contour_tracker/trust_counter" 				, m_ObstacleTracking.m_nMinTrustAppearances	);
+	_nh.getParam("/kf_contour_tracker/vector_map_filter_distance" 	, m_MapFilterDistance	);
+}
+
+void ContourTracker::ReadCommonParams()
+{
+	ros::NodeHandle _nh("~");
+	_nh.getParam("/op_common_params/horizonDistance" , m_Params.DetectionRadius);
+
+	m_ObstacleTracking.m_CirclesResolution = m_Params.DetectionRadius*0.05;
+
+	int iSource = 0;
+	_nh.getParam("/op_common_params/mapSource" , iSource);
+	if(iSource == 0)
+		m_MapType = PlannerHNS::MAP_AUTOWARE;
+	else if (iSource == 1)
+		m_MapType = PlannerHNS::MAP_FOLDER;
+	else if(iSource == 2)
+		m_MapType = PlannerHNS::MAP_KML_FILE;
+
+	_nh.getParam("/op_common_params/mapFileName" , m_MapPath);
+}
 
 void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
 {
+	struct timespec  tracking_timer;
+
 	if(bNewCurrentPos || m_Params.bEnableSimulation)
 	{
 		m_OriginalClusters.clear();
-		int nOriginalPoints = 0;
-		int nContourPoints = 0;
+		m_nOriginalPoints = 0;
+		m_nContourPoints = 0;
+		m_FilteringTime = 0;
+		m_PolyEstimationTime = 0;
+		struct timespec filter_time, poly_est_time;
 
-		PlannerHNS::RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(m_CurrentPos, m_Params.VehicleWidth, m_Params.VehicleLength, *msg,
-				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
+		PlannerHNS::DetectedObject obj;
+		PlannerHNS::GPSPoint avg_center;
+		PlannerHNS::PolygonGenerator polyGen(m_Params.nQuarters);
+		pcl::PointCloud<pcl::PointXYZ> point_cloud;
 
-		bNewClusters = true;
+		//Filter the detected Obstacles:
+		//std::cout << "Filter the detected Obstacles: " << std::endl;
+		for(unsigned int i=0; i < msg->clusters.size(); i++)
+		{
+			obj.center.pos.x = msg->clusters.at(i).centroid_point.point.x;
+			obj.center.pos.y = msg->clusters.at(i).centroid_point.point.y;
+			obj.center.pos.z = msg->clusters.at(i).centroid_point.point.z;
+			obj.center.pos.a = msg->clusters.at(i).estimated_angle;
+
+			obj.distance_to_center = hypot(obj.center.pos.y-m_CurrentPos.pos.y, obj.center.pos.x-m_CurrentPos.pos.x);
+
+			obj.actual_yaw = msg->clusters.at(i).estimated_angle;
+
+			obj.w = msg->clusters.at(i).dimensions.x;
+			obj.l = msg->clusters.at(i).dimensions.y;
+			obj.h = msg->clusters.at(i).dimensions.z;
+
+			UtilityHNS::UtilityH::GetTickCount(filter_time);
+			if(!IsCar(obj, m_CurrentPos, m_Map)) continue;
+			m_FilteringTime += UtilityHNS::UtilityH::GetTimeDiffNow(filter_time);
+
+			obj.id = msg->clusters.at(i).id;
+			obj.originalID = msg->clusters.at(i).id;
+			obj.label = msg->clusters.at(i).label;
+
+			if(msg->clusters.at(i).indicator_state == 0)
+				obj.indicator_state = PlannerHNS::INDICATOR_LEFT;
+			else if(msg->clusters.at(i).indicator_state == 1)
+				obj.indicator_state = PlannerHNS::INDICATOR_RIGHT;
+			else if(msg->clusters.at(i).indicator_state == 2)
+				obj.indicator_state = PlannerHNS::INDICATOR_BOTH;
+			else if(msg->clusters.at(i).indicator_state == 3)
+				obj.indicator_state = PlannerHNS::INDICATOR_NONE;
+
+
+
+			UtilityHNS::UtilityH::GetTickCount(poly_est_time);
+
+			point_cloud.clear();
+			pcl::fromROSMsg(msg->clusters.at(i).cloud, point_cloud);
+			obj.contour = polyGen.EstimateClusterPolygon(point_cloud ,obj.center.pos,avg_center, m_Params.PolygonRes);
+
+			m_PolyEstimationTime += UtilityHNS::UtilityH::GetTimeDiffNow(poly_est_time);
+
+			m_nOriginalPoints += point_cloud.points.size();
+			m_nContourPoints += obj.contour.size();
+			m_OriginalClusters.push_back(obj);
+
+		}
+
+		UtilityHNS::UtilityH::GetTickCount(tracking_timer);
+		m_ObstacleTracking.DoOneStep(m_CurrentPos, m_OriginalClusters, m_Params.trackingType);
+		m_tracking_time = UtilityHNS::UtilityH::GetTimeDiffNow(tracking_timer);
+		m_dt  = UtilityHNS::UtilityH::GetTimeDiffNow(m_loop_timer);
+		UtilityHNS::UtilityH::GetTickCount(m_loop_timer);
+
+
+		LogAndSend();
+
+		VisualizeLocalTracking();
+
+//		PlannerHNS::RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(m_CurrentPos, m_Params.VehicleWidth, m_Params.VehicleLength, *msg,
+//				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
+
 	}
+}
+
+bool ContourTracker::IsCar(const PlannerHNS::DetectedObject& obj, const PlannerHNS::WayPoint& currState, PlannerHNS::RoadNetwork& map)
+{
+
+	if(m_MapFilterDistance > 0 && PlannerHNS::MappingHelpers::GetClosestLaneFromMap(obj.center, map, m_MapFilterDistance, false) == nullptr)
+		return false;
+
+	double object_size = hypot(obj.w, obj.l);
+
+	if(obj.distance_to_center > m_Params.DetectionRadius || object_size < m_Params.MinObjSize || object_size > m_Params.MaxObjSize)
+		return false;
+
+	if(m_Params.bEnableSimulation)
+	{
+		PlannerHNS::Mat3 rotationMat(-currState.pos.a);
+		PlannerHNS::Mat3 translationMat(-currState.pos.x, -currState.pos.y);
+
+		PlannerHNS::GPSPoint relative_point = translationMat*obj.center.pos;
+		relative_point = rotationMat*relative_point;
+
+		double distance_x = fabs(relative_point.x - m_Params.VehicleLength/3.0);
+		double distance_y = fabs(relative_point.y);
+
+		if(distance_x  <= m_Params.VehicleLength*0.5 && distance_y <=  m_Params.VehicleWidth*0.5) // don't detect yourself
+			return false;
+	}
+
+	return true;
 }
 
 void ContourTracker::callbackGetCurrentPose(const geometry_msgs::PoseStampedConstPtr& msg)
@@ -173,38 +315,75 @@ void ContourTracker::VisualizeLocalTracking()
 
 }
 
+void ContourTracker::LogAndSend()
+{
+	timespec log_t;
+	UtilityHNS::UtilityH::GetTickCount(log_t);
+	std::ostringstream dataLine;
+	std::ostringstream dataLineToOut;
+	dataLine << UtilityHNS::UtilityH::GetLongTime(log_t) <<"," << m_dt << "," <<
+			m_ObstacleTracking.m_DetectedObjects.size() << "," <<
+			m_OriginalClusters.size() << "," <<
+			m_ObstacleTracking.m_DetectedObjects.size() - m_OriginalClusters.size() << "," <<
+			m_nOriginalPoints << "," <<
+			m_nContourPoints<< "," <<
+			m_FilteringTime<< "," <<
+			m_PolyEstimationTime<< "," <<
+			m_tracking_time<< "," <<
+			m_tracking_time+m_FilteringTime+m_PolyEstimationTime<< ",";
+	m_LogData.push_back(dataLine.str());
+
+	cout << "dt: " << m_dt << endl;
+	cout << "num_Tracked_Objects: " << m_ObstacleTracking.m_DetectedObjects.size() << endl;
+	cout << "num_new_objects: " << m_OriginalClusters.size() << endl;
+	cout << "num_matched_objects: " << m_ObstacleTracking.m_DetectedObjects.size() - m_OriginalClusters.size() << endl;
+	cout << "num_Cluster_Points: " << m_nOriginalPoints << endl;
+	cout << "num_Contour_Points: " << m_nContourPoints << endl;
+	cout << "t_filtering : " << m_FilteringTime << endl;
+	cout << "t_poly_calc : " << m_PolyEstimationTime << endl;
+	cout << "t_Tracking : " << m_tracking_time << endl;
+	cout << "t_total : " << m_tracking_time+m_FilteringTime+m_PolyEstimationTime << endl;
+	cout << endl;
+
+	m_OutPutResults.objects.clear();
+	autoware_msgs::DetectedObject obj;
+	for(unsigned int i = 0 ; i <m_ObstacleTracking.m_DetectedObjects.size(); i++)
+	{
+		PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_ObstacleTracking.m_DetectedObjects.at(i), m_Params.bEnableSimulation, obj);
+		m_OutPutResults.objects.push_back(obj);
+	}
+
+	m_OutPutResults.header.frame_id = "map";
+	m_OutPutResults.header.stamp  = ros::Time();
+
+	pub_AllTrackedObjects.publish(m_OutPutResults);
+}
+
 void ContourTracker::MainLoop()
 {
-	ros::Rate loop_rate(25);
-
-	PlannerHNS::WayPoint prevState, state_change;
+	ros::Rate loop_rate(50);
 
 	while (ros::ok())
 	{
-		ros::spinOnce();
+		ReadCommonParams();
 
-		if(bNewClusters)
+		if(m_MapType == PlannerHNS::MAP_KML_FILE && !bMap)
 		{
-			m_ObstacleTracking.DoOneStep(m_CurrentPos, m_OriginalClusters, m_Params.trackingType);
-
-			m_OutPutResults.objects.clear();
-			autoware_msgs::DetectedObject obj;
-			for(unsigned int i = 0 ; i <m_ObstacleTracking.m_DetectedObjects.size(); i++)
+			PlannerHNS::MappingHelpers::LoadKML(m_MapPath, m_Map);
+			if(m_Map.roadSegments.size() > 0)
 			{
-				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(m_ObstacleTracking.m_DetectedObjects.at(i), m_Params.bEnableSimulation, obj);
-				m_OutPutResults.objects.push_back(obj);
+				bMap = true;
+				std::cout << " ******* Map Is Loaded successfully from the tracker !! " << std::endl;
 			}
-
-			m_OutPutResults.header.frame_id = "map";
-			m_OutPutResults.header.stamp  = ros::Time();
-
-			pub_AllTrackedObjects.publish(m_OutPutResults);
-
-			std::cout << "Visualize tracking is Online ! " << std::endl;
-			VisualizeLocalTracking();
-
-			bNewClusters = false;
 		}
+		else if (m_MapType == PlannerHNS::MAP_FOLDER && !bMap)
+		{
+			PlannerHNS::MappingHelpers::ConstructRoadNetworkFromDataFiles(m_MapPath, m_Map, true);
+			if(m_Map.roadSegments.size() > 0)
+				bMap = true;
+		}
+
+		ros::spinOnce();
 		loop_rate.sleep();
 	}
 }

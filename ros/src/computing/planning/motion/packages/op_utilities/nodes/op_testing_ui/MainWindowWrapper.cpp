@@ -11,16 +11,20 @@
 #include <cmath>
 #include "GL/freeglut_ext.h"
 
+
+#define USE_INFO_WINDOW_
+
 using namespace std;
 
-namespace Graphics {
+namespace OP_TESTING_NS
+{
 
 WindowParams MainWindowWrapper::m_params;
 DisplayParams MainWindowWrapper::m_DisplayParam;
 
 WindowParams::WindowParams()
 {
-	title = "Simple Simulator";
+	title = "Testing UI";
 
 	x = 10;
 	y = 10;
@@ -42,6 +46,7 @@ WindowParams::WindowParams()
 
 void WindowParams::ReCalcSimuWindow()
 {
+#ifdef USE_INFO_WINDOW
 	info_window.x = w*(1.0-info_ratio) - UI_CONST.GAP;
 	info_window.y = UI_CONST.GAP;
 	info_window.w = w*info_ratio;
@@ -51,6 +56,12 @@ void WindowParams::ReCalcSimuWindow()
 	simu_window.y = UI_CONST.GAP;
 	simu_window.w = w - UI_CONST.GAP * 3 - info_window.w;
 	simu_window.h = h - UI_CONST.GAP * 2;
+#else
+	simu_window.x = UI_CONST.GAP;
+	simu_window.y = UI_CONST.GAP;
+	simu_window.w = w - UI_CONST.GAP * 2.0;
+	simu_window.h = h - UI_CONST.GAP * 2.0;
+#endif
 }
 
 DisplayParams::DisplayParams()
@@ -122,9 +133,6 @@ void MainWindowWrapper::InitOpenGLWindow(int argc, char** argv)
 	glutInitWindowPosition(m_params.x, m_params.y);
 	glutInit(&argc, argv);
 
-
-
-
 	m_MainWindow = glutCreateWindow(m_params.title.c_str());
 	glutReshapeFunc(MainWindowWrapper::MainReshape);
 	glutDisplayFunc(MainWindowWrapper::MainDisplay);
@@ -138,14 +146,14 @@ void MainWindowWrapper::InitOpenGLWindow(int argc, char** argv)
 	glutMouseFunc(MainWindowWrapper::MouseCommand);
 	glutKeyboardFunc(MainWindowWrapper::KeyboardCommand);
 	glutSpecialFunc(MainWindowWrapper::KeyboardSpecialCommand);
-	if(m_DrawAndControl)
-		m_DrawAndControl->LoadMaterials();
-	CreateRightClickMenu();
+	//CreateRightClickMenu();
 
+#ifdef USE_INFO_WINDOW
 	m_InfoWindow = glutCreateSubWindow(m_MainWindow, m_params.info_window.x, m_params.info_window.y, m_params.info_window.w, m_params.info_window.h);
 	glutReshapeFunc(MainWindowWrapper::InfoReshape);
 	glutDisplayFunc(MainWindowWrapper::InfoDisplay);
 	glutKeyboardFunc(MainWindowWrapper::KeyboardExitCommand);
+#endif
 
 	//RedisplayAll();
 	glutPostRedisplay();
@@ -198,8 +206,9 @@ void MainWindowWrapper::MainReshape(int width,  int height)
 	gluOrtho2D(0, m_params.w, m_params.h, 0);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
+#ifdef USE_INFO_WINDOW
 	glutPostWindowRedisplay(m_InfoWindow);
+#endif
 	glutPostWindowRedisplay(m_SimuWindow);
 }
 
@@ -273,67 +282,56 @@ void MainWindowWrapper::SimuDisplay()
 	//glClearColor(1,1,1,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if(m_DisplayParam.bDisplayMode == DISPLAY_FOLLOW && m_DrawAndControl)
-	{
-		//glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
-		m_DisplayParam.centerRotX = m_DrawAndControl->m_followX;
-		m_DisplayParam.centerRotY = m_DrawAndControl->m_followY;
-
-
-		int yaw = (m_DisplayParam.currRotationZ/8)%360;
-		int roll = (m_DisplayParam.currRotationX/8)%360;
-		int pitch = (m_DisplayParam.currRotationY/8)%360;
-
-		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
-		glRotated(yaw, 0,0,1);
-		glRotated(roll, 1,0,0);
-		glRotated(pitch, 0,1,0);
-		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
-	}
-	else if(m_DisplayParam.bDisplayMode == DISPLAY_FREE)
-	{
-		glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
-
-		int yaw = (m_DisplayParam.currRotationZ/8)%360;
-		int roll = (m_DisplayParam.currRotationX/8)%360;
-		int pitch = (m_DisplayParam.currRotationY/8)%360;
-
-		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
-		glRotated(yaw, 0,0,1);
-		glRotated(roll, 1,0,0);
-		glRotated(pitch, 0,1,0);
-		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
-	}
-	else if(m_DisplayParam.bDisplayMode == DISPLAY_TOP_FREE)
-	{
-		glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
-
-		int yaw = (m_DisplayParam.currRotationZ/8)%360;
-		//int roll = (m_DisplayParam.currRotationX/8)%360;
-		//int pitch = (m_DisplayParam.currRotationY/8)%360;
-
-
-		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
-		glRotated(yaw, 0,0,1);
-		//glRotated(roll, 1,0,0);
-		//glRotated(pitch, 0,1,0);
-		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
-	}
-
-
-//	glPushMatrix();
-//	glTranslated(5, 5, 0);
-//	glutSolidTeapot(3);
-//	glPopMatrix();
-
+//	if(m_DisplayParam.bDisplayMode == DISPLAY_FOLLOW && m_DrawAndControl)
+//	{
+//		//glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
+//		m_DisplayParam.centerRotX = m_DrawAndControl->m_followX;
+//		m_DisplayParam.centerRotY = m_DrawAndControl->m_followY;
 //
+//
+//		int yaw = (m_DisplayParam.currRotationZ/8)%360;
+//		int roll = (m_DisplayParam.currRotationX/8)%360;
+//		int pitch = (m_DisplayParam.currRotationY/8)%360;
+//
+//		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
+//		glRotated(yaw, 0,0,1);
+//		glRotated(roll, 1,0,0);
+//		glRotated(pitch, 0,1,0);
+//		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
+//	}
+//	else if(m_DisplayParam.bDisplayMode == DISPLAY_FREE)
+//	{
+//		glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
+//
+//		int yaw = (m_DisplayParam.currRotationZ/8)%360;
+//		int roll = (m_DisplayParam.currRotationX/8)%360;
+//		int pitch = (m_DisplayParam.currRotationY/8)%360;
+//
+//		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
+//		glRotated(yaw, 0,0,1);
+//		glRotated(roll, 1,0,0);
+//		glRotated(pitch, 0,1,0);
+//		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
+//	}
+//	else if(m_DisplayParam.bDisplayMode == DISPLAY_TOP_FREE)
+//	{
+//		glTranslated(-m_DisplayParam.translateX, -m_DisplayParam.translateY, 0);
+//
+//		int yaw = (m_DisplayParam.currRotationZ/8)%360;
+//		//int roll = (m_DisplayParam.currRotationX/8)%360;
+//		//int pitch = (m_DisplayParam.currRotationY/8)%360;
+//
+//
+//		glTranslated(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0);
+//		glRotated(yaw, 0,0,1);
+//		//glRotated(roll, 1,0,0);
+//		//glRotated(pitch, 0,1,0);
+//		glTranslated(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY, 0);
+//	}
 
-	DrawingHelpers::DrawCustomOrigin(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY, 0, 0, 0, 0, 2.5 );
 
 	if(m_DrawAndControl)
 		m_DrawAndControl->DrawSimu();
-	else
-		DrawingHelpers::DrawGrid(m_DisplayParam.centerRotX-5, m_DisplayParam.centerRotY-5, 10, 10, 1);
 
 	glutSwapBuffers();
 }
@@ -374,14 +372,16 @@ void MainWindowWrapper::MainDisplay()
 	glPushMatrix();
 	glColor3f(0.9, 0.2, 0.2);
 	glTranslated(m_params.simu_window.x, m_params.UI_CONST.GAP-1, 0);
-	DrawingHelpers::DrawString(0, 0, GLUT_BITMAP_TIMES_ROMAN_24, (char*)"Simulation View");
+	DrawingHelpers::DrawString(0, 0, GLUT_BITMAP_TIMES_ROMAN_24, (char*)"Command Input Window");
 	glPopMatrix();
 
+#ifdef USE_INFO_WINDOW
 	glPushMatrix();
 	glColor3f(0.9, 0.2, 0.2);
 	glTranslated(m_params.info_window.x, m_params.UI_CONST.GAP-1, 0);
 	DrawingHelpers::DrawString(0, 0, GLUT_BITMAP_TIMES_ROMAN_24, (char*)"Info View");
 	glPopMatrix();
+#endif
 
 	glutSwapBuffers();
 }
@@ -436,201 +436,185 @@ void MainWindowWrapper::InfoDisplay()
 	glutSwapBuffers();
 }
 
-void MainWindowWrapper::RedisplayAll()
-{
-//	glutSetWindow(m_InfoWindow);
-//	glutPostRedisplay();
-//	glutSetWindow(m_SimuWindow);
-//	glutPostRedisplay();
-//	glutSetWindow(m_MainWindow);
-//	glutPostRedisplay();
-}
-
 void MainWindowWrapper::MouseMove(int x, int y)
 {
-	if(m_DisplayParam.bSelectPosition == 1)
-	{
-		if(m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.StartPos[2] = atan2(m_DisplayParam.StartPos[1] - y, x - m_DisplayParam.StartPos[0]);
-		}
-	}
-	else if(m_DisplayParam.bSelectPosition == 2)
-	{
-		if(m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.GoalPos[2] = atan2(m_DisplayParam.GoalPos[1] - y, x - m_DisplayParam.GoalPos[0]);
-		}
-	}
-	else if(m_DisplayParam.bSelectPosition == 3)
-	{
-		if(m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.SimulatedCarPos[2] = atan2(m_DisplayParam.SimulatedCarPos[1] - y, x - m_DisplayParam.SimulatedCarPos[0]);
-		}
-	}
-	else if(m_DisplayParam.bLeftDown)
-	{
-		m_DisplayParam.currRotationZ += x-m_DisplayParam.prev_x;
-		m_DisplayParam.prev_x = x;
-
-		//if(m_DisplayParam.bFreeDisplay)
-		{
-			double zdir = (m_DisplayParam.currRotationZ/8)%360 * DEG2RAD;
-			double xRatio = cos(zdir);
-			double yRatio = sin(zdir);
-
-			m_DisplayParam.currRotationX += (y-m_DisplayParam.prev_y) * xRatio;
-			m_DisplayParam.currRotationY += (m_DisplayParam.prev_y - y) * yRatio;
-
-			m_DisplayParam.prev_y = y;
-		}
-	}
-	else if (m_DisplayParam.bRightDown)
-	{
-	}
-	else if (m_DisplayParam.bCenterDown)
-	{
-
-		m_DisplayParam.actualViewX = (tan(m_DisplayParam.prespective_fov/2.0*DEG2RAD) * m_DisplayParam.zoom * 2.0)/m_params.simu_window.w;
-		m_DisplayParam.actualViewY = (tan(m_DisplayParam.prespective_fov/2.0*DEG2RAD) * m_DisplayParam.zoom * 2.0)/m_params.simu_window.h;
-
-		m_DisplayParam.translateX += (m_DisplayParam.prev_x-x)*m_DisplayParam.actualViewX;
-		m_DisplayParam.translateY += (y-m_DisplayParam.prev_y)*m_DisplayParam.actualViewY;
-
-		m_DisplayParam.prev_x = x;
-		m_DisplayParam.prev_y = y;
-
-	}
-	else
-	{
-
-	}
-
+//	if(m_DisplayParam.bSelectPosition == 1)
+//	{
+//		if(m_DisplayParam.bLeftDown)
+//		{
+//			m_DisplayParam.StartPos[2] = atan2(m_DisplayParam.StartPos[1] - y, x - m_DisplayParam.StartPos[0]);
+//		}
+//	}
+//	else if(m_DisplayParam.bSelectPosition == 2)
+//	{
+//		if(m_DisplayParam.bLeftDown)
+//		{
+//			m_DisplayParam.GoalPos[2] = atan2(m_DisplayParam.GoalPos[1] - y, x - m_DisplayParam.GoalPos[0]);
+//		}
+//	}
+//	else if(m_DisplayParam.bSelectPosition == 3)
+//	{
+//		if(m_DisplayParam.bLeftDown)
+//		{
+//			m_DisplayParam.SimulatedCarPos[2] = atan2(m_DisplayParam.SimulatedCarPos[1] - y, x - m_DisplayParam.SimulatedCarPos[0]);
+//		}
+//	}
+//	else if(m_DisplayParam.bLeftDown)
+//	{
+//		m_DisplayParam.currRotationZ += x-m_DisplayParam.prev_x;
+//		m_DisplayParam.prev_x = x;
+//
+//		//if(m_DisplayParam.bFreeDisplay)
+//		{
+//			double zdir = (m_DisplayParam.currRotationZ/8)%360 * DEG2RAD;
+//			double xRatio = cos(zdir);
+//			double yRatio = sin(zdir);
+//
+//			m_DisplayParam.currRotationX += (y-m_DisplayParam.prev_y) * xRatio;
+//			m_DisplayParam.currRotationY += (m_DisplayParam.prev_y - y) * yRatio;
+//
+//			m_DisplayParam.prev_y = y;
+//		}
+//	}
+//	else if (m_DisplayParam.bRightDown)
+//	{
+//	}
+//	else if (m_DisplayParam.bCenterDown)
+//	{
+//
+//		m_DisplayParam.actualViewX = (tan(m_DisplayParam.prespective_fov/2.0*DEG2RAD) * m_DisplayParam.zoom * 2.0)/m_params.simu_window.w;
+//		m_DisplayParam.actualViewY = (tan(m_DisplayParam.prespective_fov/2.0*DEG2RAD) * m_DisplayParam.zoom * 2.0)/m_params.simu_window.h;
+//
+//		m_DisplayParam.translateX += (m_DisplayParam.prev_x-x)*m_DisplayParam.actualViewX;
+//		m_DisplayParam.translateY += (y-m_DisplayParam.prev_y)*m_DisplayParam.actualViewY;
+//
+//		m_DisplayParam.prev_x = x;
+//		m_DisplayParam.prev_y = y;
+//
+//	}
+//	else
+//	{
+//
+//	}
 }
 
 void MainWindowWrapper::MouseCommand(int button, int state, int x, int y)
 {
-	//cout << x << ", " << y << endl;
-	if(m_DisplayParam.bSelectPosition == 1)
-	{
-		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.bLeftDown = true;
-			m_DisplayParam.StartPos[0] = x;
-			m_DisplayParam.StartPos[1] = y;
-			//cout << "Left Down" << endl;
-		}
-		else if(button == 0 && state == 1)
-		{
-			m_DisplayParam.bLeftDown = false;
-			m_DisplayParam.bSelectPosition = 0;
-		}
-	}
-	else if(m_DisplayParam.bSelectPosition == 2)
-	{
-		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.bLeftDown = true;
-			m_DisplayParam.GoalPos[0] = x;
-			m_DisplayParam.GoalPos[1] = y;
-			//cout << "Left Down" << endl;
-		}
-		else if(button == 0 && state == 1)
-		{
-			m_DisplayParam.bLeftDown = false;
-			m_DisplayParam.bSelectPosition = 0;
-			m_DrawAndControl->UpdatePlaneStartGoal(m_DisplayParam.StartPosFinal[0],
-					m_DisplayParam.StartPosFinal[1], m_DisplayParam.StartPosFinal[2],
-					m_DisplayParam.GoalPosFinal[0], m_DisplayParam.GoalPosFinal[1], m_DisplayParam.GoalPosFinal[2]);
-		}
-	}
-	else if(m_DisplayParam.bSelectPosition == 3)
-	{
-//		if(button == 0 && state == 1)
+//	//cout << x << ", " << y << endl;
+//	if(m_DisplayParam.bSelectPosition == 1)
+//	{
+//		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
 //		{
-//			int yaw = (m_DisplayParam.currRotationZ/8)%360;
-//			PlannerHNS::Mat3 rotationMat(-yaw*DEG2RAD);
-//			PlannerHNS::Mat3 translationMat(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY);
-//			PlannerHNS::Mat3 invTranslationMat(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY);
-//
-//			double gx=0,gy=0;
-//			FromScreenToModelCoordinate(x-m_params.simu_window.w/2.0, m_params.simu_window.h/2.0 - y,gx,gy);
-//
-//			PlannerHNS::GPSPoint gp(gx+m_DisplayParam.translateX, gy+m_DisplayParam.translateY, 0, 0);
-//			gp = translationMat * gp;
-//			gp = rotationMat * gp;
-//			gp = invTranslationMat * gp;
-//
-//			m_DisplayParam.bSelectPosition = 0;
-//
+//			m_DisplayParam.bLeftDown = true;
+//			m_DisplayParam.StartPos[0] = x;
+//			m_DisplayParam.StartPos[1] = y;
+//			//cout << "Left Down" << endl;
 //		}
-
-		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
-		{
-			m_DisplayParam.bLeftDown = true;
-			m_DisplayParam.SimulatedCarPos[0] = x;
-			m_DisplayParam.SimulatedCarPos[1] = y;
-			//cout << "Left Down" << endl;
-		}
-		else if(button == 0 && state == 1)
-		{
-			m_DisplayParam.bLeftDown = false;
-			m_DisplayParam.bSelectPosition = 0;
-			m_DrawAndControl->AddSimulatedCarPos(m_DisplayParam.SimulatedCarPosFinal[0],
-					m_DisplayParam.SimulatedCarPosFinal[1], m_DisplayParam.SimulatedCarPosFinal[2]);
-		}
-	}
-	else if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
-	{
-		m_DisplayParam.bLeftDown = true;
-		m_DisplayParam.prev_x = x;
-		m_DisplayParam.prev_y = y;
-		//cout << "Left Down" << endl;
-	}
-	else if(button == 0 && state == 1)
-	{
-		m_DisplayParam.bLeftDown = false;
-	}
-	else if(button == 2 && state == 0 && !m_DisplayParam.bRightDown)
-	{
-		m_DisplayParam.bRightDown = true;
-		m_DisplayParam.prev_x = x;
-		m_DisplayParam.prev_y = y;
-		//cout << "Right Down" << endl;
-	}
-	else if(button == 2 && state == 1)
-	{
-		m_DisplayParam.bRightDown = false;
-
-	}
-	else if(button == 1 && state == 0 && !m_DisplayParam.bCenterDown)
-	{
-		m_DisplayParam.bCenterDown = true;
-		m_DisplayParam.prev_x = x;
-		m_DisplayParam.prev_y = y;
-		//cout << "Right Down" << endl;
-	}
-	else if(button == 1 && state == 1)
-	{
-		m_DisplayParam.bCenterDown = false;
-
-	}
-	else if(button == 3)
-	{
-		m_DisplayParam.zoom-=1;
-		if(m_DisplayParam.zoom < 2)
-			m_DisplayParam.zoom = 2;
-	}
-	else if (button == 4)
-	{
-		m_DisplayParam.zoom+=1;
-		if(m_DisplayParam.zoom > m_DisplayParam.prespective_z/10.0)
-			m_DisplayParam.zoom = m_DisplayParam.prespective_z/10.0;
-	}
-
-	if(m_DrawAndControl)
-		m_DrawAndControl->OnLeftClick(x,y);
+//		else if(button == 0 && state == 1)
+//		{
+//			m_DisplayParam.bLeftDown = false;
+//			m_DisplayParam.bSelectPosition = 0;
+//		}
+//	}
+//	else if(m_DisplayParam.bSelectPosition == 2)
+//	{
+//		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
+//		{
+//			m_DisplayParam.bLeftDown = true;
+//			m_DisplayParam.GoalPos[0] = x;
+//			m_DisplayParam.GoalPos[1] = y;
+//			//cout << "Left Down" << endl;
+//		}
+//		else if(button == 0 && state == 1)
+//		{
+//			m_DisplayParam.bLeftDown = false;
+//			m_DisplayParam.bSelectPosition = 0;
+//		}
+//	}
+//	else if(m_DisplayParam.bSelectPosition == 3)
+//	{
+////		if(button == 0 && state == 1)
+////		{
+////			int yaw = (m_DisplayParam.currRotationZ/8)%360;
+////			PlannerHNS::Mat3 rotationMat(-yaw*DEG2RAD);
+////			PlannerHNS::Mat3 translationMat(m_DisplayParam.centerRotX, m_DisplayParam.centerRotY);
+////			PlannerHNS::Mat3 invTranslationMat(-m_DisplayParam.centerRotX, -m_DisplayParam.centerRotY);
+////
+////			double gx=0,gy=0;
+////			FromScreenToModelCoordinate(x-m_params.simu_window.w/2.0, m_params.simu_window.h/2.0 - y,gx,gy);
+////
+////			PlannerHNS::GPSPoint gp(gx+m_DisplayParam.translateX, gy+m_DisplayParam.translateY, 0, 0);
+////			gp = translationMat * gp;
+////			gp = rotationMat * gp;
+////			gp = invTranslationMat * gp;
+////
+////			m_DisplayParam.bSelectPosition = 0;
+////
+////		}
+//
+//		if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
+//		{
+//			m_DisplayParam.bLeftDown = true;
+//			m_DisplayParam.SimulatedCarPos[0] = x;
+//			m_DisplayParam.SimulatedCarPos[1] = y;
+//			//cout << "Left Down" << endl;
+//		}
+//		else if(button == 0 && state == 1)
+//		{
+//			m_DisplayParam.bLeftDown = false;
+//			m_DisplayParam.bSelectPosition = 0;
+//		}
+//	}
+//	else if(button == 0 && state == 0 && !m_DisplayParam.bLeftDown)
+//	{
+//		m_DisplayParam.bLeftDown = true;
+//		m_DisplayParam.prev_x = x;
+//		m_DisplayParam.prev_y = y;
+//		//cout << "Left Down" << endl;
+//	}
+//	else if(button == 0 && state == 1)
+//	{
+//		m_DisplayParam.bLeftDown = false;
+//	}
+//	else if(button == 2 && state == 0 && !m_DisplayParam.bRightDown)
+//	{
+//		m_DisplayParam.bRightDown = true;
+//		m_DisplayParam.prev_x = x;
+//		m_DisplayParam.prev_y = y;
+//		//cout << "Right Down" << endl;
+//	}
+//	else if(button == 2 && state == 1)
+//	{
+//		m_DisplayParam.bRightDown = false;
+//
+//	}
+//	else if(button == 1 && state == 0 && !m_DisplayParam.bCenterDown)
+//	{
+//		m_DisplayParam.bCenterDown = true;
+//		m_DisplayParam.prev_x = x;
+//		m_DisplayParam.prev_y = y;
+//		//cout << "Right Down" << endl;
+//	}
+//	else if(button == 1 && state == 1)
+//	{
+//		m_DisplayParam.bCenterDown = false;
+//
+//	}
+//	else if(button == 3)
+//	{
+//		m_DisplayParam.zoom-=1;
+//		if(m_DisplayParam.zoom < 2)
+//			m_DisplayParam.zoom = 2;
+//	}
+//	else if (button == 4)
+//	{
+//		m_DisplayParam.zoom+=1;
+//		if(m_DisplayParam.zoom > m_DisplayParam.prespective_z/10.0)
+//			m_DisplayParam.zoom = m_DisplayParam.prespective_z/10.0;
+//	}
+//
+//	if(m_DrawAndControl)
+//		m_DrawAndControl->OnLeftClick(x,y);
 
 }
 
@@ -646,7 +630,7 @@ void MainWindowWrapper::KeyboardExitCommand(unsigned char key, int x, int y)
 
 void MainWindowWrapper::KeyboardCommand(unsigned char key, int x, int y)
 {
-	//cout << "Char : " << key <<  endl;
+	//cout << "Char : " << (int)key <<  endl;
 	switch (key)
 	{
 	case 27:
@@ -685,8 +669,6 @@ void MainWindowWrapper::KeyboardCommand(unsigned char key, int x, int y)
 		break;
 	case 'r':
 	{
-		if(m_DrawAndControl)
-			m_DrawAndControl->Reset();
 	}
 	break;
 	case 'p':
@@ -729,65 +711,52 @@ void MainWindowWrapper::KeyboardCommand(unsigned char key, int x, int y)
 	}
 
 	if(m_DrawAndControl)
-		m_DrawAndControl->OnKeyboardPress(CHAR_KEY, key);
+		m_DrawAndControl->OnKeyboardPress(0, key);
 }
 
 void MainWindowWrapper::KeyboardSpecialCommand(int key, int x, int y)
 {
-	//cout << "Control : " << key << endl;
+//	cout << "Control : " << key << endl;
+
+	if(m_DrawAndControl)
+		m_DrawAndControl->OnKeyboardPress(key, 0);
+
 	switch (key)
 	{
 	case 101: // Up
 	{
-//		double prevAngle = angle;
-//		angle += rand()%5;
-//		//double a = circ_angle->CalcAngle(3.0*DEG2RAD);
-//		angle = UtilityH::GetCircularAngle(prevAngle*DEG2RAD, angle*DEG2RAD) * RAD2DEG;
-//		cout << endl << "angle = " << angle << endl;
 	}
 	break;
 	case 103: //Down
 	{
-//		double prevAngle = angle;
-//		angle -= rand()%5;
-//		//double a = circ_angle->CalcAngle(357.0*DEG2RAD);
-//		angle = UtilityH::GetCircularAngle(prevAngle*DEG2RAD, angle*DEG2RAD) * RAD2DEG;
-//		cout << "angle = " << angle << endl;
 	}
 	break;
 	case 102: //Right
 	{
-
 	}
 	break;
 	case 100: //Left
 	{
-
 	}
 	break;
 	case 112: //left shift key
 	{
-
 	}
 	break;
 	case 114: //left Ctrl key
 	{
-
 	}
 	break;
 	case 113: //Right shift key
 	{
-
 	}
 	break;
 	case 115: // right Ctrl key
 	{
-
 	}
 	break;
 	case 116: //ALT key
 	{
-
 	}
 	break;
 	default:
@@ -799,31 +768,6 @@ void MainWindowWrapper::KeyboardSpecialCommand(int key, int x, int y)
 void MainWindowWrapper::MenuCommand(int value)
 {
 	KeyboardCommand(value, 0,0);
-}
-
-void MainWindowWrapper::ProcessMenuStatus(int status, int x, int y)
-{
-	if (status != GLUT_MENU_IN_USE)
-	{
-		ModifyPopupMenu();
-	}
-}
-
-void MainWindowWrapper::ModifyPopupMenu()
-{
-//	glutSetMenu(m_PopupMenu);
-//
-//	if(m_DisplayParam.bDisplayMode == DISPLAY_FOLLOW)
-//		glutChangeToMenuEntry(5, "> Follow CAM(c)", 1004);
-//	else if(m_DisplayParam.bDisplayMode == DISPLAY_TOP_FREE)
-//		glutChangeToMenuEntry(6, "> Top CAM   (t)", 1005);
-//	else if(m_DisplayParam.bDisplayMode == DISPLAY_FREE)
-//		glutChangeToMenuEntry(7, "> Free CAM  (e)", 1006);
-
-//	if(m_DisplayParam.bFullScreen)
-//	{
-//		glutChangeToMenuEntry(8, "Hide V Window", 'h');
-//	}
 }
 
 void MainWindowWrapper::CreateRightClickMenu()
@@ -862,4 +806,4 @@ void MainWindowWrapper::CreateRightClickMenu()
 
 
 
-} /* namespace Graphics */
+}

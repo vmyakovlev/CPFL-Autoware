@@ -686,6 +686,8 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 		return;
 	}
 
+	std::cout << " >> Loading KML Map file ... " << std::endl;
+
 	TiXmlDocument doc(kmlFile);
 	try
 	{
@@ -699,6 +701,8 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 	}
 
 
+	std::cout << " >> Reading Data from KML map file ... " << std::endl;
+
 	pElem = doc.FirstChildElement();
 	pHeadElem = GetHeadElement(pElem);
 
@@ -706,14 +710,14 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 	vector<RoadSegment> roadLinksList = GetRoadSegmentsList(pHeadElem);
 	vector<TrafficLight> trafficLights = GetTrafficLightsList(pHeadElem);
 	vector<StopLine> stopLines = GetStopLinesList(pHeadElem);
-
-	std::cout << "#### Number of StopLines from KML = " << stopLines.size() << std::endl;
-
 	vector<TrafficSign> signs = GetTrafficSignsList(pHeadElem);
 	vector<Crossing> crossings = GetCrossingsList(pHeadElem);
 	vector<Marking> markings = GetMarkingsList(pHeadElem);
 	vector<Boundary> boundaries = GetBoundariesList(pHeadElem);
 	vector<Curb> curbs = GetCurbsList(pHeadElem);
+
+
+	std::cout << " >> Linking data pointers ... " << stopLines.size() << std::endl;
 
 	map.signs.clear();
 	map.signs = signs;

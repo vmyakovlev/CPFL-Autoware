@@ -7,18 +7,18 @@
 
 #include "DrawObjBase.h"
 
-namespace Graphics {
+namespace OP_TESTING_NS
+{
 
-DrawObjBase::DrawObjBase() {
+DrawObjBase::DrawObjBase()
+{
 		m_followX = 0;
 		m_followY = 0;
 		m_followZ = 0;
 		m_followA = 0;
-
 }
 
-DrawObjBase::~DrawObjBase() {
-	// TODO Auto-generated destructor stub
+DrawObjBase::~DrawObjBase()
+{
 }
-
-} /* namespace Graphics */
+}

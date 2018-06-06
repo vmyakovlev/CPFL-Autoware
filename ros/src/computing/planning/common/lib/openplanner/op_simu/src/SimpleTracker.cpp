@@ -32,6 +32,7 @@ SimpleTracker::SimpleTracker()
 	m_MaxKeepTime = 2; // seconds
 	m_bUseCenterOnly = true;
 	m_bFirstCall = true;
+	m_bEnableStepByStep = false;
 	m_nMinTrustAppearances = 5;
 	m_Horizon = 100.0;
 	m_CirclesResolution = 5.0;
@@ -98,18 +99,21 @@ void SimpleTracker::InitializeInterestRegions(std::vector<InterestCircle*>& regi
 
 void SimpleTracker::DoOneStep(const WayPoint& currPose, const std::vector<DetectedObject>& obj_list, const TRACKING_TYPE& type)
 {
-	if(!m_bFirstCall)
+	if(!m_bEnableStepByStep)
 	{
-		m_dt = UtilityHNS::UtilityH::GetTimeDiffNow(m_TrackTimer);
-		m_StateDiff.pos.x = m_PrevState.pos.x - currPose.pos.x ;
-		m_StateDiff.pos.y = m_PrevState.pos.y - currPose.pos.y;
-		m_StateDiff.pos.a = UtilityHNS::UtilityH::AngleBetweenTwoAnglesPositive(currPose.pos.a, m_PrevState.pos.a) * UtilityHNS::UtilityH::GetSign(m_PrevState.pos.a - currPose.pos.a);
-		//std::cout << "(" << m_StateDiff.pos.x << ", " << m_StateDiff.pos.y << ", " << m_StateDiff.pos.a << std::endl;
-	}
-	else
-		m_bFirstCall = false;
+		if(!m_bFirstCall)
+		{
+			m_dt = UtilityHNS::UtilityH::GetTimeDiffNow(m_TrackTimer);
+			m_StateDiff.pos.x = m_PrevState.pos.x - currPose.pos.x ;
+			m_StateDiff.pos.y = m_PrevState.pos.y - currPose.pos.y;
+			m_StateDiff.pos.a = UtilityHNS::UtilityH::AngleBetweenTwoAnglesPositive(currPose.pos.a, m_PrevState.pos.a) * UtilityHNS::UtilityH::GetSign(m_PrevState.pos.a - currPose.pos.a);
+			//std::cout << "(" << m_StateDiff.pos.x << ", " << m_StateDiff.pos.y << ", " << m_StateDiff.pos.a << std::endl;
+		}
+		else
+			m_bFirstCall = false;
 
-	UtilityHNS::UtilityH::GetTickCount(m_TrackTimer);
+		UtilityHNS::UtilityH::GetTickCount(m_TrackTimer);
+	}
 
 	m_DetectedObjects = obj_list;
 
@@ -128,7 +132,6 @@ void SimpleTracker::DoOneStep(const WayPoint& currPose, const std::vector<Detect
 	}
 
 	m_PrevState = currPose;
-
 }
 
 void SimpleTracker::MatchClosest()
@@ -359,7 +362,7 @@ void SimpleTracker::MatchClosestCost()
 
 		if(min_set.i_obj != -1 && min_set.i_track != -1 &&  min_set.distance_diff <= m_MAX_ASSOCIATION_DISTANCE && min_set.size_diff < m_MAX_ASSOCIATION_SIZE_DIFF && min_set.angle_diff < m_MAX_ASSOCIATION_ANGLE_DIFF)
 		{
-		//	std::cout << "MatchObj: " << m_TrackSimply.at(min_set.i_track).obj.id << ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff  << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
+			std::cout << "MatchObj: " << m_TrackSimply.at(min_set.i_track).obj.id << ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff  << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
 
 			m_DetectedObjects.at(min_set.i_obj).id = m_TrackSimply.at(min_set.i_track).obj.id;
 			MergeObjectAndTrack(m_TrackSimply.at(min_set.i_track), m_DetectedObjects.at(min_set.i_obj));
@@ -378,7 +381,7 @@ void SimpleTracker::MatchClosestCost()
 				track.obj = m_DetectedObjects.at(min_set.i_obj);
 				newObjects.push_back(track);
 
-				//std::cout << "NewMatch: " << iTracksNumber << ", "<< ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
+				std::cout << "NewMatch: " << iTracksNumber << ", "<< ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
 				m_DetectedObjects.erase(m_DetectedObjects.begin()+min_set.i_obj);
 			}
 			else
@@ -387,7 +390,7 @@ void SimpleTracker::MatchClosestCost()
 				KFTrackV track(m_DetectedObjects.at(0).center.pos.x, m_DetectedObjects.at(0).center.pos.y,m_DetectedObjects.at(0).actual_yaw, m_DetectedObjects.at(0).id, m_dt, m_nMinTrustAppearances);
 				track.obj = m_DetectedObjects.at(0);
 				newObjects.push_back(track);
-				//std::cout << "NewObj: " << iTracksNumber << ", "<< ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
+				std::cout << "NewObj: " << iTracksNumber << ", "<< ", MinD: " << min_set.distance_diff << ", SizeDiff: (" << min_set.size_diff << ")" << ", AngDiff: " << min_set.angle_diff << ", ObjI" << min_set.i_obj <<", TrackI: " << min_set.i_track << std::endl;
 				m_DetectedObjects.erase(m_DetectedObjects.begin()+0);
 			}
 		}

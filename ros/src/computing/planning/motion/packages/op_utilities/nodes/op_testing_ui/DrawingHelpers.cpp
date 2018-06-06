@@ -17,16 +17,15 @@ using namespace std;
 using namespace PlannerHNS;
 using namespace UtilityHNS;
 
-namespace Graphics
+namespace OP_TESTING_NS
 {
 
-DrawingHelpers::DrawingHelpers() {
-	// TODO Auto-generated constructor stub
-
+DrawingHelpers::DrawingHelpers()
+{
 }
 
-DrawingHelpers::~DrawingHelpers() {
-	// TODO Auto-generated destructor stub
+DrawingHelpers::~DrawingHelpers()
+{
 }
 
 void DrawingHelpers::DrawString(float x, float y, GLvoid* font_style, char* format, ...)
@@ -533,38 +532,6 @@ void DrawingHelpers::DrawCustomCarModel(const PlannerHNS::WayPoint& pose,const d
 	}
 
 	DrawCustomOrigin(pose.pos.x, pose.pos.y, pose.pos.z, pose.pos.a*RAD2DEG, 0,0, 2);
-}
-
-GLMmodel* DrawingHelpers::LoadModel(const char* fileName)
-{
-	GLMmodel* pmodel = glmReadOBJ((char*)fileName);
-	if (!pmodel) exit(0);
-	glmUnitize(pmodel);
-	glmFacetNormals(pmodel);
-	glmVertexNormals(pmodel, 90.0);
-
-	return pmodel;
-}
-
-void DrawingHelpers::DrawModel(GLMmodel* pmod,double length, double width, double height, double x, double y,double z, double heading, double pitch , double roll )
-{
-	if (pmod)
-	{
-		if(!glIsEnabled(GL_LIGHTING))
-			  glEnable(GL_LIGHTING);
-
-		glPushMatrix();
-		glTranslated(x,y,z);
-		glRotated(heading*RAD2DEG,0.0, 0.0, 1.0);
-		glRotated(pitch*RAD2DEG,0.0, 1.0, 0.0);
-		glRotated(roll*RAD2DEG,1.0, 0.0, 0.0);
-
-		glScaled(length, width, height);
-		glmDraw(pmod, GLM_FLAT | GLM_MATERIAL );
-		glPopMatrix();
-
-		glDisable(GL_LIGHTING);
-	}
 }
 
 void DrawingHelpers::DrawFilledEllipse(float x, float y, float z, float width, float height)

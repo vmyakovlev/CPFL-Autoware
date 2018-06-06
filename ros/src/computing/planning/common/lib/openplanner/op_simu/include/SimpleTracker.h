@@ -86,8 +86,6 @@ public:
 	int m_iLife;
 	PlannerHNS::DetectedObject obj; // Used for associate only , don't remove
 
-	//kalmanFilter1D errorSmoother;
-
 	long GetTrackID()
 	{
 		return m_id;
@@ -524,6 +522,7 @@ public:
 	double m_CirclesResolution;
 	double m_MAX_ASSOCIATION_SIZE_DIFF;
 	double m_MAX_ASSOCIATION_ANGLE_DIFF;
+	bool m_bEnableStepByStep;
 
 private:
 	std::vector<KFTrackV> newObjects;

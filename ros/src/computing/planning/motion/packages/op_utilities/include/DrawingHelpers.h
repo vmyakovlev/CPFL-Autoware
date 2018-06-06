@@ -5,15 +5,17 @@
  *      Author: hatem
  */
 
-#ifndef DRAWINGHELPERS_H_
-#define DRAWINGHELPERS_H_
+#ifndef DRAWINGHELPERS_TEST
+#define DRAWINGHELPERS_TEST
 
-#include "glm.h"
+#include "GL/glut.h"
 #include "RoadNetwork.h"
 
-namespace Graphics {
+namespace OP_TESTING_NS
+{
 
-class DrawingHelpers {
+class DrawingHelpers
+{
 public:
 	DrawingHelpers();
 	virtual ~DrawingHelpers();
@@ -42,10 +44,6 @@ public:
 
 	static void DrawCustomCarModel(const PlannerHNS::WayPoint& pose, const double& steeringAngle, const std::vector<PlannerHNS::GPSPoint>& carPoints,float color[3], const double& angleFix);
 
-	static GLMmodel* LoadModel(const char* fileName);
-
-	static void DrawModel(GLMmodel* pmod,double length, double width, double height, double x, double y,double z, double heading, double pitch , double roll );
-
 	static void DrawFilledEllipse(float x, float y, float z, float width, float height);
 
 	static void DrawWideEllipse(float x, float y, float z, float outer_width, float outer_height, float inner_width,float color[3]);
@@ -56,7 +54,7 @@ public:
 
 };
 
-} /* namespace Graphics */
+}
 
 
 #endif

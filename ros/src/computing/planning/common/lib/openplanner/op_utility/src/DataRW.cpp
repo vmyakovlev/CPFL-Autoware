@@ -26,6 +26,7 @@ std::string DataRW::StatesLogFolderName 	= "BehaviorsLogs/";
 std::string DataRW::SimulationFolderName 	= "SimulationData/";
 std::string DataRW::KmlMapsFolderName 		= "KmlMaps/";
 std::string DataRW::PredictionFolderName 	= "PredictionResults/";
+std::string DataRW::TrackingFolderName 		= "TrackingLogs/";
 
 
 DataRW::DataRW()
@@ -59,6 +60,9 @@ void DataRW::CreateLoggingFolder()
 	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + DataRW::PredictionFolderName;
+	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
+	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + DataRW::TrackingFolderName;
 	dir_err = mkdir(main_folder.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
 	main_folder = UtilityH::GetHomeDirectory() + DataRW::LoggingMainfolderName + "SimulatedCar1";

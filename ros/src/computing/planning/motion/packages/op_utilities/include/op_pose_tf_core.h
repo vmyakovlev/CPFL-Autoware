@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2017, Nagoya University
+// *  Copyright (c) 2018, Nagoya University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,37 +28,38 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef OP_POSETF
+#define OP_POSETF
+
+// ROS includes
 #include <ros/ros.h>
-#include "AlternativeVisualizer.h"
-#include "MainWindowWrapper.h"
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 
-using namespace  Graphics;
+#include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
+#include <tf/tf.h>
 
-int main(int argc, char **argv)
+namespace PoseTFNS
 {
-	ros::init(argc, argv, "testing_ui");
 
-	DrawObjBase* pSimulator =  0;
-	pSimulator = new AlternativeVisualizer();
+class PoseToTF
+{
 
-	WindowParams pms;
-	DisplayParams dpms;
-	dpms.centerRotX = 0;
-	dpms.centerRotY = 0;
-	dpms.translateX = 0;
-	dpms.translateY = 0;
-	MainWindowWrapper wrapper(pSimulator);
+protected:
+
+	ros::Subscriber sub_ndt_pose;
+	ros::Publisher pub_reset_time;
 	ros::NodeHandle nh;
 
-	nh.getParam("/testing_ui/width", pms.w);
-	nh.getParam("/testing_ui/height", pms.h);
-	nh.getParam("/testing_ui/info_ratio", pms.info_ratio);
+	void callbackGetPose(const geometry_msgs::PoseStampedConstPtr &msg);
 
-	wrapper.UpdateParams(pms, dpms);
+public:
+	PoseToTF();
+	virtual ~PoseToTF();
+	void MainLoop();
+};
 
-
-
-	wrapper.InitOpenGLWindow(argc, argv);
-
-	return 0;
 }
+
+#endif  // OP_POSETF

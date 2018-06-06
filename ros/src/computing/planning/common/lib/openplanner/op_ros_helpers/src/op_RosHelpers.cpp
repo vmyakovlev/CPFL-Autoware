@@ -178,7 +178,7 @@ void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currSt
 			text_info.markers.push_back(text_mkr);
 
 
-		visualization_msgs::Marker poly_mkr = CreateGenMarker(0,0,0,0, 0,0,1,0.1,centers.markers.size()*3+i,"detected_polygons", visualization_msgs::Marker::LINE_STRIP);
+		visualization_msgs::Marker poly_mkr = CreateGenMarker(0,0,0,0, 1,0.25,0.25,0.1,centers.markers.size()*3+i,"detected_polygons", visualization_msgs::Marker::LINE_STRIP);
 
 		for(unsigned int p = 0; p < trackedObstacles.at(i).contour.size(); p++)
 		{
@@ -757,10 +757,13 @@ void RosHelpers::ConvertFromRoadNetworkToAutowareVisualizeMapFormat(const Planne
 	}
 
 	std_msgs::ColorRGBA total_color;
-	total_color.r = 1;
-	total_color.g = 0.5;
-	total_color.b = 0.3;
-	total_color.a = 0.85;
+//	total_color.r = 1;
+//	total_color.g = 0.5;
+//	total_color.b = 0.3;
+	total_color.r = 0.75;
+	total_color.g = 0.7;
+	total_color.b = 0.75;
+	total_color.a = 0.6;
 
 	visualization_msgs::Marker lane_waypoint_marker;
 	  lane_waypoint_marker.header.frame_id = "map";

@@ -1,0 +1,12 @@
+<!-- -->
+<launch>
+	<arg name="pose_topic" 				default="/ndt_pose" /> 	
+		
+		
+	<node pkg="op_utilities" type="op_pose_tf" name="op_pose_tf" output="screen">
+		
+		<param name="pose_topic" 				value="$(arg pose_topic)" />
+				
+	</node>
+
+</launch>

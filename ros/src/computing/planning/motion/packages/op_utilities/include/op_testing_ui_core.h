@@ -5,8 +5,9 @@
  *      Author: hatem
  */
 
-#ifndef AlternativeVisualizer_H_
-#define AlternativeVisualizer_H_
+#ifndef OP_TESTING_CORE
+#define OP_TESTING_CORE
+
 #include <iostream>
 #include "RoadNetwork.h"
 #include "DrawObjBase.h"
@@ -15,35 +16,60 @@
 #include <geometry_msgs/TwistStamped.h>
 #include <autoware_msgs/ControlCommandStamped.h>
 #include <autoware_msgs/CanInfo.h>
-#include "Graph2dBase.h"
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/Image.h>
+#include <geometry_msgs/PoseStamped.h>
 #include "SimulatedController.h"
+#include "Graph2dBase.h"
+#include <rosbag/bag.h>
+#include "BagTopicPlayer.h"
 
-namespace Graphics
+namespace OP_TESTING_NS
 {
 
-class AlternativeVisualizer : public DrawObjBase
+#define USE_GAME_CONTROLER_
+
+class BagReaderParams
 {
 public:
-	AlternativeVisualizer();
-	virtual ~AlternativeVisualizer();
+	std::string fileName;
+	std::string lidarTopic;
+	std::string poseTopic;
+	std::string imageTopic;
+
+	std::string lidarTopic_pub;
+	std::string poseTopic_pub;
+	std::string imageTopic_pub;
+};
+
+enum TESTING_MODE {SIMULATION_MODE, ROSBAG_MODE, LIVE_MODE};
+enum ROSBAG_PLAY_MODE {PLAY_FORWARD, PLAY_BACKWARD, PLAY_PAUSE, PLAY_STEP_FORWARD, PLAY_STEP_BACKWARD };
+
+class TestingUI : public DrawObjBase
+{
+public:
+	TestingUI();
+	virtual ~TestingUI();
+	void InitNode(const BagReaderParams& params, const int& mode);
 
 	void DrawSimu();
 	void DrawInfo(const int& centerX, const int& centerY, const int& maxX, const int& maxY);
 	void OnLeftClick(const double& x, const double& y);
 	void OnRightClick(const double& x, const double& y);
-	void OnKeyboardPress(const SPECIAL_KEYS_TYPE& sKey, const unsigned char& key);
-	void LoadMaterials();
-	void Reset();
-    bool IsInitState();
-    void UpdatePlaneStartGoal(const double& x1,const double& y1, const double& a1, const double& x2,const double& y2, const double& a2);
-    void AddSimulatedCarPos(const double& x,const double& y, const double& a);
-
+	void OnKeyboardPress(const int& sKey, const unsigned char& key);
 
     void twistCMDCallback(const geometry_msgs::TwistStamped& msg);
     void ctrlCMDCallback(const autoware_msgs::ControlCommandStamped& msg);
     void callbackGetCanInfo(const autoware_msgs::CanInfoConstPtr &msg);
 
+    void SimulationModeMainLoop();
+
+#ifdef USE_GAME_CONTROLER
+    bool m_bCancelThread;
+	pthread_mutex_t game_ctrl_mutex;
+	pthread_t game_ctrl_thread_tid;
     static void* GameCtrlThreadStaticEntryPoint(void* pThis);
+#endif
 
     void SimulateAcceleration();
     void SimulateBraking();
@@ -82,20 +108,40 @@ public:
     Graph2dBase* m_pCurrentVelocityGraph;
     Graph2dBase* m_pTargetVelocityGraph;
 
-    bool m_bCancelThread;
-    pthread_mutex_t game_ctrl_mutex;
-	pthread_t game_ctrl_thread_tid;
-
 	PlannerHNS::VehicleState m_TargetStatus;
 	PlannerHNS::VehicleState m_CurrStatus;
 
 	SimulatedController m_Controller;
 
-private:
-	void PrepareVectorMapForDrawing();
-	void DrawVectorMap();
-	void DrawGPSData();
+	TESTING_MODE m_TestMode;
 
+	//Rosbag reader
+private:
+	BagReaderParams m_BagParams;
+	rosbag::Bag m_bag;
+	std::string m_ReadingInfo;
+
+	bool m_bBagOpen;
+	ROSBAG_PLAY_MODE m_PlayMode;
+	bool m_bStepDone;
+
+	geometry_msgs::PoseStampedPtr m_pLatestPose;
+	sensor_msgs::PointCloud2Ptr m_pLatestCloud;
+	sensor_msgs::ImagePtr m_pLatestImage;
+
+	ros::Publisher pub_Point_Raw;
+	ros::Publisher pub_Image_Raw;
+	ros::Publisher pub_NDT_pose;
+
+	UtilityHNS::BagTopicPlayer<sensor_msgs::PointCloud2> m_CloudReader;
+	UtilityHNS::BagTopicPlayer<sensor_msgs::Image> m_ImageReader;
+	UtilityHNS::BagTopicPlayer<geometry_msgs::PoseStamped> m_PoseReader;
+
+
+	bool OpenRosBag();
+	void BagReaderModeMainLoop();
+	bool ReadNextFrame();
+	bool ReadPrevFrame();
 };
 
 } /* namespace Graphics */
