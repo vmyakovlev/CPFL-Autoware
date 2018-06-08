@@ -22,6 +22,9 @@ namespace SimulationNS
 #define NEVER_GORGET_TIME -1000
 #define ACCELERATION_CALC_TIME 0.25
 #define ACCELERATION_DECISION_VALUE 0.5
+#define PREV_TRACK_SIZE 25
+#define PREV_TRACK_SMOOTH_DATA 0.45
+#define PREV_TRACK_SMOOTH_SMOOTH 0.3
 
 enum TRACKING_TYPE {ASSOCIATE_ONLY = 0, SIMPLE_TRACKER = 1, CONTOUR_TRACKER = 2};
 
@@ -232,7 +235,7 @@ public:
 			predObj.bVelocity = false;
 		}
 
-		if(predObj.centers_list.size() > 30)
+		if(predObj.centers_list.size() > PREV_TRACK_SIZE)
 					predObj.centers_list.erase(predObj.centers_list.begin()+0);
 
 		if(predObj.centers_list.size() > 1)
@@ -242,7 +245,7 @@ public:
 			if(hypot(diff_y, diff_x) > 0.1)
 			{
 				predObj.centers_list.push_back(predObj.center);
-				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list, 0.3, 0.4, 0.1);
+				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list,PREV_TRACK_SMOOTH_DATA, PREV_TRACK_SMOOTH_SMOOTH, 0.1);
 				PlannerHNS::PlanningHelpers::CalcAngleAndCost(predObj.centers_list);
 			}
 		}
@@ -278,124 +281,9 @@ public:
 		m_iLife++;
 	}
 
-	void PredictTracking(double _dt, const PlannerHNS::DetectedObject& oldObj, PlannerHNS::DetectedObject& predObj)
-	{
-		if(m_iLife < MinAppearanceCount)
-		{
-			forget_time -= _dt;
-			return;
-		}
-
-#if (CV_MAJOR_VERSION == 2)
-		m_filter.transitionMatrix = *(cv::Mat_<float>(nStates, nStates) << 1	,0	,_dt	,0  ,
-				0	,1	,0	,_dt	,
-				0	,0	,1	,0	,
-				0	,0	,0	,1	);
-#elif (CV_MAJOR_VERSION == 3)
-		m_filter.transitionMatrix = (cv::Mat_<float>(nStates, nStates) << 1	,0	,_dt	,0  ,
-				0	,1	,0	,_dt	,
-				0	,0	,1	,0	,
-				0	,0	,0	,1	);
-#endif
-
-
-		cv::Mat_<float> prediction(nStates,1);
-
-		prediction = m_filter.predict();
-
-		predObj.center.pos.x = prediction.at<float>(0);
-		predObj.center.pos.y = prediction.at<float>(1);
-		double vx  = prediction.at<float>(2);
-		double vy  = prediction.at<float>(3);
-
-		double currA = 0;
-		double currV = 0;
-
-		if(m_iLife > 1)
-		{
-			currV = sqrt(vx*vx+vy*vy);
-
-			double diff_y = predObj.center.pos.y - prev_y;
-			double diff_x = predObj.center.pos.x - prev_x;
-			if(hypot(diff_y, diff_x) > 0.2)
-			{
-				prev_y = oldObj.center.pos.y;
-				prev_x = oldObj.center.pos.x;
-				currA = atan2(diff_y, diff_x);
-				prev_a = currA;
-			}
-			else
-			{
-				currA = prev_a;
-			}
-
-			for(unsigned int k=0; k < obj.contour.size(); k++)
-			{
-				obj.contour.at(k).x += diff_x;
-				obj.contour.at(k).y += diff_y;
-			}
-		}
-
-
-		if(m_iLife > MinAppearanceCount)
-		{
-			predObj.center.pos.a = currA;
-			predObj.center.v = currV;
-
-			predObj.bVelocity = true;
-			predObj.acceleration_desc = UtilityHNS::UtilityH::GetSign(predObj.center.v - oldObj.center.v);
-		}
-		else
-		{
-			predObj.bDirection = false;
-			predObj.bVelocity = false;
-		}
-
-		if(predObj.centers_list.size() > 30)
-					predObj.centers_list.erase(predObj.centers_list.begin()+0);
-
-		if(predObj.centers_list.size() > 1)
-		{
-			double diff_y = predObj.center.pos.y - predObj.centers_list.at(predObj.centers_list.size()-1).pos.y;
-			double diff_x = predObj.center.pos.x - predObj.centers_list.at(predObj.centers_list.size()-1).pos.x;
-			if(hypot(diff_y, diff_x) > 0.1)
-			{
-				predObj.centers_list.push_back(predObj.center);
-				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list, 0.3, 0.4, 0.1);
-				PlannerHNS::PlanningHelpers::CalcAngleAndCost(predObj.centers_list);
-			}
-		}
-		else
-			predObj.centers_list.push_back(predObj.center);
-
-		if(predObj.centers_list.size()>3)
-		{
-			predObj.bDirection = true;
-			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a + predObj.centers_list.at(predObj.centers_list.size()-3).pos.a)/3.0;
-		}
-		else if(predObj.centers_list.size()>2)
-		{
-			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a)/2.0;
-		}
-		else if(predObj.centers_list.size()>1)
-		{
-			predObj.center.pos.a = predObj.centers_list.at(predObj.centers_list.size()-1).pos.a;
-		}
-
-
-		//m_filter.predict();
-		m_filter.statePre.copyTo(m_filter.statePost);
-		m_filter.errorCovPre.copyTo(m_filter.errorCovPost);
-
-		prev_v = currV;
-
-		forget_time -= _dt;
-		m_iLife++;
-	}
-
 	void UpdateAssociateOnly(double _dt, const PlannerHNS::DetectedObject& oldObj, PlannerHNS::DetectedObject& predObj)
 	{
-		if(predObj.centers_list.size() > 30)
+		if(predObj.centers_list.size() > PREV_TRACK_SIZE)
 			predObj.centers_list.erase(predObj.centers_list.begin()+0);
 
 		if(predObj.centers_list.size() > 1)
@@ -405,7 +293,7 @@ public:
 			if(hypot(diff_y, diff_x) > 0.1)
 			{
 				predObj.centers_list.push_back(predObj.center);
-				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list, 0.3, 0.4, 0.1);
+				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list, PREV_TRACK_SMOOTH_DATA, PREV_TRACK_SMOOTH_SMOOTH, 0.1);
 				PlannerHNS::PlanningHelpers::CalcAngleAndCost(predObj.centers_list);
 			}
 		}
@@ -414,25 +302,147 @@ public:
 
 		if(predObj.centers_list.size()>3)
 		{
-			predObj.bDirection = true;
 			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a + predObj.centers_list.at(predObj.centers_list.size()-3).pos.a)/3.0;
 		}
 		else if(predObj.centers_list.size()>2)
 		{
-			predObj.bDirection = true;
 			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a)/2.0;
 		}
 		else if(predObj.centers_list.size()>1)
 		{
-			predObj.bDirection = false;
 			predObj.center.pos.a = predObj.centers_list.at(predObj.centers_list.size()-1).pos.a;
 		}
+
+		if(m_iLife > MinAppearanceCount)
+		{
+			predObj.bDirection = true;
+		}
 		else
+		{
 			predObj.bDirection = false;
+		}
+
+
+		m_iLife++;
 
 	}
 
 	virtual ~KFTrackV(){}
+
+//void PredictTracking(double _dt, const PlannerHNS::DetectedObject& oldObj, PlannerHNS::DetectedObject& predObj)
+//	{
+//		if(m_iLife < MinAppearanceCount)
+//		{
+//			forget_time -= _dt;
+//			return;
+//		}
+//
+//#if (CV_MAJOR_VERSION == 2)
+//		m_filter.transitionMatrix = *(cv::Mat_<float>(nStates, nStates) << 1	,0	,_dt	,0  ,
+//				0	,1	,0	,_dt	,
+//				0	,0	,1	,0	,
+//				0	,0	,0	,1	);
+//#elif (CV_MAJOR_VERSION == 3)
+//		m_filter.transitionMatrix = (cv::Mat_<float>(nStates, nStates) << 1	,0	,_dt	,0  ,
+//				0	,1	,0	,_dt	,
+//				0	,0	,1	,0	,
+//				0	,0	,0	,1	);
+//#endif
+//
+//
+//		cv::Mat_<float> prediction(nStates,1);
+//
+//		prediction = m_filter.predict();
+//
+//		predObj.center.pos.x = prediction.at<float>(0);
+//		predObj.center.pos.y = prediction.at<float>(1);
+//		double vx  = prediction.at<float>(2);
+//		double vy  = prediction.at<float>(3);
+//
+//		double currA = 0;
+//		double currV = 0;
+//
+//		if(m_iLife > 1)
+//		{
+//			currV = sqrt(vx*vx+vy*vy);
+//
+//			double diff_y = predObj.center.pos.y - prev_y;
+//			double diff_x = predObj.center.pos.x - prev_x;
+//			if(hypot(diff_y, diff_x) > 0.2)
+//			{
+//				prev_y = oldObj.center.pos.y;
+//				prev_x = oldObj.center.pos.x;
+//				currA = atan2(diff_y, diff_x);
+//				prev_a = currA;
+//			}
+//			else
+//			{
+//				currA = prev_a;
+//			}
+//
+//			for(unsigned int k=0; k < obj.contour.size(); k++)
+//			{
+//				obj.contour.at(k).x += diff_x;
+//				obj.contour.at(k).y += diff_y;
+//			}
+//		}
+//
+//
+//		if(m_iLife > MinAppearanceCount)
+//		{
+//			predObj.center.pos.a = currA;
+//			predObj.center.v = currV;
+//
+//			predObj.bVelocity = true;
+//			predObj.acceleration_desc = UtilityHNS::UtilityH::GetSign(predObj.center.v - oldObj.center.v);
+//		}
+//		else
+//		{
+//			predObj.bDirection = false;
+//			predObj.bVelocity = false;
+//		}
+//
+//		if(predObj.centers_list.size() > PREV_TRACK_SIZE)
+//					predObj.centers_list.erase(predObj.centers_list.begin()+0);
+//
+//		if(predObj.centers_list.size() > 1)
+//		{
+//			double diff_y = predObj.center.pos.y - predObj.centers_list.at(predObj.centers_list.size()-1).pos.y;
+//			double diff_x = predObj.center.pos.x - predObj.centers_list.at(predObj.centers_list.size()-1).pos.x;
+//			if(hypot(diff_y, diff_x) > 0.1)
+//			{
+//				predObj.centers_list.push_back(predObj.center);
+//				PlannerHNS::PlanningHelpers::SmoothPath(predObj.centers_list, 0.3, 0.4, 0.1);
+//				PlannerHNS::PlanningHelpers::CalcAngleAndCost(predObj.centers_list);
+//			}
+//		}
+//		else
+//			predObj.centers_list.push_back(predObj.center);
+//
+//		if(predObj.centers_list.size()>3)
+//		{
+//			predObj.bDirection = true;
+//			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a + predObj.centers_list.at(predObj.centers_list.size()-3).pos.a)/3.0;
+//		}
+//		else if(predObj.centers_list.size()>2)
+//		{
+//			predObj.center.pos.a = (predObj.centers_list.at(predObj.centers_list.size()-1).pos.a + predObj.centers_list.at(predObj.centers_list.size()-2).pos.a)/2.0;
+//		}
+//		else if(predObj.centers_list.size()>1)
+//		{
+//			predObj.center.pos.a = predObj.centers_list.at(predObj.centers_list.size()-1).pos.a;
+//		}
+//
+//
+//		//m_filter.predict();
+//		m_filter.statePre.copyTo(m_filter.statePost);
+//		m_filter.errorCovPre.copyTo(m_filter.errorCovPost);
+//
+//		prev_v = currV;
+//
+//		forget_time -= _dt;
+//		m_iLife++;
+//	}
 };
 
 class InterestCircle
@@ -493,16 +503,9 @@ public:
 class SimpleTracker
 {
 public:
-	std::vector<CostRecordSet> m_CostsLists;
-	std::vector<InterestCircle*> m_InterestRegions;
-	std::vector<KFTrackV*> m_Tracks;
-	std::vector<KFTrackV> m_TrackSimply;
-	timespec m_TrackTimer;
-	long iTracksNumber;
-	PlannerHNS::WayPoint m_PrevState;
-	PlannerHNS::WayPoint m_StateDiff;
-	std::vector<PlannerHNS::DetectedObject> m_PrevDetectedObjects;
 	std::vector<PlannerHNS::DetectedObject> m_DetectedObjects;
+	std::vector<InterestCircle*> m_InterestRegions;
+	std::vector<std::pair<PlannerHNS::WayPoint, PlannerHNS::WayPoint> > m_MatchList;
 
 	void DoOneStep(const PlannerHNS::WayPoint& currPose, const std::vector<PlannerHNS::DetectedObject>& obj_list, const TRACKING_TYPE& type = SIMPLE_TRACKER);
 
@@ -525,8 +528,15 @@ public:
 	bool m_bEnableStepByStep;
 
 private:
+	std::vector<CostRecordSet> m_CostsLists;
+	std::vector<KFTrackV*> m_Tracks;
+	std::vector<KFTrackV> m_TrackSimply;
+	timespec m_TrackTimer;
+	long iTracksNumber;
+	PlannerHNS::WayPoint m_PrevState;
 	std::vector<KFTrackV> newObjects;
 	void AssociateAndTrack();
+	void AssociateDistanceOnlyAndTrack();
 	void AssociateSimply();
 	void AssociateToRegions(KFTrackV& detectedObject);
 	void CleanOldTracks();
@@ -535,6 +545,7 @@ private:
 	int InsidePolygon(const std::vector<PlannerHNS::GPSPoint>& polygon,const PlannerHNS::GPSPoint& p);
 
 	void MatchClosest();
+	void MatchWithDistanceOnly();
 	void MatchClosestCost();
 
 };

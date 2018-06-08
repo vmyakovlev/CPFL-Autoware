@@ -185,6 +185,11 @@ public:
 	static visualization_msgs::Marker CreateGenMarker(const double& x, const double& y, const double& z,const double& a,
 			const double& r, const double& g, const double& b, const double& scale, const int& id, const std::string& ns, const int& type);
 
+	static void InitMatchingMarkers(const int& nMarkers, visualization_msgs::MarkerArray& connections);
+
+	static void ConvertMatchingMarkers(const std::vector<std::pair<PlannerHNS::WayPoint, PlannerHNS::WayPoint> >& match_list,
+			visualization_msgs::MarkerArray& tracked_traj_d, visualization_msgs::MarkerArray& tracked_traj, int start_id=0);
+
 	static void InitMarkers(const int& nMarkers,
 			visualization_msgs::MarkerArray& centers,
 			visualization_msgs::MarkerArray& dirs,
@@ -192,7 +197,7 @@ public:
 			visualization_msgs::MarkerArray& polygons,
 			visualization_msgs::MarkerArray& trajectories);
 
-	static void ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currState, const std::vector<PlannerHNS::DetectedObject>& trackedObstacles,
+	static int ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currState, const std::vector<PlannerHNS::DetectedObject>& trackedObstacles,
 			visualization_msgs::MarkerArray& centers_d,
 			visualization_msgs::MarkerArray& dirs_d,
 			visualization_msgs::MarkerArray& text_info_d,

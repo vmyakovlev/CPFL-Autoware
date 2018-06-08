@@ -66,7 +66,7 @@ ContourTracker::ContourTracker()
 	pub_TrackedObstaclesRviz = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("op_planner_tracked_boxes", 1);
 
 
-	m_nDummyObjPerRep = 100;
+	m_nDummyObjPerRep = 150;
 	m_nDetectedObjRepresentations = 5;
 	m_DetectedPolygonsDummy.push_back(visualization_msgs::MarkerArray());
 	m_DetectedPolygonsDummy.push_back(visualization_msgs::MarkerArray());
@@ -75,6 +75,10 @@ ContourTracker::ContourTracker()
 	m_DetectedPolygonsDummy.push_back(visualization_msgs::MarkerArray());
 	m_DetectedPolygonsActual = m_DetectedPolygonsDummy;
 	PlannerHNS::RosHelpers::InitMarkers(m_nDummyObjPerRep, m_DetectedPolygonsDummy.at(0), m_DetectedPolygonsDummy.at(1), m_DetectedPolygonsDummy.at(2), m_DetectedPolygonsDummy.at(3), m_DetectedPolygonsDummy.at(4));
+
+	m_MatchingInfoDummy.push_back(visualization_msgs::MarkerArray());
+	m_MatchingInfoActual = m_MatchingInfoDummy;
+	PlannerHNS::RosHelpers::InitMatchingMarkers(m_nDummyObjPerRep, m_MatchingInfoDummy.at(0));
 }
 
 ContourTracker::~ContourTracker()
@@ -137,85 +141,85 @@ void ContourTracker::ReadCommonParams()
 
 void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg)
 {
-	struct timespec  tracking_timer;
-
 	if(bNewCurrentPos || m_Params.bEnableSimulation)
 	{
-		m_OriginalClusters.clear();
-		m_nOriginalPoints = 0;
-		m_nContourPoints = 0;
-		m_FilteringTime = 0;
-		m_PolyEstimationTime = 0;
-		struct timespec filter_time, poly_est_time;
+		ImportCloudClusters(msg, m_OriginalClusters);
 
-		PlannerHNS::DetectedObject obj;
-		PlannerHNS::GPSPoint avg_center;
-		PlannerHNS::PolygonGenerator polyGen(m_Params.nQuarters);
-		pcl::PointCloud<pcl::PointXYZ> point_cloud;
-
-		//Filter the detected Obstacles:
-		//std::cout << "Filter the detected Obstacles: " << std::endl;
-		for(unsigned int i=0; i < msg->clusters.size(); i++)
-		{
-			obj.center.pos.x = msg->clusters.at(i).centroid_point.point.x;
-			obj.center.pos.y = msg->clusters.at(i).centroid_point.point.y;
-			obj.center.pos.z = msg->clusters.at(i).centroid_point.point.z;
-			obj.center.pos.a = msg->clusters.at(i).estimated_angle;
-
-			obj.distance_to_center = hypot(obj.center.pos.y-m_CurrentPos.pos.y, obj.center.pos.x-m_CurrentPos.pos.x);
-
-			obj.actual_yaw = msg->clusters.at(i).estimated_angle;
-
-			obj.w = msg->clusters.at(i).dimensions.x;
-			obj.l = msg->clusters.at(i).dimensions.y;
-			obj.h = msg->clusters.at(i).dimensions.z;
-
-			UtilityHNS::UtilityH::GetTickCount(filter_time);
-			if(!IsCar(obj, m_CurrentPos, m_Map)) continue;
-			m_FilteringTime += UtilityHNS::UtilityH::GetTimeDiffNow(filter_time);
-
-			obj.id = msg->clusters.at(i).id;
-			obj.originalID = msg->clusters.at(i).id;
-			obj.label = msg->clusters.at(i).label;
-
-			if(msg->clusters.at(i).indicator_state == 0)
-				obj.indicator_state = PlannerHNS::INDICATOR_LEFT;
-			else if(msg->clusters.at(i).indicator_state == 1)
-				obj.indicator_state = PlannerHNS::INDICATOR_RIGHT;
-			else if(msg->clusters.at(i).indicator_state == 2)
-				obj.indicator_state = PlannerHNS::INDICATOR_BOTH;
-			else if(msg->clusters.at(i).indicator_state == 3)
-				obj.indicator_state = PlannerHNS::INDICATOR_NONE;
-
-
-
-			UtilityHNS::UtilityH::GetTickCount(poly_est_time);
-
-			point_cloud.clear();
-			pcl::fromROSMsg(msg->clusters.at(i).cloud, point_cloud);
-			obj.contour = polyGen.EstimateClusterPolygon(point_cloud ,obj.center.pos,avg_center, m_Params.PolygonRes);
-
-			m_PolyEstimationTime += UtilityHNS::UtilityH::GetTimeDiffNow(poly_est_time);
-
-			m_nOriginalPoints += point_cloud.points.size();
-			m_nContourPoints += obj.contour.size();
-			m_OriginalClusters.push_back(obj);
-
-		}
-
+		struct timespec  tracking_timer;
 		UtilityHNS::UtilityH::GetTickCount(tracking_timer);
+
 		m_ObstacleTracking.DoOneStep(m_CurrentPos, m_OriginalClusters, m_Params.trackingType);
+
 		m_tracking_time = UtilityHNS::UtilityH::GetTimeDiffNow(tracking_timer);
 		m_dt  = UtilityHNS::UtilityH::GetTimeDiffNow(m_loop_timer);
 		UtilityHNS::UtilityH::GetTickCount(m_loop_timer);
 
-
 		LogAndSend();
-
 		VisualizeLocalTracking();
+	}
+}
 
-//		PlannerHNS::RosHelpers::ConvertFromAutowareCloudClusterObstaclesToPlannerH(m_CurrentPos, m_Params.VehicleWidth, m_Params.VehicleLength, *msg,
-//				m_OriginalClusters, m_Params.MaxObjSize, m_Params.MinObjSize, m_Params.DetectionRadius, m_Params.nQuarters, m_Params.PolygonRes, m_Params.bEnableSimulation, nOriginalPoints, nContourPoints);
+void ContourTracker::ImportCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg, std::vector<PlannerHNS::DetectedObject>& originalClusters)
+{
+	originalClusters.clear();
+	m_nOriginalPoints = 0;
+	m_nContourPoints = 0;
+	m_FilteringTime = 0;
+	m_PolyEstimationTime = 0;
+	struct timespec filter_time, poly_est_time;
+
+	PlannerHNS::DetectedObject obj;
+	PlannerHNS::GPSPoint avg_center;
+	PlannerHNS::PolygonGenerator polyGen(m_Params.nQuarters);
+	pcl::PointCloud<pcl::PointXYZ> point_cloud;
+
+	m_ClosestLanesList = PlannerHNS::MappingHelpers::GetClosestLanesFast(m_CurrentPos, m_Map, m_Params.DetectionRadius);
+
+	//Filter the detected Obstacles:
+	//std::cout << "Filter the detected Obstacles: " << std::endl;
+	for(unsigned int i=0; i < msg->clusters.size(); i++)
+	{
+		obj.center.pos.x = msg->clusters.at(i).centroid_point.point.x;
+		obj.center.pos.y = msg->clusters.at(i).centroid_point.point.y;
+		obj.center.pos.z = msg->clusters.at(i).centroid_point.point.z;
+		obj.center.pos.a = msg->clusters.at(i).estimated_angle;
+
+		obj.distance_to_center = hypot(obj.center.pos.y-m_CurrentPos.pos.y, obj.center.pos.x-m_CurrentPos.pos.x);
+
+		obj.actual_yaw = msg->clusters.at(i).estimated_angle;
+
+		obj.w = msg->clusters.at(i).dimensions.x;
+		obj.l = msg->clusters.at(i).dimensions.y;
+		obj.h = msg->clusters.at(i).dimensions.z;
+
+		UtilityHNS::UtilityH::GetTickCount(filter_time);
+		if(!IsCar(obj, m_CurrentPos, m_Map)) continue;
+		m_FilteringTime += UtilityHNS::UtilityH::GetTimeDiffNow(filter_time);
+
+		obj.id = msg->clusters.at(i).id;
+		obj.originalID = msg->clusters.at(i).id;
+		obj.label = msg->clusters.at(i).label;
+
+		if(msg->clusters.at(i).indicator_state == 0)
+			obj.indicator_state = PlannerHNS::INDICATOR_LEFT;
+		else if(msg->clusters.at(i).indicator_state == 1)
+			obj.indicator_state = PlannerHNS::INDICATOR_RIGHT;
+		else if(msg->clusters.at(i).indicator_state == 2)
+			obj.indicator_state = PlannerHNS::INDICATOR_BOTH;
+		else if(msg->clusters.at(i).indicator_state == 3)
+			obj.indicator_state = PlannerHNS::INDICATOR_NONE;
+
+
+		UtilityHNS::UtilityH::GetTickCount(poly_est_time);
+		point_cloud.clear();
+		pcl::fromROSMsg(msg->clusters.at(i).cloud, point_cloud);
+
+		obj.contour = polyGen.EstimateClusterPolygon(point_cloud ,obj.center.pos,avg_center, m_Params.PolygonRes);
+
+		m_PolyEstimationTime += UtilityHNS::UtilityH::GetTimeDiffNow(poly_est_time);
+		m_nOriginalPoints += point_cloud.points.size();
+		m_nContourPoints += obj.contour.size();
+		originalClusters.push_back(obj);
 
 	}
 }
@@ -223,7 +227,30 @@ void ContourTracker::callbackGetCloudClusters(const autoware_msgs::CloudClusterA
 bool ContourTracker::IsCar(const PlannerHNS::DetectedObject& obj, const PlannerHNS::WayPoint& currState, PlannerHNS::RoadNetwork& map)
 {
 
-	if(m_MapFilterDistance > 0 && PlannerHNS::MappingHelpers::GetClosestLaneFromMap(obj.center, map, m_MapFilterDistance, false) == nullptr)
+	bool bOnLane = false;
+//	std::cout << "Debug Obj: " << obj.id << ", Closest Lane: " << m_ClosestLanesList.size() << std::endl;
+
+	for(unsigned int i =0 ; i < m_ClosestLanesList.size(); i++)
+	{
+		PlannerHNS::RelativeInfo info;
+		PlannerHNS::PlanningHelpers::GetRelativeInfoLimited(m_ClosestLanesList.at(i)->points, obj.center, info);
+		PlannerHNS::WayPoint wp = m_ClosestLanesList.at(i)->points.at(info.iFront);
+
+		double direct_d = hypot(wp.pos.y - obj.center.pos.y, wp.pos.x - obj.center.pos.x);
+
+	//	std::cout << "- Distance To Car: " << obj.distance_to_center << ", PerpD: " << info.perp_distance << ", DirectD: " << direct_d << ", bAfter: " << info.bAfter << ", bBefore: " << info.bBefore << std::endl;
+
+		if((info.bAfter || info.bBefore) && direct_d > m_MapFilterDistance*2.0)
+			continue;
+
+		if(fabs(info.perp_distance) <= m_MapFilterDistance)
+		{
+			bOnLane = true;
+			break;
+		}
+	}
+
+	if(bOnLane == false)
 		return false;
 
 	double object_size = hypot(obj.w, obj.l);
@@ -269,6 +296,8 @@ void ContourTracker::VisualizeLocalTracking()
 			m_DetectedPolygonsActual.at(3),
 			m_DetectedPolygonsActual.at(4));
 
+	PlannerHNS::RosHelpers::ConvertMatchingMarkers(m_ObstacleTracking.m_MatchList, m_MatchingInfoDummy.at(0), m_MatchingInfoActual.at(0), 0);
+
 	m_DetectedPolygonsAllMarkers.markers.clear();
 	m_DetectedPolygonsAllMarkers.markers.insert(m_DetectedPolygonsAllMarkers.markers.end(), m_DetectedPolygonsActual.at(0).markers.begin(), m_DetectedPolygonsActual.at(0).markers.end());
 	m_DetectedPolygonsAllMarkers.markers.insert(m_DetectedPolygonsAllMarkers.markers.end(), m_DetectedPolygonsActual.at(1).markers.begin(), m_DetectedPolygonsActual.at(1).markers.end());
@@ -287,6 +316,8 @@ void ContourTracker::VisualizeLocalTracking()
 
 	m_DetectedPolygonsAllMarkers.markers.insert(m_DetectedPolygonsAllMarkers.markers.end(), all_circles.markers.begin(), all_circles.markers.end());
 
+	m_DetectedPolygonsAllMarkers.markers.insert(m_DetectedPolygonsAllMarkers.markers.end(), m_MatchingInfoActual.at(0).markers.begin(), m_MatchingInfoActual.at(0).markers.end());
+
 	pub_DetectedPolygonsRviz.publish(m_DetectedPolygonsAllMarkers);
 
 	jsk_recognition_msgs::BoundingBoxArray boxes_array;
@@ -297,16 +328,16 @@ void ContourTracker::VisualizeLocalTracking()
 	{
 		jsk_recognition_msgs::BoundingBox box;
 		box.header.frame_id = "map";
-		box.header.stamp = ros::Time();
+		box.header.stamp = ros::Time().now();
 		box.pose.position.x = m_ObstacleTracking.m_DetectedObjects.at(i).center.pos.x;
 		box.pose.position.y = m_ObstacleTracking.m_DetectedObjects.at(i).center.pos.y;
 		box.pose.position.z = m_ObstacleTracking.m_DetectedObjects.at(i).center.pos.z;
 
 		box.value = 0.9;
 
-		box.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, UtilityHNS::UtilityH::SplitPositiveAngle(m_ObstacleTracking.m_DetectedObjects.at(i).center.pos.a));
-		box.dimensions.x = m_ObstacleTracking.m_DetectedObjects.at(i).w;
-		box.dimensions.y = m_ObstacleTracking.m_DetectedObjects.at(i).l;
+		box.pose.orientation = tf::createQuaternionMsgFromRollPitchYaw(0, 0, m_ObstacleTracking.m_DetectedObjects.at(i).center.pos.a);
+		box.dimensions.x = m_ObstacleTracking.m_DetectedObjects.at(i).l;
+		box.dimensions.y = m_ObstacleTracking.m_DetectedObjects.at(i).w;
 		box.dimensions.z = m_ObstacleTracking.m_DetectedObjects.at(i).h;
 		boxes_array.boxes.push_back(box);
 	}
@@ -333,17 +364,17 @@ void ContourTracker::LogAndSend()
 			m_tracking_time+m_FilteringTime+m_PolyEstimationTime<< ",";
 	m_LogData.push_back(dataLine.str());
 
-	cout << "dt: " << m_dt << endl;
-	cout << "num_Tracked_Objects: " << m_ObstacleTracking.m_DetectedObjects.size() << endl;
-	cout << "num_new_objects: " << m_OriginalClusters.size() << endl;
-	cout << "num_matched_objects: " << m_ObstacleTracking.m_DetectedObjects.size() - m_OriginalClusters.size() << endl;
-	cout << "num_Cluster_Points: " << m_nOriginalPoints << endl;
-	cout << "num_Contour_Points: " << m_nContourPoints << endl;
-	cout << "t_filtering : " << m_FilteringTime << endl;
-	cout << "t_poly_calc : " << m_PolyEstimationTime << endl;
-	cout << "t_Tracking : " << m_tracking_time << endl;
-	cout << "t_total : " << m_tracking_time+m_FilteringTime+m_PolyEstimationTime << endl;
-	cout << endl;
+//	cout << "dt: " << m_dt << endl;
+//	cout << "num_Tracked_Objects: " << m_ObstacleTracking.m_DetectedObjects.size() << endl;
+//	cout << "num_new_objects: " << m_OriginalClusters.size() << endl;
+//	cout << "num_matched_objects: " << m_ObstacleTracking.m_DetectedObjects.size() - m_OriginalClusters.size() << endl;
+//	cout << "num_Cluster_Points: " << m_nOriginalPoints << endl;
+//	cout << "num_Contour_Points: " << m_nContourPoints << endl;
+//	cout << "t_filtering : " << m_FilteringTime << endl;
+//	cout << "t_poly_calc : " << m_PolyEstimationTime << endl;
+//	cout << "t_Tracking : " << m_tracking_time << endl;
+//	cout << "t_total : " << m_tracking_time+m_FilteringTime+m_PolyEstimationTime << endl;
+//	cout << endl;
 
 	m_OutPutResults.objects.clear();
 	autoware_msgs::DetectedObject obj;

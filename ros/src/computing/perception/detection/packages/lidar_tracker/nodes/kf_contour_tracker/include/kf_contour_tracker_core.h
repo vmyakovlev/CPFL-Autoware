@@ -96,12 +96,17 @@ protected:
 	bool bMap;
 
 	SimulationNS::SimpleTracker m_ObstacleTracking;
+	std::vector<PlannerHNS::Lane*> m_ClosestLanesList;
 
 	//Visualization Section
 	int m_nDummyObjPerRep;
 	int m_nDetectedObjRepresentations;
 	std::vector<visualization_msgs::MarkerArray> m_DetectedPolygonsDummy;
 	std::vector<visualization_msgs::MarkerArray> m_DetectedPolygonsActual;
+
+	std::vector<visualization_msgs::MarkerArray> m_MatchingInfoDummy;
+	std::vector<visualization_msgs::MarkerArray> m_MatchingInfoActual;
+
 	visualization_msgs::MarkerArray m_DetectedPolygonsAllMarkers;
 	visualization_msgs::MarkerArray m_DetectionCircles;
 
@@ -134,6 +139,7 @@ protected:
 
 	//Helper Functions
 	void VisualizeLocalTracking();
+	void ImportCloudClusters(const autoware_msgs::CloudClusterArrayConstPtr& msg, std::vector<PlannerHNS::DetectedObject>& originalClusters);
 	bool IsCar(const PlannerHNS::DetectedObject& obj, const PlannerHNS::WayPoint& currState, PlannerHNS::RoadNetwork& map);
 	void ReadNodeParams();
 	void ReadCommonParams();

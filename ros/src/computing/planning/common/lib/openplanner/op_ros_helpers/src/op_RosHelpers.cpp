@@ -73,6 +73,44 @@ visualization_msgs::Marker RosHelpers::CreateGenMarker(const double& x, const do
 	return mkr;
 }
 
+
+void RosHelpers::InitMatchingMarkers(const int& nMarkers, visualization_msgs::MarkerArray& connections)
+{
+	connections.markers.clear();
+	for(int i=0; i<nMarkers; i++)
+	{
+		visualization_msgs::Marker mkr = CreateGenMarker(0,0,0,0,1,1,1,1,i,"matching_connections", visualization_msgs::Marker::LINE_STRIP);
+		connections.markers.push_back(mkr);
+	}
+}
+
+void RosHelpers::ConvertMatchingMarkers(const std::vector<std::pair<PlannerHNS::WayPoint, PlannerHNS::WayPoint> >& match_list,
+		visualization_msgs::MarkerArray& tracked_traj_d, visualization_msgs::MarkerArray& tracked_traj, int start_id)
+{
+
+	tracked_traj = tracked_traj_d;
+
+	for(unsigned int i = 0; i < match_list.size(); i++)
+	{
+		visualization_msgs::Marker match_mkr = CreateGenMarker(0,0,0,0,1,0,0,0.2, start_id+i,"matching_connections", visualization_msgs::Marker::LINE_STRIP);
+		geometry_msgs::Point point;
+		point.x = match_list.at(i).first.pos.x;
+		point.y = match_list.at(i).first.pos.y;
+		point.z = match_list.at(i).first.pos.z;
+		match_mkr.points.push_back(point);
+
+		point.x = match_list.at(i).second.pos.x;
+		point.y = match_list.at(i).second.pos.y;
+		point.z = match_list.at(i).second.pos.z;
+		match_mkr.points.push_back(point);
+
+		if(i < tracked_traj.markers.size())
+			tracked_traj.markers.at(i) = match_mkr;
+		else
+			tracked_traj.markers.push_back(match_mkr);
+	}
+}
+
 void RosHelpers::InitMarkers(const int& nMarkers,
 		visualization_msgs::MarkerArray& centers,
 		visualization_msgs::MarkerArray& dirs,
@@ -85,6 +123,7 @@ void RosHelpers::InitMarkers(const int& nMarkers,
 	text_info.markers.clear();
 	polygons.markers.clear();
 	trajectories.markers.clear();
+
 
 	for(int i=0; i<nMarkers; i++)
 	{
@@ -117,7 +156,7 @@ void RosHelpers::InitMarkers(const int& nMarkers,
 	}
 }
 
-void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currState, const std::vector<PlannerHNS::DetectedObject>& trackedObstacles,
+int RosHelpers::ConvertTrackedObjectsMarkers( const PlannerHNS::WayPoint& currState, const std::vector<PlannerHNS::DetectedObject>& trackedObstacles,
 		visualization_msgs::MarkerArray& centers_d,
 		visualization_msgs::MarkerArray& dirs_d,
 		visualization_msgs::MarkerArray& text_info_d,
@@ -130,6 +169,7 @@ void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currSt
 		visualization_msgs::MarkerArray& tracked_traj)
 {
 
+	int i_next_id = 0;
 	centers = centers_d;
 	dirs = dirs_d;
 	text_info = text_info_d;
@@ -144,40 +184,53 @@ void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currSt
 		visualization_msgs::Marker center_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x,trackedObstacles.at(i).center.pos.y,trackedObstacles.at(i).center.pos.z,
 				trackedObstacles.at(i).center.pos.a,1,0,0,0.5,i,"CenterMarker", visualization_msgs::Marker::SPHERE);
 		if(i < centers.markers.size())
+		{
+			center_mkr.id = centers.markers.at(i).id;
 			centers.markers.at(i) = center_mkr;
+		}
 		else
 			centers.markers.push_back(center_mkr);
 
+		//Directions
 		if(trackedObstacles.at(i).bDirection)
 		{
 			visualization_msgs::Marker dir_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x,trackedObstacles.at(i).center.pos.y,trackedObstacles.at(i).center.pos.z+0.5,
-					trackedObstacles.at(i).center.pos.a,0,1,0,0.1,centers.markers.size()+i,"Directions", visualization_msgs::Marker::ARROW);
+					trackedObstacles.at(i).center.pos.a,0,1,0,0.3,centers.markers.size()+i,"Directions", visualization_msgs::Marker::ARROW);
 			dir_mkr.scale.x = 0.4;
 			if(i < dirs.markers.size())
+			{
+				dir_mkr.id = dirs.markers.at(i).id;
 				dirs.markers.at(i) = dir_mkr;
+			}
 			else
 				dirs.markers.push_back(dir_mkr);
 		}
 
 
+		//Text
 		visualization_msgs::Marker text_mkr;
-		if(speed > 3.0)
-			text_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x+0.5,trackedObstacles.at(i).center.pos.y+0.5,trackedObstacles.at(i).center.pos.z+1,
-					trackedObstacles.at(i).center.pos.a,1,0,0,0.75,centers.markers.size()*2+i,"InfoText", visualization_msgs::Marker::TEXT_VIEW_FACING);
-		else
-			text_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x+0.5,trackedObstacles.at(i).center.pos.y+0.5,trackedObstacles.at(i).center.pos.z+1,
-								trackedObstacles.at(i).center.pos.a,1,1,1,0.75,centers.markers.size()*2+i,"InfoText", visualization_msgs::Marker::TEXT_VIEW_FACING);
+//		if(speed > 3.0)
+//			text_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x+0.5,trackedObstacles.at(i).center.pos.y+0.5,trackedObstacles.at(i).center.pos.z+1,
+//					trackedObstacles.at(i).center.pos.a,1,0,0,0.75,centers.markers.size()*2+i,"InfoText", visualization_msgs::Marker::TEXT_VIEW_FACING);
+//		else
+		text_mkr = CreateGenMarker(trackedObstacles.at(i).center.pos.x+0.5,trackedObstacles.at(i).center.pos.y+0.5,trackedObstacles.at(i).center.pos.z+1,
+							trackedObstacles.at(i).center.pos.a,1,1,1,1.2,centers.markers.size()*2+i,"InfoText", visualization_msgs::Marker::TEXT_VIEW_FACING);
 
 		std::ostringstream str_out;
-		str_out << trackedObstacles.at(i).id << " ( " << speed << " )";
+		//str_out << trackedObstacles.at(i).id << " ( " << speed << " )" << " (" << trackedObstacles.at(i).distance_to_center << ")";
+		str_out << trackedObstacles.at(i).id << " (" << speed << ")";
 		text_mkr.text = str_out.str();
 
 		if(i < text_info.markers.size())
+		{
+			text_mkr.id = text_info.markers.at(i).id;
 			text_info.markers.at(i) = text_mkr;
+		}
 		else
 			text_info.markers.push_back(text_mkr);
 
 
+		//Polygons
 		visualization_msgs::Marker poly_mkr = CreateGenMarker(0,0,0,0, 1,0.25,0.25,0.1,centers.markers.size()*3+i,"detected_polygons", visualization_msgs::Marker::LINE_STRIP);
 
 		for(unsigned int p = 0; p < trackedObstacles.at(i).contour.size(); p++)
@@ -199,11 +252,15 @@ void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currSt
 		}
 
 		if(i < polygons.markers.size())
+		{
+			poly_mkr.id =  polygons.markers.at(i).id;
 			polygons.markers.at(i) = poly_mkr;
+		}
 		else
 			polygons.markers.push_back(poly_mkr);
 
 
+		//Trajectories
 		visualization_msgs::Marker traj_mkr = CreateGenMarker(0,0,0,0,1,1,0,0.1,centers.markers.size()*4+i,"tracked_trajectories", visualization_msgs::Marker::LINE_STRIP);
 
 		for(unsigned int p = 0; p < trackedObstacles.at(i).centers_list.size(); p++)
@@ -217,11 +274,18 @@ void RosHelpers::ConvertTrackedObjectsMarkers(const PlannerHNS::WayPoint& currSt
 
 
 		if(i < tracked_traj.markers.size())
+		{
+			traj_mkr.id = tracked_traj.markers.at(i).id ;
 			tracked_traj.markers.at(i) = traj_mkr;
+		}
 		else
 			tracked_traj.markers.push_back(traj_mkr);
 
+		i_next_id = traj_mkr.id;
+
 	}
+
+	return i_next_id +1;
 }
 
 void RosHelpers::CreateCircleMarker(const PlannerHNS::WayPoint& _center, const double& radius, const int& start_id, visualization_msgs::Marker& circle_points)

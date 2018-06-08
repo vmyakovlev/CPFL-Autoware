@@ -707,7 +707,10 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 	pHeadElem = GetHeadElement(pElem);
 
 	vector<Lane> laneLinksList = GetLanesList(pHeadElem);
-	vector<RoadSegment> roadLinksList = GetRoadSegmentsList(pHeadElem);
+
+	map.roadSegments.clear();
+	map.roadSegments = GetRoadSegmentsList(pHeadElem);
+
 	vector<TrafficLight> trafficLights = GetTrafficLightsList(pHeadElem);
 	vector<StopLine> stopLines = GetStopLinesList(pHeadElem);
 	vector<TrafficSign> signs = GetTrafficSignsList(pHeadElem);
@@ -735,20 +738,14 @@ void MappingHelpers::LoadKML(const std::string& kmlFile, RoadNetwork& map)
 	map.curbs = curbs;
 
 	//Fill the relations
-	for(unsigned int i= 0; i<roadLinksList.size(); i++ )
+	for(unsigned int i= 0; i<map.roadSegments.size(); i++ )
 	{
 		for(unsigned int j=0; j < laneLinksList.size(); j++)
 		{
-			//if(laneLinksList.at(j).roadId == roadLinksList.at(i).id)
-			{
-				PlanningHelpers::CalcAngleAndCost(laneLinksList.at(j).points);
-				roadLinksList.at(i).Lanes.push_back(laneLinksList.at(j));
-			}
+			PlanningHelpers::CalcAngleAndCost(laneLinksList.at(j).points);
+			map.roadSegments.at(i).Lanes.push_back(laneLinksList.at(j));
 		}
 	}
-
-	map.roadSegments.clear();
-	map.roadSegments = roadLinksList;
 
 	//Link Lanes and lane's waypoints by pointers
 	for(unsigned int rs = 0; rs < map.roadSegments.size(); rs++)
@@ -1102,6 +1099,27 @@ Lane* MappingHelpers::GetClosestLaneFromMapDirectionBased(const WayPoint& pos, R
 	}
 
 	return closest_lane;
+}
+
+std::vector<Lane*> MappingHelpers::GetClosestLanesFast(const WayPoint& center, RoadNetwork& map, const double& distance)
+{
+	vector<Lane*> lanesList;
+	for(unsigned int j=0; j< map.roadSegments.size(); j ++)
+	{
+		for(unsigned int k=0; k< map.roadSegments.at(j).Lanes.size(); k ++)
+		{
+			Lane* pL = &map.roadSegments.at(j).Lanes.at(k);
+			int index = PlanningHelpers::GetClosestNextPointIndexFast(pL->points, center);
+
+			if(index < 0 || index >= pL->points.size()) continue;
+
+			double d = hypot(pL->points.at(index).pos.y - center.pos.y, pL->points.at(index).pos.x - center.pos.x);
+			if(d <= distance)
+				lanesList.push_back(pL);
+		}
+	}
+
+	return lanesList;
 }
 
  std::vector<Lane*> MappingHelpers::GetClosestMultipleLanesFromMap(const WayPoint& pos, RoadNetwork& map, const double& distance)
