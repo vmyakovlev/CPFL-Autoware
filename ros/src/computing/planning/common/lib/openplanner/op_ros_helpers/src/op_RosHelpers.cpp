@@ -331,19 +331,19 @@ void RosHelpers::ConvertPredictedTrqajectoryMarkers(std::vector<std::vector<Plan
 		double basic_color = 0.5;
 		double prop = 1.0;
 		bool bCurrent = false;
-		if(paths.at(i).size()>0)
-		{
-
-			prop = paths.at(i).at(0).collisionCost;
-			if(prop < 0.5)
-				continue;
-
-			if(prop > 0.5)
-			{
-				additional_z = prop;
-				bCurrent = true;
-			}
-		}
+//		if(paths.at(i).size()>0)
+//		{
+//
+//			prop = paths.at(i).at(0).collisionCost;
+//			if(prop < 0.5)
+//				continue;
+//
+//			if(prop > 0.5)
+//			{
+//				additional_z = prop;
+//				bCurrent = true;
+//			}
+//		}
 
 
 //		double r = 0, g = 0, b = 0;
