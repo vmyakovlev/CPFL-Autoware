@@ -222,13 +222,18 @@ if (${CUDA_FOUND})
     message("Library: " ${CUDA_CUDA_LIBRARY})
     message("Runtime: " ${CUDA_CUDART_LIBRARY})
 
-    target_compile_definitions(euclidean_cluster PRIVATE
-            GPU_CLUSTERING=1
-            )
+   target_compile_definitions(euclidean_cluster PRIVATE
+           GPU_CLUSTERING=1
+           )
 
     cuda_add_library(gpu_euclidean_clustering
-            nodes/euclidean_cluster/includes/gpu_euclidean_clustering.h
-            nodes/euclidean_cluster/gpu_euclidean_clustering.cu
+#            nodes/euclidean_cluster/includes/gpu_euclidean_clustering.h
+#            nodes/euclidean_cluster/gpu_euclidean_clustering.cu
+				nodes/euclidean_cluster/euclidean_cluster/include/euclidean_cluster.h
+				nodes/euclidean_cluster/euclidean_cluster/common.cu
+				nodes/euclidean_cluster/euclidean_cluster/edge_based.cu
+				nodes/euclidean_cluster/euclidean_cluster/vertex_based.cu
+				nodes/euclidean_cluster/euclidean_cluster/matrix_based.cu
             )
 
     target_link_libraries(euclidean_cluster

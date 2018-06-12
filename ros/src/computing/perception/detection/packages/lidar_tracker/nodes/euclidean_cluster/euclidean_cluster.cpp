@@ -78,8 +78,11 @@
 #include "Cluster.h"
 
 #ifdef GPU_CLUSTERING
-	#include "gpu_euclidean_clustering.h"
+//	#include "gpu_euclidean_clustering.h"
+#include "euclidean_cluster/include/euclidean_cluster.h"
 #endif
+
+#define RUN_GPU_ 1
 
 using namespace cv;
 
@@ -381,28 +384,28 @@ std::vector<ClusterPtr> clusterAndColorGpu(const pcl::PointCloud<pcl::PointXYZ>:
 	if (size == 0)
 		return clusters;
 
-	float *tmp_x, *tmp_y, *tmp_z;
+	GpuEuclideanCluster2 gecl_cluster;
 
-	tmp_x = (float *)malloc(sizeof(float) * size);
-	tmp_y = (float *)malloc(sizeof(float) * size);
-	tmp_z = (float *)malloc(sizeof(float) * size);
+	//gecl_cluster.setInputPoints(tmp_x, tmp_y, tmp_z, size);
+	struct timeval start, end;
 
-	for (int i = 0; i < size; i++) {
-		pcl::PointXYZ tmp_point = in_cloud_ptr->at(i);
+	gettimeofday(&start, NULL);
 
-		tmp_x[i] = tmp_point.x;
-		tmp_y[i] = tmp_point.y;
-		tmp_z[i] = tmp_point.z;
-	}
-
-	GpuEuclideanCluster gecl_cluster;
-
-	gecl_cluster.setInputPoints(tmp_x, tmp_y, tmp_z, size);
+	gecl_cluster.setInputPoints(in_cloud_ptr);
 	gecl_cluster.setThreshold(in_max_cluster_distance);
 	gecl_cluster.setMinClusterPts (_cluster_size_min);
 	gecl_cluster.setMaxClusterPts (_cluster_size_max);
+	gettimeofday(&end, NULL);
+
+	std::cout << "Set input = " << timeDiff(start, end) << std::endl;
+
+	gettimeofday(&start, NULL);
 	gecl_cluster.extractClusters();
-	std::vector<GpuEuclideanCluster::GClusterIndex> cluster_indices = gecl_cluster.getOutput();
+	std::cout << "End of extraction " << std::endl;
+	std::vector<GpuEuclideanCluster2::GClusterIndex> cluster_indices = gecl_cluster.getOutput();
+	gettimeofday(&end, NULL);
+
+	std::cout << "TOtal time = " << timeDiff(start, end) << std::endl;
 
 	unsigned int k = 0;
 
@@ -414,10 +417,6 @@ std::vector<ClusterPtr> clusterAndColorGpu(const pcl::PointCloud<pcl::PointXYZ>:
 
 		k++;
 	}
-
-	free(tmp_x);
-	free(tmp_y);
-	free(tmp_z);
 
 	return clusters;
 }
@@ -479,7 +478,6 @@ std::vector<ClusterPtr> clusterAndColor(const pcl::PointCloud<pcl::PointXYZ>::Pt
 
 		k++;
 	}
-	//std::cout << "Clusters: " << k << std::endl;
 	return clusters;
 
 }
@@ -602,15 +600,32 @@ void segmentByDistance(const pcl::PointCloud<pcl::PointXYZ>::Ptr in_cloud_ptr,
 	}
 
 	std::vector <ClusterPtr> all_clusters;
+
 	for(unsigned int i=0; i<cloud_segments_array.size(); i++)
 	{
+		struct timeval start, end;
+
+#define timeDiff(s, e) ((e.tv_sec - s.tv_sec) * 1000000 + (e.tv_usec - s.tv_usec))
 #ifdef GPU_CLUSTERING
     std::vector<ClusterPtr> local_clusters;
-		if (_use_gpu) {
+    std::cout << "Size of segment array = " << cloud_segments_array[i]->points.size() << std::endl;
+//#ifdef RUN_GPU_
+		//if (_use_gpu) {
+			gettimeofday(&start, NULL);
 			local_clusters = clusterAndColorGpu(cloud_segments_array[i], out_cloud_ptr, in_out_boundingbox_array, in_out_centroids, _clustering_thresholds[i]);
-		} else {
+			gettimeofday(&end, NULL);
+
+			std::cout << "GPU num clusters = " << local_clusters.size() << std::endl;
+			std::cout << "GPU Execution time = " << timeDiff(start, end) << std::endl;
+//#else		//} else {
+			gettimeofday(&start, NULL);
 			local_clusters = clusterAndColor(cloud_segments_array[i], out_cloud_ptr, in_out_boundingbox_array, in_out_centroids, _clustering_thresholds[i]);
-		}
+			gettimeofday(&end, NULL);
+
+			std::cout << "CPU num clusters = " << local_clusters.size() << std::endl;
+			std::cout << "CPU Execution time = " << timeDiff(start, end) << std::endl << std::endl;
+		//}
+//#endif
 #else
 		std::vector<ClusterPtr> local_clusters = clusterAndColor(cloud_segments_array[i], out_cloud_ptr, in_out_boundingbox_array, in_out_centroids, _clustering_thresholds[i]);
 #endif
