@@ -102,6 +102,7 @@ void PurePursuitNode::run()
 
     pp_.setLookaheadDistance(computeLookaheadDistance());
     pp_.setMinimumLookaheadDistance(minimum_lookahead_distance_);
+    command_linear_velocity_ = pp_.calcLinearVelocity();
 
     double kappa = 0;
     bool can_get_curvature = pp_.canGetCurvature(&kappa);
@@ -214,11 +215,6 @@ void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStam
 
 void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr &msg)
 {
-  if (!msg->waypoints.empty())
-    command_linear_velocity_ = msg->waypoints.at(0).twist.twist.linear.x;
-  else
-    command_linear_velocity_ = 0;
-
   pp_.setCurrentWaypoints(msg->waypoints);
   is_waypoint_set_ = true;
 }

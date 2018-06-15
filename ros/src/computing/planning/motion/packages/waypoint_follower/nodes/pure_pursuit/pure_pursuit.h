@@ -31,6 +31,7 @@
 #ifndef PURE_PURSUIT_H
 #define PURE_PURSUIT_H
 
+#include <boost/circular_buffer.hpp>
 // ROS includes
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -101,7 +102,7 @@ public:
   }
   // processing
   bool canGetCurvature(double *output_kappa);
-
+  double calcLinearVelocity();
 private:
   // constant
   const double RADIUS_MAX_;
@@ -116,6 +117,7 @@ private:
   geometry_msgs::Pose current_pose_;
   double current_linear_velocity_;
   std::vector<autoware_msgs::waypoint> current_waypoints_;
+  boost::circular_buffer<autoware_msgs::waypoint> past_closest_waypoint_;
 
   // functions
   double calcCurvature(geometry_msgs::Point target) const;
