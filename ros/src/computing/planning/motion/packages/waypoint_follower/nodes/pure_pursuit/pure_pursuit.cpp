@@ -70,7 +70,7 @@ double PurePursuit::calcCurvature(geometry_msgs::Point target) const
 }
 
 // linear interpolation of next target
-bool PurePursuit::interpolateNextTarget(int next_waypoint, geometry_msgs::Point *next_target) const
+bool PurePursuit::interpolateNextTarget(int next_waypoint, geometry_msgs::Point* next_target) const
 {
   constexpr double ERROR = pow(10, -5);  // 0.00001
 
@@ -232,7 +232,7 @@ void PurePursuit::getNextWaypoint()
   return;
 }
 
-bool PurePursuit::canGetCurvature(double *output_kappa)
+bool PurePursuit::canGetCurvature(double* output_kappa)
 {
   // search next waypoint
   getNextWaypoint();
@@ -298,12 +298,9 @@ double PurePursuit::calcLinearVelocity()
   const geometry_msgs::Point& pc = current_pose_.position;
   const double v0 = past_closest_waypoint_[0].twist.twist.linear.x;
   const double v1 = wp.twist.twist.linear.x;
-  const double d[3] =
-  {
-    (p1.x - p0.x) * (p1.x - p0.x) + (p1.y - p0.y) * (p1.y - p0.y),
-    (pc.x - p0.x) * (pc.x - p0.x) + (pc.y - p0.y) * (pc.y - p0.y),
-    (p1.x - pc.x) * (p1.x - pc.x) + (p1.y - pc.y) * (p1.y - pc.y)
-  };
+  const double d[3] = { (p1.x - p0.x) * (p1.x - p0.x) + (p1.y - p0.y) * (p1.y - p0.y),
+                        (pc.x - p0.x) * (pc.x - p0.x) + (pc.y - p0.y) * (pc.y - p0.y),
+                        (p1.x - pc.x) * (p1.x - pc.x) + (p1.y - pc.y) * (p1.y - pc.y) };
   if (d[0] < 1e-8)
   {
     return v0;

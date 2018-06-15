@@ -127,7 +127,7 @@ void PurePursuitNode::run()
   }
 }
 
-void PurePursuitNode::publishTwistStamped(const bool &can_get_curvature, const double &kappa) const
+void PurePursuitNode::publishTwistStamped(const bool& can_get_curvature, const double& kappa) const
 {
   geometry_msgs::TwistStamped ts;
   ts.header.stamp = ros::Time::now();
@@ -136,7 +136,7 @@ void PurePursuitNode::publishTwistStamped(const bool &can_get_curvature, const d
   pub1_.publish(ts);
 }
 
-void PurePursuitNode::publishControlCommandStamped(const bool &can_get_curvature, const double &kappa) const
+void PurePursuitNode::publishControlCommandStamped(const bool& can_get_curvature, const double& kappa) const
 {
   if (!publishes_for_steering_robot_)
     return;
@@ -158,9 +158,8 @@ double PurePursuitNode::computeLookaheadDistance() const
   double maximum_lookahead_distance = current_linear_velocity_ * 10;
   double ld = current_linear_velocity_ * lookahead_distance_ratio_;
 
-  return ld < minimum_lookahead_distance_ ? minimum_lookahead_distance_
-        : ld > maximum_lookahead_distance ? maximum_lookahead_distance
-        : ld;
+  return ld < minimum_lookahead_distance_ ? minimum_lookahead_distance_ :
+                                            ld > maximum_lookahead_distance ? maximum_lookahead_distance : ld;
 }
 
 double PurePursuitNode::computeCommandVelocity() const
@@ -177,20 +176,21 @@ double PurePursuitNode::computeCommandAccel() const
   const geometry_msgs::Pose target_pose = pp_.getCurrentWaypoints().at(1).pose.pose;
 
   // v^2 - v0^2 = 2ax
-  const double x =  std::hypot(current_pose.position.x-target_pose.position.x, current_pose.position.y-target_pose.position.y);
+  const double x =
+      std::hypot(current_pose.position.x - target_pose.position.x, current_pose.position.y - target_pose.position.y);
   const double v0 = current_linear_velocity_;
   const double v = computeCommandVelocity();
-  const double a = (v*v - v0*v0) / (2*x);
+  const double a = (v * v - v0 * v0) / (2 * x);
   return a;
 }
 
 double PurePursuitNode::computeAngularGravity(double velocity, double kappa) const
 {
   const double gravity = 9.80665;
-  return (velocity*velocity) / (1.0/kappa*gravity);
+  return (velocity * velocity) / (1.0 / kappa * gravity);
 }
 
-void PurePursuitNode::callbackFromConfig(const autoware_msgs::ConfigWaypointFollowerConstPtr &config)
+void PurePursuitNode::callbackFromConfig(const autoware_msgs::ConfigWaypointFollowerConstPtr& config)
 {
   param_flag_ = config->param_flag;
   const_lookahead_distance_ = config->lookahead_distance;
@@ -200,26 +200,26 @@ void PurePursuitNode::callbackFromConfig(const autoware_msgs::ConfigWaypointFoll
   is_config_set_ = true;
 }
 
-void PurePursuitNode::callbackFromCurrentPose(const geometry_msgs::PoseStampedConstPtr &msg)
+void PurePursuitNode::callbackFromCurrentPose(const geometry_msgs::PoseStampedConstPtr& msg)
 {
   pp_.setCurrentPose(msg);
   is_pose_set_ = true;
 }
 
-void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStampedConstPtr &msg)
+void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStampedConstPtr& msg)
 {
   current_linear_velocity_ = msg->twist.linear.x;
   pp_.setCurrentVelocity(current_linear_velocity_);
   is_velocity_set_ = true;
 }
 
-void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr &msg)
+void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr& msg)
 {
   pp_.setCurrentWaypoints(msg->waypoints);
   is_waypoint_set_ = true;
 }
 
-double convertCurvatureToSteeringAngle(const double &wheel_base, const double &kappa)
+double convertCurvatureToSteeringAngle(const double& wheel_base, const double& kappa)
 {
   return atan(wheel_base * kappa);
 }
