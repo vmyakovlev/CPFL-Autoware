@@ -342,6 +342,8 @@ __global__ void rebuildMatrix2(int *old_matrix, int *updated_cluster_list, int *
 
 void GpuEuclideanCluster2::extractClusters()
 {
+	struct timeval start, end;
+
 	// Initialize names of clusters
 	initClusters();
 
@@ -356,24 +358,20 @@ void GpuEuclideanCluster2::extractClusters()
 	block_x = (point_num_ > BLOCK_SIZE_X) ? BLOCK_SIZE_X : point_num_;
 	grid_x = (point_num_ - 1) / block_x + 1;
 
+	gettimeofday(&start, NULL);
 	// Divide points into blocks of points and clustering points inside each block
 	blockClustering<<<grid_x, block_x>>>(x_, y_, z_, point_num_, cluster_name_, threshold_, changed);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+	gettimeofday(&end, NULL);
 
-	// Avoid sparse cloud
-	if (!(*changed)) {
-		checkCudaErrors(cudaMemcpy(cluster_name_host_, cluster_name_, sizeof(int) * point_num_, cudaMemcpyDeviceToHost));
-		cluster_num_ = point_num_;
-		checkCudaErrors(cudaFreeHost(changed));
-
-		return;
-	}
+	std::cout << "blockClustering = " << timeDiff(start, end) << std::endl;
 
 	// Collect the remaining clusters
 	// Locations of clusters in the cluster list
 	int *cluster_location;
 
+	gettimeofday(&start, NULL);
 	checkCudaErrors(cudaMalloc(&cluster_location, sizeof(int) * (point_num_ + 1)));
 	checkCudaErrors(cudaMemset(cluster_location, 0, sizeof(int) * (point_num_ + 1)));
 	clusterMark<<<grid_x, block_x>>>(cluster_name_, cluster_location, point_num_);
@@ -411,6 +409,9 @@ void GpuEuclideanCluster2::extractClusters()
 	buildClusterMatrix2<<<grid_size, block_size>>>(x_, y_, z_, cluster_name_, cluster_location, matrix, point_num_, cluster_num_, threshold_);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+	gettimeofday(&end, NULL);
+
+	std::cout << "Build RC and Matrix = " << timeDiff(start, end) << std::endl;
 
 	int *changed_diag;
 
@@ -418,6 +419,7 @@ void GpuEuclideanCluster2::extractClusters()
 
 	int *new_cluster_list;
 
+	gettimeofday(&start, NULL);
 	do {
 		*changed = false;
 		*changed_diag = -1;
@@ -520,6 +522,10 @@ void GpuEuclideanCluster2::extractClusters()
 			matrix = new_matrix;
 		}
 	} while (*changed);
+
+	gettimeofday(&end, NULL);
+
+	std::cout << "Iteration = " << timeDiff(start, end) << std::endl;
 
 	renamingClusters(cluster_name_, cluster_location, point_num_);
 
