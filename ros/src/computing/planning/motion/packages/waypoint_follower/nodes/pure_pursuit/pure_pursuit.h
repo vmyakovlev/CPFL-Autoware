@@ -63,7 +63,7 @@ public:
   }
   void setCurrentWaypoints(const std::vector<autoware_msgs::waypoint> &wps)
   {
-    current_waypoints_ = wps;
+    current_waypoints_ = &wps;
   }
   void setCurrentPose(const geometry_msgs::PoseStampedConstPtr &msg)
   {
@@ -77,7 +77,7 @@ public:
   // for debug on ROS
   geometry_msgs::Point getPoseOfNextWaypoint() const
   {
-    return current_waypoints_.at(next_waypoint_number_).pose.pose.position;
+    return current_waypoints_->at(next_waypoint_number_).pose.pose.position;
   }
   geometry_msgs::Point getPoseOfNextTarget() const
   {
@@ -89,7 +89,7 @@ public:
   }
   std::vector<autoware_msgs::waypoint> getCurrentWaypoints() const
   {
-    return current_waypoints_;
+    return *current_waypoints_;
   }
   double getLookaheadDistance() const
   {
@@ -115,7 +115,7 @@ private:
   double minimum_lookahead_distance_;
   geometry_msgs::Pose current_pose_;
   double current_linear_velocity_;
-  std::vector<autoware_msgs::waypoint> current_waypoints_;
+  const std::vector<autoware_msgs::waypoint>* current_waypoints_;
 
   // functions
   double calcCurvature(geometry_msgs::Point target) const;

@@ -73,16 +73,16 @@ bool PurePursuit::interpolateNextTarget(int next_waypoint, geometry_msgs::Point 
 {
   constexpr double ERROR = pow(10, -5);  // 0.00001
 
-  int path_size = static_cast<int>(current_waypoints_.size());
+  int path_size = static_cast<int>(current_waypoints_->size());
   if (next_waypoint == path_size - 1)
   {
-    *next_target = current_waypoints_.at(next_waypoint).pose.pose.position;
+    *next_target = current_waypoints_->at(next_waypoint).pose.pose.position;
     return true;
   }
   double search_radius = lookahead_distance_;
   geometry_msgs::Point zero_p;
-  geometry_msgs::Point end = current_waypoints_.at(next_waypoint).pose.pose.position;
-  geometry_msgs::Point start = current_waypoints_.at(next_waypoint - 1).pose.pose.position;
+  geometry_msgs::Point end = current_waypoints_->at(next_waypoint).pose.pose.position;
+  geometry_msgs::Point start = current_waypoints_->at(next_waypoint - 1).pose.pose.position;
 
   // let the linear equation be "ax + by + c = 0"
   // if there are two points (x1,y1) , (x2,y2), a = "y2-y1, b = "(-1) * x2 - x1" ,c = "(-1) * (y2-y1)x1 + (x2-x1)y1"
@@ -198,7 +198,7 @@ bool PurePursuit::interpolateNextTarget(int next_waypoint, geometry_msgs::Point 
 
 void PurePursuit::getNextWaypoint()
 {
-  int path_size = static_cast<int>(current_waypoints_.size());
+  int path_size = static_cast<int>(current_waypoints_->size());
 
   // if waypoints are not given, do nothing.
   if (path_size == 0)
@@ -219,7 +219,7 @@ void PurePursuit::getNextWaypoint()
     }
 
     // if there exists an effective waypoint
-    if (getPlaneDistance(current_waypoints_.at(i).pose.pose.position, current_pose_.position) > lookahead_distance_)
+    if (getPlaneDistance(current_waypoints_->at(i).pose.pose.position, current_pose_.position) > lookahead_distance_)
     {
       next_waypoint_number_ = i;
       return;
@@ -242,7 +242,7 @@ bool PurePursuit::canGetCurvature(double *output_kappa)
   }
   // check whether curvature is valid or not
   bool is_valid_curve = false;
-  for (const auto& el : current_waypoints_)
+  for (const auto& el : *current_waypoints_)
   {
     if (getPlaneDistance(el.pose.pose.position, current_pose_.position) > minimum_lookahead_distance_)
     {
@@ -256,9 +256,9 @@ bool PurePursuit::canGetCurvature(double *output_kappa)
   }
   // if is_linear_interpolation_ is false or next waypoint is first or last
   if (!is_linear_interpolation_ || next_waypoint_number_ == 0 ||
-      next_waypoint_number_ == (static_cast<int>(current_waypoints_.size() - 1)))
+      next_waypoint_number_ == (static_cast<int>(current_waypoints_->size() - 1)))
   {
-    next_target_position_ = current_waypoints_.at(next_waypoint_number_).pose.pose.position;
+    next_target_position_ = current_waypoints_->at(next_waypoint_number_).pose.pose.position;
     *output_kappa = calcCurvature(next_target_position_);
     return true;
   }

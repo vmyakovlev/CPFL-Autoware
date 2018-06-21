@@ -75,7 +75,7 @@ private:
   ros::NodeHandle private_nh_;
 
   // class
-  PurePursuit pp_;
+  std::vector<PurePursuit> pp_;
 
   // publisher
   ros::Publisher pub1_, pub2_, pub11_, pub12_, pub13_, pub14_, pub15_, pub16_;
@@ -90,6 +90,8 @@ private:
   bool is_linear_interpolation_, publishes_for_steering_robot_;
   bool is_waypoint_set_, is_pose_set_, is_velocity_set_, is_config_set_;
   double current_linear_velocity_, command_linear_velocity_;
+  double current_kappa_;
+  std::vector<autoware_msgs::waypoint> current_waypoints_;
   double wheel_base_;
 
   int32_t param_flag_;               // 0 = waypoint, 1 = Dialog
@@ -97,6 +99,9 @@ private:
   double const_velocity_;            // km/h
   double lookahead_distance_ratio_;
   double minimum_lookahead_distance_;  // the next waypoint must be outside of this threshold.
+
+  double omega_sigma_, alpha_sigma_, dist_sigma_; // evaluation parameter
+  double dt_;
 
   // callbacks
   void callbackFromConfig(const autoware_msgs::ConfigWaypointFollowerConstPtr &config);
@@ -115,6 +120,8 @@ private:
   double computeCommandVelocity() const;
   double computeCommandAccel() const;
   double computeAngularGravity(double velocity, double kappa) const;
+  double computeEvaluation(double omega, double alpha, double dist) const;
+  bool computeBestCurvature(double *kappa, int *id);
 };
 
 double convertCurvatureToSteeringAngle(const double &wheel_base, const double &kappa);

@@ -35,7 +35,7 @@ namespace waypoint_follower
 // Constructor
 PurePursuitNode::PurePursuitNode()
   : private_nh_("~")
-  , pp_()
+  , pp_(30)
   , LOOP_RATE_(30)
   , is_waypoint_set_(false)
   , is_pose_set_(false)
@@ -48,11 +48,16 @@ PurePursuitNode::PurePursuitNode()
   , const_velocity_(5.0)
   , lookahead_distance_ratio_(2.0)
   , minimum_lookahead_distance_(6.0)
+  , omega_sigma_(4.0)
+  , alpha_sigma_(0.1)
+  , dist_sigma_(6.0)
+  , dt_(0.1)
 {
   initForROS();
 
   // initialize for PurePursuit
-  pp_.setLinearInterpolationParameter(is_linear_interpolation_);
+  for(int i = 0; i < pp_.size(); i++)
+    pp_[i].setLinearInterpolationParameter(is_linear_interpolation_);
 }
 
 // Destructor
@@ -67,6 +72,9 @@ void PurePursuitNode::initForROS()
   // ROS_INFO_STREAM("is_linear_interpolation : " << is_linear_interpolation_);
   private_nh_.param("publishes_for_steering_robot", publishes_for_steering_robot_, bool(false));
   private_nh_.param("vehicle_info/wheel_base", wheel_base_, double(2.7));
+  private_nh_.param("eval_omega", omega_sigma_, double(4.0));
+  private_nh_.param("eval_alpha", alpha_sigma_, double(0.1));
+  private_nh_.param("eval_dist", dist_sigma_, double(6.0));
 
   // setup subscriber
   sub1_ = nh_.subscribe("final_waypoints", 10, &PurePursuitNode::callbackFromWayPoints, this);
@@ -100,20 +108,27 @@ void PurePursuitNode::run()
       continue;
     }
 
-    pp_.setLookaheadDistance(computeLookaheadDistance());
-    pp_.setMinimumLookaheadDistance(minimum_lookahead_distance_);
+    double ld = computeLookaheadDistance();
+    for (int i = 0; i < pp_.size(); i++)
+    {
+      double ratio = (i + 1) / (double)pp_.size();
+      pp_[i].setLookaheadDistance(minimum_lookahead_distance_ + (ld - minimum_lookahead_distance_) * ratio);
+      pp_[i].setMinimumLookaheadDistance(minimum_lookahead_distance_);
+    }
 
-    double kappa = 0;
-    bool can_get_curvature = pp_.canGetCurvature(&kappa);
+    double kappa = 1e-9;
+    int id = 0;
+    bool can_get_curvature = computeBestCurvature(&kappa, &id);
+
     publishTwistStamped(can_get_curvature, kappa);
     publishControlCommandStamped(can_get_curvature, kappa);
 
     // for visualization with Rviz
-    pub11_.publish(displayNextWaypoint(pp_.getPoseOfNextWaypoint()));
-    pub13_.publish(displaySearchRadius(pp_.getCurrentPose().position, pp_.getLookaheadDistance()));
-    pub12_.publish(displayNextTarget(pp_.getPoseOfNextTarget()));
+    pub11_.publish(displayNextWaypoint(pp_[id].getPoseOfNextWaypoint()));
+    pub13_.publish(displaySearchRadius(pp_[id].getCurrentPose().position, pp_[id].getLookaheadDistance()));
+    pub12_.publish(displayNextTarget(pp_[id].getPoseOfNextTarget()));
     pub15_.publish(displayTrajectoryCircle(
-        waypoint_follower::generateTrajectoryCircle(pp_.getPoseOfNextTarget(), pp_.getCurrentPose())));
+        waypoint_follower::generateTrajectoryCircle(pp_[id].getPoseOfNextTarget(), pp_[id].getCurrentPose())));
     std_msgs::Float32 angular_gravity_msg;
     angular_gravity_msg.data = computeAngularGravity(computeCommandVelocity(), kappa);
     pub16_.publish(angular_gravity_msg);
@@ -172,8 +187,8 @@ double PurePursuitNode::computeCommandVelocity() const
 
 double PurePursuitNode::computeCommandAccel() const
 {
-  const geometry_msgs::Pose current_pose = pp_.getCurrentPose();
-  const geometry_msgs::Pose target_pose = pp_.getCurrentWaypoints().at(1).pose.pose;
+  const geometry_msgs::Pose current_pose = pp_.back().getCurrentPose();
+  const geometry_msgs::Pose target_pose = pp_.back().getCurrentWaypoints().at(1).pose.pose;
 
   // v^2 - v0^2 = 2ax
   const double x =  std::hypot(current_pose.position.x-target_pose.position.x, current_pose.position.y-target_pose.position.y);
@@ -201,14 +216,25 @@ void PurePursuitNode::callbackFromConfig(const autoware_msgs::ConfigWaypointFoll
 
 void PurePursuitNode::callbackFromCurrentPose(const geometry_msgs::PoseStampedConstPtr &msg)
 {
-  pp_.setCurrentPose(msg);
+  for (int i = 0; i < pp_.size(); i++)
+    pp_[i].setCurrentPose(msg);
   is_pose_set_ = true;
 }
 
 void PurePursuitNode::callbackFromCurrentVelocity(const geometry_msgs::TwistStampedConstPtr &msg)
 {
   current_linear_velocity_ = msg->twist.linear.x;
-  pp_.setCurrentVelocity(current_linear_velocity_);
+  if (current_linear_velocity_ > 1e-9)
+  {
+    current_kappa_ = msg->twist.angular.z / msg->twist.linear.x;
+  }
+  else
+  {
+    int sgn = (msg->twist.angular.z > 0.0) ? 1 : -1;
+    current_kappa_ = 1e-9 * sgn;
+  }
+  for (int i = 0; i < pp_.size(); i++)
+    pp_[i].setCurrentVelocity(current_linear_velocity_);
   is_velocity_set_ = true;
 }
 
@@ -218,9 +244,48 @@ void PurePursuitNode::callbackFromWayPoints(const autoware_msgs::laneConstPtr &m
     command_linear_velocity_ = msg->waypoints.at(0).twist.twist.linear.x;
   else
     command_linear_velocity_ = 0;
-
-  pp_.setCurrentWaypoints(msg->waypoints);
+  current_waypoints_ = msg->waypoints;
+  for (int i = 0; i < pp_.size(); i++)
+    pp_[i].setCurrentWaypoints(current_waypoints_);
   is_waypoint_set_ = true;
+}
+
+double PurePursuitNode::computeEvaluation(double omega, double alpha, double dist) const
+{
+  const double omega_eval = exp(-omega * omega / (2 * omega_sigma_ * omega_sigma_));
+  const double alpha_eval = exp(-alpha * alpha / (2 * alpha_sigma_ * alpha_sigma_));
+  const double dist_eval = exp(-dist * dist / (2 * dist_sigma_ * dist_sigma_));
+  return omega_eval * alpha_eval * dist_eval;
+}
+
+bool PurePursuitNode::computeBestCurvature(double *kappa, int *id)
+{
+  const double current_theta = convertCurvatureToSteeringAngle(wheel_base_, current_kappa_);
+  static double prev_theta = current_theta;
+  const double prev_omega = (current_theta - prev_theta) / dt_;
+  prev_theta = current_theta;
+  double max_eval = 0.0;
+  for (int i = 0; i < pp_.size(); i++)
+  {
+    double kappa_tmp = 1e-9;
+    const bool can_get_curvature = pp_[i].canGetCurvature(&kappa_tmp);
+    if (!can_get_curvature)
+    {
+      return false;
+    }
+    const double angle = convertCurvatureToSteeringAngle(wheel_base_, kappa_tmp);
+    const double omega = (angle - current_theta) / dt_;
+    const double alpha = (omega - prev_omega) / dt_;
+    const double eval = computeEvaluation(omega, alpha, pp_[i].getLookaheadDistance());
+    if (max_eval > eval)
+    {
+      continue;
+    }
+    max_eval = eval;
+    *id = i;
+    *kappa = kappa_tmp;
+  }
+  return true;
 }
 
 double convertCurvatureToSteeringAngle(const double &wheel_base, const double &kappa)
