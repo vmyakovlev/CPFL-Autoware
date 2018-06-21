@@ -203,6 +203,12 @@ __global__ void buildAdjacentList(float *x, float *y, float *z, int point_num, f
 
 __global__ void clustering(int *adjacent_list_loc, int *adjacent_list, int point_num, int *cluster_name, int *frontier_array1, int *frontier_array2, bool *changed)
 {
+	__shared__ bool schanged;
+
+	if (threadIdx.x == 0)
+		schanged = false;
+	__syncthreads();
+
 	for (int pid = threadIdx.x + blockIdx.x * blockDim.x; pid < point_num; pid += blockDim.x * gridDim.x) {
 		if (frontier_array1[pid] == 1) {
 			frontier_array1[pid] = 0;
@@ -218,7 +224,8 @@ __global__ void clustering(int *adjacent_list_loc, int *adjacent_list, int point
 				if (cname < nname) {
 					atomicMin(cluster_name + nid, cname);
 					frontier_array2[nid] = 1;
-					*changed = true;
+					schanged = true;
+					//*changed = true;
 				} else if (cname > nname) {
 					cname = nname;
 					c = true;
@@ -228,10 +235,15 @@ __global__ void clustering(int *adjacent_list_loc, int *adjacent_list, int point
 			if (c) {
 				atomicMin(cluster_name + pid, cname);
 				frontier_array2[pid] = 1;
-				*changed = true;
+				schanged = true;
+				//*changed = true;
 			}
 		}
 	}
+	__syncthreads();
+
+	if (threadIdx.x == 0 && schanged)
+		*changed = true;
 }
 
 /* Iterate through the list of remaining clusters and mark the corresponding
@@ -286,17 +298,15 @@ void GpuEuclideanCluster2::extractClusters2()
 
 	std::cout << "Build ADJ = " << timeDiff(start, end) << std::endl;
 
-//#define HOST_ALLOC_
+#define HOST_ALLOC_
 
 	bool *changed;
 
-#define HOST_ALLOC_ 1
-
-#ifdef HOST_ALLOC_
-	checkCudaErrors(cudaMallocHost(&changed, sizeof(bool)));
-#else
+#ifndef HOST_ALLOC_
 	bool hchanged;
 	checkCudaErrors(cudaMalloc(&changed, sizeof(bool)));
+#else
+	checkCudaErrors(cudaMallocHost(&changed, sizeof(bool)));
 #endif
 
 	int *frontier_array1, *frontier_array2;
@@ -311,12 +321,13 @@ void GpuEuclideanCluster2::extractClusters2()
 
 	gettimeofday(&start, NULL);
 	do {
-#ifdef HOST_ALLOC_
-		*changed = false;
-#else
+#ifndef HOST_ALLOC_
 		hchanged = false;
 		checkCudaErrors(cudaMemcpy(changed, &hchanged, sizeof(bool), cudaMemcpyHostToDevice));
+#else
+		*changed = false;
 #endif
+
 		clustering<<<grid_x, block_x>>>(adjacent_count, adjacent_list, point_num_, cluster_name_, frontier_array1, frontier_array2, changed);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
@@ -326,12 +337,13 @@ void GpuEuclideanCluster2::extractClusters2()
 		tmp = frontier_array1;
 		frontier_array1 = frontier_array2;
 		frontier_array2 = tmp;
-#ifdef HOST_ALLOC_
-	} while (*changed);
+#ifndef HOST_ALLOC_
+		checkCudaErrors(cudaMemcpy(&hchanged, changed, sizeof(bool), cudaMemcpyDeviceToHost));
+	} while (hchanged);
 #else
-	checkCudaErrors(cudaMemcpy(&hchanged, changed, sizeof(bool), cudaMemcpyDeviceToHost));
-} while (hchanged);
+} while (*changed);
 #endif
+
 gettimeofday(&end, NULL);
 
 std::cout << "Iteration = " << timeDiff(start, end) << std::endl;
@@ -356,10 +368,10 @@ std::cout << "Iteration = " << timeDiff(start, end) << std::endl;
 	checkCudaErrors(cudaFree(adjacent_list));
 	checkCudaErrors(cudaFree(frontier_array1));
 	checkCudaErrors(cudaFree(frontier_array2));
-#ifdef HOST_ALLOC_
-	checkCudaErrors(cudaFreeHost(changed));
-#else
+#ifndef HOST_ALLOC_
 	checkCudaErrors(cudaFree(changed));
+#else
+	checkCudaErrors(cudaFreeHost(changed));
 #endif
 	checkCudaErrors(cudaFree(cluster_location));
 }

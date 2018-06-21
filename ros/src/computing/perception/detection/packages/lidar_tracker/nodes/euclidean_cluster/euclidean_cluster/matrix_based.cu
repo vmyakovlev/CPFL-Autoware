@@ -39,7 +39,7 @@
  *
  * After this kernel finishes, all points in each block are labeled.
  */
-__global__ void blockClustering(float *x, float *y, float *z, int point_num, int *cluster_name, float threshold, bool *changed)
+__global__ void blockClustering(float *x, float *y, float *z, int point_num, int *cluster_name, float threshold)
 {
 	int block_start = blockIdx.x * blockDim.x;
 	int block_end = (block_start + blockDim.x > point_num) ? point_num : block_start + blockDim.x;
@@ -52,7 +52,6 @@ __global__ void blockClustering(float *x, float *y, float *z, int point_num, int
 	__shared__ int local_cluster_idx[BLOCK_SIZE_X];
 	/* Cluster changed to check if a cluster name has changed after each comparison */
 	__shared__ int cluster_changed[BLOCK_SIZE_X];
-	bool local_changed = false;
 
 	if (pid < block_end) {
 		local_cluster_idx[threadIdx.x] = threadIdx.x;
@@ -80,7 +79,6 @@ __global__ void blockClustering(float *x, float *y, float *z, int point_num, int
 
 			if (threadIdx.x > rid && distance < threshold) {
 				cluster_changed[col_cluster] = 1;
-				local_changed = true;
 			}
 			__syncthreads();
 
@@ -93,9 +91,6 @@ __global__ void blockClustering(float *x, float *y, float *z, int point_num, int
 		__syncthreads();
 
 		cluster_name[pid] = new_cluster;
-
-		if (local_changed)
-			*changed = true;
 	}
 }
 
@@ -121,10 +116,15 @@ __global__ void clusterCollector(int *old_cluster_list, int *new_cluster_list, i
 	}
 }
 
-__global__ void buildClusterMatrix(float *x, float *y, float *z, int *cluster_name, int *cluster_location, int *matrix, int point_num, int cluster_num, float threshold)
+__global__ void buildClusterMatrix(float *x, float *y, float *z, int *cluster_name, int *cluster_location, int *matrix, int point_num, int cluster_num, float threshold, bool *non_zero)
 {
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int stride = blockDim.x * gridDim.x;
+	__shared__ bool snon_zero;
+
+	if (threadIdx.x == 0)
+		snon_zero = false;
+	__syncthreads();
 
 	for (int pid = idx; pid < point_num; pid += stride) {
 		float tmp_x = x[pid];
@@ -142,15 +142,28 @@ __global__ void buildClusterMatrix(float *x, float *y, float *z, int *cluster_na
 
 			if (row_cluster != col_cluster && norm3df(tmp_x2, tmp_y2, tmp_z2) < threshold) {
 				matrix[row * cluster_num + col] = 1;
+				snon_zero = true;
 			}
+			__syncthreads();
 		}
+		__syncthreads();
 	}
+
+	__syncthreads();
+
+	if (threadIdx.x == 0 && snon_zero)
+		*non_zero = true;
 }
 
-__global__ void buildClusterMatrix2(float *x, float *y, float *z, int *cluster_name, int *cluster_location, int *matrix, int point_num, int cluster_num, float threshold)
+__global__ void buildClusterMatrix2(float *x, float *y, float *z, int *cluster_name, int *cluster_location, int *matrix, int point_num, int cluster_num, float threshold, bool *non_zero)
 {
 	int idx = threadIdx.x + blockIdx.x * blockDim.x;
 	int stride = blockDim.x * gridDim.x;
+	__shared__ bool snon_zero;
+
+	if (threadIdx.x == 0)
+		snon_zero = false;
+	__syncthreads();
 
 	for (int pid = idx; pid < point_num; pid += stride) {
 		float tmp_x = x[pid];
@@ -168,9 +181,17 @@ __global__ void buildClusterMatrix2(float *x, float *y, float *z, int *cluster_n
 
 			if (row_cluster != col_cluster && norm3df(tmp_x2, tmp_y2, tmp_z2) < threshold) {
 				matrix[row * cluster_num + col] = 1;
+				snon_zero = true;
 			}
+			__syncthreads();
 		}
+		__syncthreads();
 	}
+
+	__syncthreads();
+
+	if (threadIdx.x == 0 && snon_zero)
+		*non_zero = true;
 }
 
 
@@ -183,6 +204,11 @@ __global__ void mergeLocalClusters(int *cluster_list, int *matrix, int cluster_n
 	__shared__ int local_cluster_idx[BLOCK_SIZE_X];
 	__shared__ int cluster_changed[BLOCK_SIZE_X];
 	bool block_changed = false;
+	__shared__ bool schanged;
+
+	if (threadIdx.x == 0)
+		schanged = false;
+	__syncthreads();
 
 	if(col < cluster_num && row_start < row_end) {
 		local_cluster_idx[threadIdx.x] = threadIdx.x;
@@ -212,8 +238,12 @@ __global__ void mergeLocalClusters(int *cluster_list, int *matrix, int cluster_n
 		cluster_list[col] = new_cluster;
 
 		if (block_changed)
-			*changed = true;
+			schanged = true;
 	}
+
+	__syncthreads();
+	if (threadIdx.x == 0 && schanged)
+		*changed = true;
 }
 
 /* Merge clusters that belong to different block of threads*/
@@ -237,9 +267,14 @@ __global__ void mergeForeignClusters(int *matrix, int *cluster_list,
 	int row_end = (row_start + blockDim.x <= cluster_num) ? row_start + blockDim.x : cluster_num;
 	int col = col_start + threadIdx.x;
 	bool block_changed = true;
+	__shared__ bool schanged;
 
 	__shared__ int cluster_changed[BLOCK_SIZE_X];
 	__shared__ int local_cluster_idx[BLOCK_SIZE_X];
+
+	if (threadIdx.x == 0)
+		schanged = false;
+	__syncthreads();
 
 	if (col < col_end && row_start < row_end) {
 		local_cluster_idx[threadIdx.x] = threadIdx.x;
@@ -269,8 +304,12 @@ __global__ void mergeForeignClusters(int *matrix, int *cluster_list,
 		cluster_list[col] = new_cluster;
 
 		if (block_changed)
-			*changed = true;
+			schanged = true;
 	}
+
+	__syncthreads();
+	if (threadIdx.x == 0 && schanged)
+		*changed = true;
 }
 
 /* Check if are there any 1 element in the adjacency matrix */
@@ -287,15 +326,24 @@ __global__ void clusterIntersecCheck(int *matrix, int *changed_diag, int sub_mat
 
 	int col = col_start + threadIdx.x;
 	int diag_offset = (sub_mat_size + col_idx - row_idx) % sub_mat_size;
+	__shared__ int schanged_diag;
+
+	if (threadIdx.x == 0)
+		schanged_diag = -1;
+	__syncthreads();
 
 	if (col < col_end && col_start < col_end && row_start < row_end) {
 		for (int row = row_start; row < row_end; row ++) {
 			if (matrix[row * cluster_num + col] != 0) {
-				*changed_diag = diag_offset;
+				schanged_diag = diag_offset;
 				break;
 			}
 		}
 	}
+
+	__syncthreads();
+	if (threadIdx.x == 0 && schanged_diag >= 0)
+		*changed_diag = schanged_diag;
 }
 
 /* Rename the cluster name of each point after some clusters are joined together */
@@ -347,11 +395,11 @@ void GpuEuclideanCluster2::extractClusters()
 	// Initialize names of clusters
 	initClusters();
 
-	bool *changed;
+	bool *check;
+	bool hcheck = false;
 
-	checkCudaErrors(cudaMallocHost(&changed, sizeof(bool)));
-
-	*changed = false;
+	checkCudaErrors(cudaMalloc(&check, sizeof(bool)));
+	checkCudaErrors(cudaMemcpy(check, &hcheck, sizeof(bool), cudaMemcpyHostToDevice));
 
 	int block_x, grid_x;
 
@@ -360,7 +408,7 @@ void GpuEuclideanCluster2::extractClusters()
 
 	gettimeofday(&start, NULL);
 	// Divide points into blocks of points and clustering points inside each block
-	blockClustering<<<grid_x, block_x>>>(x_, y_, z_, point_num_, cluster_name_, threshold_, changed);
+	blockClustering<<<grid_x, block_x>>>(x_, y_, z_, point_num_, cluster_name_, threshold_);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	gettimeofday(&end, NULL);
@@ -404,9 +452,12 @@ void GpuEuclideanCluster2::extractClusters()
 	grid_size.x = grid_x;
 	grid_size.y = (cluster_num_ > GRID_SIZE_Y) ? GRID_SIZE_Y : cluster_num_;
 	grid_size.z = 1;
+	//grid_size.y = 1;
 
-	//buildClusterMatrix<<<grid_x, block_x>>>(x_, y_, z_, cluster_name_, cluster_location, matrix, point_num_, cluster_num_, threshold_);
-	buildClusterMatrix2<<<grid_size, block_size>>>(x_, y_, z_, cluster_name_, cluster_location, matrix, point_num_, cluster_num_, threshold_);
+	buildClusterMatrix2<<<grid_size, block_size>>>(x_, y_, z_, cluster_name_,
+													cluster_location, matrix,
+													point_num_, cluster_num_,
+													threshold_, check);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 	gettimeofday(&end, NULL);
@@ -414,28 +465,36 @@ void GpuEuclideanCluster2::extractClusters()
 	std::cout << "Build RC and Matrix = " << timeDiff(start, end) << std::endl;
 
 	int *changed_diag;
+	int hchanged_diag;
+	checkCudaErrors(cudaMalloc(&changed_diag, sizeof(int)));
 
-	checkCudaErrors(cudaMallocHost(&changed_diag, sizeof(int)));
 
 	int *new_cluster_list;
 
 	gettimeofday(&start, NULL);
 	do {
-		*changed = false;
-		*changed_diag = -1;
+		hcheck = false;
+		hchanged_diag = -1;
+
+		checkCudaErrors(cudaMemcpy(check, &hcheck, sizeof(bool), cudaMemcpyHostToDevice));
+
 		int block_x2, grid_x2, grid_y2;
 
 		block_x2 = (cluster_num_ > BLOCK_SIZE_X) ? BLOCK_SIZE_X : cluster_num_;
 		grid_x2 = (cluster_num_ - 1) / block_x2 + 1;
 
-		mergeLocalClusters<<<grid_x2, block_x2>>>(cluster_list, matrix, cluster_num_, changed);
+		mergeLocalClusters<<<grid_x2, block_x2>>>(cluster_list, matrix, cluster_num_, check);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
 
 		int sub_matrix_size = 1;
 		int sub_matrix_offset = 2;
 
-		while (!(*changed) && sub_matrix_size < cluster_num_ && cluster_num_ > BLOCK_SIZE_X) {
+		checkCudaErrors(cudaMemcpy(&hcheck, check, sizeof(bool), cudaMemcpyDeviceToHost));
+
+
+		while (!(hcheck) && sub_matrix_size < cluster_num_ && cluster_num_ > BLOCK_SIZE_X) {
+
 			int sub_matrix_num = (cluster_num_ - 1) / sub_matrix_offset + 1;
 			block_x2 = BLOCK_SIZE_X;
 			grid_x2 = sub_matrix_size * sub_matrix_num;
@@ -446,19 +505,24 @@ void GpuEuclideanCluster2::extractClusters()
 			grid_size.x = grid_x2;
 			grid_size.y = grid_y2;
 			grid_size.z = 1;
-			*changed_diag = -1;
+			hchanged_diag = -1;
+
+			checkCudaErrors(cudaMemcpy(changed_diag, &hchanged_diag, sizeof(int), cudaMemcpyHostToDevice));
 
 			clusterIntersecCheck<<<grid_size, block_size>>>(matrix, changed_diag, sub_matrix_size, sub_matrix_offset, cluster_num_);
 			checkCudaErrors(cudaGetLastError());
 			checkCudaErrors(cudaDeviceSynchronize());
 
-			if (*changed_diag >= 0) {
+			checkCudaErrors(cudaMemcpy(&hchanged_diag, changed_diag, sizeof(int), cudaMemcpyDeviceToHost));
 
-				mergeForeignClusters<<<grid_x2, block_x2>>>(matrix, cluster_list, *changed_diag,
+			if (hchanged_diag >= 0) {
+				mergeForeignClusters<<<grid_x2, block_x2>>>(matrix, cluster_list, hchanged_diag,
 															sub_matrix_size, sub_matrix_offset,
-															cluster_num_, changed);
+															cluster_num_, check);
 				checkCudaErrors(cudaGetLastError());
 				checkCudaErrors(cudaDeviceSynchronize());
+
+				checkCudaErrors(cudaMemcpy(&hcheck, check, sizeof(bool), cudaMemcpyDeviceToHost));
 			}
 
 			sub_matrix_size *= 2;
@@ -470,8 +534,7 @@ void GpuEuclideanCluster2::extractClusters()
 		 * rebuild the matrix, the cluster location, and apply those changes to the cluster_name array
 		 */
 
-		if (*changed) {
-
+		if (hcheck) {
 			// Apply changes to the cluster_name array
 			applyClusterChanged<<<grid_x, block_x>>>(cluster_name_, cluster_list, cluster_location, point_num_);
 			checkCudaErrors(cudaGetLastError());
@@ -521,7 +584,8 @@ void GpuEuclideanCluster2::extractClusters()
 			checkCudaErrors(cudaFree(matrix));
 			matrix = new_matrix;
 		}
-	} while (*changed);
+	} while (hcheck);
+
 
 	gettimeofday(&end, NULL);
 
@@ -534,6 +598,6 @@ void GpuEuclideanCluster2::extractClusters()
 	checkCudaErrors(cudaFree(matrix));
 	checkCudaErrors(cudaFree(cluster_list));
 	checkCudaErrors(cudaFree(cluster_location));
-	checkCudaErrors(cudaFreeHost(changed));
-	checkCudaErrors(cudaFreeHost(changed_diag));
+	checkCudaErrors(cudaFree(check));
+	checkCudaErrors(cudaFree(changed_diag));
 }

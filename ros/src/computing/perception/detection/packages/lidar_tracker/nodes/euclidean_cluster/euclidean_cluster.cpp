@@ -400,7 +400,7 @@ std::vector<ClusterPtr> clusterAndColorGpu(const pcl::PointCloud<pcl::PointXYZ>:
 	std::cout << "Set input = " << timeDiff(start, end) << std::endl;
 
 	gettimeofday(&start, NULL);
-	gecl_cluster.extractClusters2();
+	gecl_cluster.extractClusters();
 	std::cout << "End of extraction " << std::endl;
 	std::vector<GpuEuclideanCluster2::GClusterIndex> cluster_indices = gecl_cluster.getOutput();
 	gettimeofday(&end, NULL);

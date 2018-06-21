@@ -149,13 +149,10 @@ __global__ void buildEdgeSet(float *x, float *y, float *z, int point_num, int *e
 			tmp_y = y[pid];
 			tmp_z = z[pid];
 			writing_location = edge_count[pid];
-		}
 
-		int block_id = blockIdx.x * blockDim.x;
 
-		__syncthreads();
+			int block_id = blockIdx.x * blockDim.x;
 
-		if (pid < point_num) {
 			local_x[threadIdx.x] = x[pid];
 			local_y[threadIdx.x] = y[pid];
 			local_z[threadIdx.x] = z[pid];
@@ -174,6 +171,12 @@ __global__ void buildEdgeSet(float *x, float *y, float *z, int point_num, int *e
 
 __global__ void clustering(int2 *edge_set, int size, int *cluster_name, bool *changed)
 {
+	__shared__ bool schanged;
+
+	if (threadIdx.x == 0)
+		schanged = false;
+	__syncthreads();
+
 	for (int i = threadIdx.x + blockIdx.x * blockDim.x; i < size; i += blockDim.x * gridDim.x) {
 		int2 cur_edge = edge_set[i];
 		int x = cur_edge.x;
@@ -194,9 +197,14 @@ __global__ void clustering(int2 *edge_set, int size, int *cluster_name, bool *ch
 
 		if (changed_addr != NULL) {
 			atomicMin(changed_addr, change_name);
-			*changed = true;
+			schanged = true;
 		}
 	}
+
+	__syncthreads();
+
+	if (threadIdx.x == 0 && schanged)
+		*changed = true;
 }
 
 __global__ void clusterCount(int *cluster_name, int *count, int point_num)
@@ -241,19 +249,24 @@ void GpuEuclideanCluster2::extractClusters3()
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	bool *changed;
+	bool hchanged;
 
-	checkCudaErrors(cudaMallocHost(&changed, sizeof(bool)));
+	checkCudaErrors(cudaMalloc(&changed, sizeof(bool)));
 
 	block_x = (edge_num > BLOCK_SIZE_X) ? BLOCK_SIZE_X : edge_num;
 	grid_x = (edge_num - 1) / block_x + 1;
 
 	do {
-		*changed = false;
+		hchanged = false;
+
+		checkCudaErrors(cudaMemcpy(changed, &hchanged, sizeof(bool), cudaMemcpyHostToDevice));
 
 		clustering<<<grid_x, block_x>>>(edge_set, edge_num, cluster_name_, changed);
 		checkCudaErrors(cudaGetLastError());
 		checkCudaErrors(cudaDeviceSynchronize());
-	} while (*changed);
+
+		checkCudaErrors(cudaMemcpy(&hchanged, changed, sizeof(bool), cudaMemcpyDeviceToHost));
+	} while (hchanged);
 
 	int *count;
 
@@ -276,6 +289,6 @@ void GpuEuclideanCluster2::extractClusters3()
 
 	checkCudaErrors(cudaFree(edge_count));
 	checkCudaErrors(cudaFree(edge_set));
-	checkCudaErrors(cudaFreeHost(changed));
+	checkCudaErrors(cudaFree(changed));
 	checkCudaErrors(cudaFree(count));
 }

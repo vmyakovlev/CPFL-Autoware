@@ -110,6 +110,9 @@ std::vector<GpuEuclideanCluster2::GClusterIndex> GpuEuclideanCluster2::getOutput
 {
 	std::vector<GpuEuclideanCluster2::GClusterIndex> output(cluster_num_);
 
+	if (cluster_num_ == 0)
+		return output;
+
 	for (int i = 0; i < cluster_num_; i++) {
 		output[i].index_value = i;
 	}
