@@ -35,7 +35,7 @@ namespace waypoint_follower
 // Constructor
 PurePursuitNode::PurePursuitNode()
   : private_nh_("~")
-  , pp_(30)
+  , pp_(100)
   , LOOP_RATE_(30)
   , is_waypoint_set_(false)
   , is_pose_set_(false)
@@ -48,9 +48,9 @@ PurePursuitNode::PurePursuitNode()
   , const_velocity_(5.0)
   , lookahead_distance_ratio_(2.0)
   , minimum_lookahead_distance_(6.0)
-  , omega_sigma_(4.0)
-  , alpha_sigma_(0.1)
-  , dist_sigma_(6.0)
+  , omega_sigma_(5.0)
+  , alpha_sigma_(5.0)
+  , dist_sigma_(20.0)
   , dt_(0.1)
 {
   initForROS();
@@ -72,9 +72,9 @@ void PurePursuitNode::initForROS()
   // ROS_INFO_STREAM("is_linear_interpolation : " << is_linear_interpolation_);
   private_nh_.param("publishes_for_steering_robot", publishes_for_steering_robot_, bool(false));
   private_nh_.param("vehicle_info/wheel_base", wheel_base_, double(2.7));
-  private_nh_.param("eval_omega", omega_sigma_, double(4.0));
-  private_nh_.param("eval_alpha", alpha_sigma_, double(0.1));
-  private_nh_.param("eval_dist", dist_sigma_, double(6.0));
+  private_nh_.param("eval_omega", omega_sigma_, double(5.0));
+  private_nh_.param("eval_alpha", alpha_sigma_, double(5.0));
+  private_nh_.param("eval_dist", dist_sigma_, double(20.0));
 
   // setup subscriber
   sub1_ = nh_.subscribe("final_waypoints", 10, &PurePursuitNode::callbackFromWayPoints, this);

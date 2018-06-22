@@ -3,9 +3,9 @@
 
 	<arg name="is_linear_interpolation" default="True"/>
 	<arg name="publishes_for_steering_robot" default="False"/>
-	<arg name="eval_omega" default="4.0"/>
-	<arg name="eval_alpha" default="0.1"/>
-	<arg name="eval_dist" default="10.0"/>
+	<arg name="eval_omega" default="5.0"/>
+	<arg name="eval_alpha" default="5.0"/>
+	<arg name="eval_dist" default="20.0"/>
 	<!-- rosrun waypoint_follower pure_pursuit -->
 	<node pkg="waypoint_follower" type="pure_pursuit" name="pure_pursuit" output="log">
 		<param name="is_linear_interpolation" value="$(arg is_linear_interpolation)"/>
