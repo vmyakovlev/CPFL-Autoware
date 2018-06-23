@@ -384,7 +384,7 @@ void MotionPrediction::VisualizePrediction()
 	//std::cout << "Original Particles: " << number_of_particles <<  ", Total Particles Num: " << m_PredictedParticlesActual.markers.size() << std::endl;
 	pub_ParticlesRviz.publish(m_PredictedParticlesActual);
 
-	std::cout << "Start Tracking of Trajectories : " <<  m_all_pred_paths.size() << endl;
+	//std::cout << "Start Tracking of Trajectories : " <<  m_all_pred_paths.size() << endl;
 	PlannerHNS::RosHelpers::ConvertPredictedTrqajectoryMarkers(m_all_pred_paths, m_PredictedTrajectoriesActual, m_PredictedTrajectoriesDummy);
 	pub_PredictedTrajectoriesRviz.publish(m_PredictedTrajectoriesActual);
 

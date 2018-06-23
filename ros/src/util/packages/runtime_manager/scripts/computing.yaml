@@ -2648,9 +2648,9 @@ params :
     - name : pathDensity
       desc : distance between each two waypoints
       label: Path Density
-      min  : 0.1
-      max  : 3.0
-      v    : 0.75
+      min  : 0.01
+      max  : 5.0
+      v    : 1.0
       cmd_param:
         dash     : ''
         delim    : ':='
@@ -3019,7 +3019,7 @@ params :
       desc : Horizon distance
       label: Horizon
       min : 2.0
-      max : 200.0
+      max : 250.0
       v   : 120.0
       cmd_param:
         dash     : ''
@@ -3027,17 +3027,17 @@ params :
     - name : maxLocalPlanDistance
       desc : max length of the local plan
       label: Plan Ditance
-      min  : 10.0
+      min  : 1.0
       max  : 150.0
-      v    : 60.0
+      v    : 80.0
       cmd_param:
         dash     : ''
         delim    : ':='
     - name : pathDensity
       desc : distance between each two waypoints
       label: Path Density
-      min  : 0.1
-      max  : 3.0
+      min  : 0.01
+      max  : 5.0
       v    : 0.5
       cmd_param:
         dash     : ''
@@ -3045,8 +3045,8 @@ params :
     - name : rollOutDensity
       desc : Roll outs density
       label: Horizontal Density
-      min  : 0.1
-      max  : 2.0
+      min  : 0.01
+      max  : 5.0
       v    : 0.5
       cmd_param:
         dash     : ''
@@ -3072,8 +3072,8 @@ params :
     - name : maxAcceleration
       desc : Maximum acceleration allowed 
       label: Acceleration
-      min  : 0.1
-      max  : 15.0
+      min  : 0.01
+      max  : 25.0
       v    : 3.0
       cmd_param:
         dash     : ''
@@ -3081,8 +3081,8 @@ params :
     - name : maxDeceleration
       desc : Maximum deceleration
       label: Deceleration
-      min  : -15.0
-      max  : -0.1
+      min  : -25.0
+      max  : -0.01
       v    : -3.0
       cmd_param:
         dash     : ''
@@ -3106,8 +3106,8 @@ params :
     - name : minFollowingDistance
       desc : Distance to start follow Next Car
       label: Follow Distance
-      min  : 10.0
-      max  : 50.0
+      min  : 0.5
+      max  : 100.0
       v    : 30.0
       cmd_param:
         dash     : ''
@@ -3115,8 +3115,8 @@ params :
     - name : minDistanceToAvoid
       desc : Avoidance and Following threshold Distance
       label: Avoiding Distance
-      min  : 6.0
-      max  : 30.0
+      min  : 0.1
+      max  : 80.0
       v    : 15.0
       cmd_param:
         dash     : ''
@@ -3124,8 +3124,8 @@ params :
     - name : maxDistanceToAvoid
       desc : Distance to give up avoidance
       label: Avoidance Limit
-      min  : 1.0
-      max  : 6.0
+      min  : 0.05
+      max  : 60.0
       v    : 4.0
       cmd_param:
         dash     : ''
@@ -3134,7 +3134,7 @@ params :
       desc : Enable stop sign check
       label: Enable Stop Sign Stop
       kind : checkbox
-      v    : TRUE
+      v    : False
       cmd_param:
         dash     : ''
         delim    : ':='
@@ -3142,7 +3142,7 @@ params :
       desc : Enable traffic light check
       label: Enable Traffic Light
       kind : checkbox
-      v    : TRUE
+      v    : False
       cmd_param:
         dash     : ''
         delim    : ':='
@@ -3158,7 +3158,7 @@ params :
       desc : Horizontal Safety Distance
       label: Lateral Safety
       min : 0.0
-      max : 3.0
+      max : 10.0
       v   : 1.0
       cmd_param:
         dash     : ''
@@ -3167,7 +3167,7 @@ params :
       desc : Vertical Safety Distance
       label: Longitudinal Safety
       min : 0.0
-      max : 5.0
+      max : 25.0
       v   : 1.0
       cmd_param:
         dash     : ''
@@ -3269,7 +3269,7 @@ params :
     - name : samplingTipMargin
       desc : Car Tip Initial Margin
       label: Tip Margin
-      min  : 2.5
+      min  : 0.1
       max  : 10.0
       v    : 4.0
       cmd_param:
@@ -3278,8 +3278,8 @@ params :
     - name : samplingOutMargin
       desc : Roll In Margin
       label: Roll In Margin
-      min  : 5.0
-      max  : 30.0
+      min  : 0.2
+      max  : 40.0
       v    : 12.0
       cmd_param:
         dash     : ''
@@ -3454,8 +3454,8 @@ params :
     - name : max_distance_to_lane
       desc : Distance to closest lane
       label: Distance to closest lane
-      min  : 0
-      max  : 5.0
+      min  : 0.0
+      max  : 10.0
       v    : 2.0
       cmd_param:
         dash     : ''
@@ -3464,7 +3464,7 @@ params :
       desc : Max trajectory prediction distance
       label: Prediction distance
       min  : 1.0
-      max  : 50.0
+      max  : 75.0
       v    : 25.0
       cmd_param:
         dash     : ''
