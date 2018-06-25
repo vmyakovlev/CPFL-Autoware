@@ -1,10 +1,12 @@
-#include "ndt_gpu/Registration.h"
-#include "ndt_gpu/debug.h"
 #include <iostream>
+#include "ndt_gpu/common.h"
+#include "ndt_gpu/debug.h"
+#include "ndt_gpu/Registration.h"
 
 namespace gpu {
 
-GRegistration::GRegistration()
+template <typename eleType>
+GRegistration<eleType>::GRegistration()
 {
 	max_iterations_ = 0;
 	x_ = y_ = z_ = NULL;
@@ -24,7 +26,8 @@ GRegistration::GRegistration()
 
 }
 
-GRegistration::GRegistration(const GRegistration &other)
+template <typename eleType>
+GRegistration<eleType>::GRegistration(const GRegistration &other)
 {
 	transformation_epsilon_ = other.transformation_epsilon_;
 	max_iterations_ = other.max_iterations_;
@@ -57,7 +60,8 @@ GRegistration::GRegistration(const GRegistration &other)
 	is_copied_ = true;
 }
 
-GRegistration::~GRegistration()
+template <typename eleType>
+GRegistration<eleType>::~GRegistration()
 {
 	if (!is_copied_) {
 		if (x_ != NULL) {
@@ -107,37 +111,44 @@ GRegistration::~GRegistration()
 	}
 }
 
-void GRegistration::setTransformationEpsilon(double trans_eps)
+template <typename eleType>
+void GRegistration<eleType>::setTransformationEpsilon(eleType trans_eps)
 {
 	transformation_epsilon_ = trans_eps;
 }
 
-double GRegistration::getTransformationEpsilon() const
+template <typename eleType>
+eleType GRegistration<eleType>::getTransformationEpsilon() const
 {
 	return transformation_epsilon_;
 }
 
-void GRegistration::setMaximumIterations(int max_itr)
+template <typename eleType>
+void GRegistration<eleType>::setMaximumIterations(int max_itr)
 {
 	max_iterations_ = max_itr;
 }
 
-int GRegistration::getMaximumIterations() const
+template <typename eleType>
+int GRegistration<eleType>::getMaximumIterations() const
 {
 	return max_iterations_;
 }
 
-Eigen::Matrix<float, 4, 4> GRegistration::getFinalTransformation() const
+template <typename eleType>
+Eigen::Matrix<float, 4, 4> GRegistration<eleType>::getFinalTransformation() const
 {
 	return final_transformation_;
 }
 
-int GRegistration::getFinalNumIteration() const
+template <typename eleType>
+int GRegistration<eleType>::getFinalNumIteration() const
 {
 	return nr_iterations_;
 }
 
-bool GRegistration::hasConverged() const
+template <typename eleType>
+bool GRegistration<eleType>::hasConverged() const
 {
 	return converged_;
 }
@@ -157,7 +168,8 @@ __global__ void convertInput(T *input, float *out_x, float *out_y, float *out_z,
 	}
 }
 
-void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
+template <typename eleType>
+void GRegistration<eleType>::setInputSource(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 {
 	//Convert point cloud to float x, y, z
 	if (input->size() > 0) {
@@ -236,7 +248,8 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 	}
 }
 
-void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
+template <typename eleType>
+void GRegistration<eleType>::setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 {
 	//Convert point cloud to float x, y, z
 	if (input->size() > 0) {
@@ -314,7 +327,8 @@ void GRegistration::setInputSource(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 
 
 //Set input MAP data
-void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
+template <typename eleType>
+void GRegistration<eleType>::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 {
 	if (input->size() > 0) {
 		target_points_number_ = input->size();
@@ -364,7 +378,8 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZI>::Ptr input)
 	}
 }
 
-void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
+template <typename eleType>
+void GRegistration<eleType>::setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 {
 	if (input->size() > 0) {
 		target_points_number_ = input->size();
@@ -414,7 +429,8 @@ void GRegistration::setInputTarget(pcl::PointCloud<pcl::PointXYZ>::Ptr input)
 	}
 }
 
-void GRegistration::align(const Eigen::Matrix<float, 4, 4> &guess)
+template <typename eleType>
+void GRegistration<eleType>::align(const Eigen::Matrix<float, 4, 4> &guess)
 {
 	converged_ = false;
 
@@ -423,8 +439,12 @@ void GRegistration::align(const Eigen::Matrix<float, 4, 4> &guess)
 	computeTransformation(guess);
 }
 
-void GRegistration::computeTransformation(const Eigen::Matrix<float, 4, 4> &guess) {
+template <typename eleType>
+void GRegistration<eleType>::computeTransformation(const Eigen::Matrix<float, 4, 4> &guess) {
 	printf("Unsupported by Registration\n");
 }
 
+template class GRegistration<float>;
+template class GRegistration<double>;
 }
+

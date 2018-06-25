@@ -55,12 +55,13 @@ if (CUDA_FOUND)
     )
 
     set(srcs
+    		src/Matrix.cu
             src/MatrixDevice.cu
             src/MatrixHost.cu
-            src/NormalDistributionsTransform.cu
-            src/Registration.cu
-            src/VoxelGrid.cu
             src/SymmetricEigenSolver.cu
+            src/VoxelGrid.cu
+            src/Registration.cu
+            src/NormalDistributionsTransform.cu
             )
 
     set(incs
@@ -69,10 +70,10 @@ if (CUDA_FOUND)
             include/ndt_gpu/Matrix.h
             include/ndt_gpu/MatrixDevice.h
             include/ndt_gpu/MatrixHost.h
-            include/ndt_gpu/NormalDistributionsTransform.h
-            include/ndt_gpu/Registration.h
             include/ndt_gpu/SymmetricEigenSolver.h
             include/ndt_gpu/VoxelGrid.h
+            include/ndt_gpu/Registration.h
+            include/ndt_gpu/NormalDistributionsTransform.h
             )
 
     cuda_add_library(ndt_gpu ${srcs} ${incs})

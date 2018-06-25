@@ -11,11 +11,12 @@
 #include <vector>
 
 namespace gpu {
+template <typename eleType = float>
 class GVoxelGrid {
 public:
 	GVoxelGrid();
 
-	GVoxelGrid(const GVoxelGrid &other);
+	GVoxelGrid(const GVoxelGrid<eleType> &other);
 
 	/* Set input points */
 	void setInput(float *x, float *y, float *z, int points_num);
@@ -64,13 +65,13 @@ public:
 	void setLeafSize(float voxel_x, float voxel_y, float voxel_z);
 
 	/* Get the centroid list. */
-	double *getCentroidList() const;
+	eleType *getCentroidList() const;
 
 	/* Get the covariance list. */
-	double *getCovarianceList() const;
+	eleType *getCovarianceList() const;
 
 	/* Get the pointer to the inverse covariances list. */
-	double *getInverseCovarianceList() const;
+	eleType *getInverseCovarianceList() const;
 
 	int *getPointsPerVoxelList() const;
 
@@ -82,7 +83,7 @@ public:
 	 * The ith element of min_distance array stores the distance between
 	 * the corresponding input point and its nearest neighbor. It is 0 if
 	 * the distance is larger than max_range. */
-	void nearestNeighborSearch(float *trans_x, float *trans_y, float *trans_z, int point_num, int *valid_distance, double *min_distance, float max_range);
+	void nearestNeighborSearch(float *trans_x, float *trans_y, float *trans_z, int point_num, int *valid_distance, eleType *min_distance, float max_range);
 
 	~GVoxelGrid();
 private:
@@ -128,9 +129,9 @@ private:
 	//Coordinate of input points
 	float *x_, *y_, *z_;
 	int points_num_;
-	double *centroid_; 				// List of 3x1 double vector
-	double *covariance_;			// List of 3x3 double matrix
-	double *inverse_covariance_;	// List of 3x3 double matrix
+	eleType *centroid_; 				// List of 3x1 eleType vector
+	eleType *covariance_;			// List of 3x3 eleType matrix
+	eleType *inverse_covariance_;	// List of 3x3 eleType matrix
 	int *points_per_voxel_;
 
 	int voxel_num_;						// Number of voxels
@@ -148,7 +149,7 @@ private:
 
 	/* Centroids of octree nodes. Each element stores a list
 	 * of 3x1 matrices containing centroids of octree nodes. */
-	std::vector<double*> octree_centroids_;
+	std::vector<eleType*> octree_centroids_;
 
 	/* The number of points per octree node per level. */
 	std::vector<int*> octree_points_per_node_;
@@ -158,6 +159,8 @@ private:
 
 	bool is_copied_;
 };
+
 }
+
 
 #endif

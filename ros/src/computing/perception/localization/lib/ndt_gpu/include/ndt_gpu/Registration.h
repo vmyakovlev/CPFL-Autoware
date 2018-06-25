@@ -13,16 +13,17 @@
 #include <pcl/point_cloud.h>
 
 namespace gpu {
+template <typename eleType = float>
 class GRegistration {
 public:
 	GRegistration();
-	GRegistration(const GRegistration &other);
+	GRegistration(const GRegistration<eleType> &other);
 
 	void align(const Eigen::Matrix<float, 4, 4> &guess);
 
-	void setTransformationEpsilon(double trans_eps);
+	void setTransformationEpsilon(eleType trans_eps);
 
-	double getTransformationEpsilon() const;
+	eleType getTransformationEpsilon() const;
 
 	void setMaximumIterations(int max_itr);
 
@@ -49,7 +50,7 @@ protected:
 
 	virtual void computeTransformation(const Eigen::Matrix<float, 4, 4> &guess);
 
-	double transformation_epsilon_;
+	eleType transformation_epsilon_;
 	int max_iterations_;
 
 	//Original scanned point clouds
@@ -72,6 +73,8 @@ protected:
 
 	bool is_copied_;
 };
+
 }
+
 
 #endif

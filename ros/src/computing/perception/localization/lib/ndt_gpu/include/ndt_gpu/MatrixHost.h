@@ -5,28 +5,30 @@
 #include "MatrixDevice.h"
 
 namespace gpu {
-class MatrixHost : public Matrix {
+template <typename eleType = float>
+class MatrixHost : public Matrix<eleType> {
 public:
 	MatrixHost();
 	MatrixHost(int rows, int cols);
-	MatrixHost(int rows, int cols, int offset, double *buffer);
-	MatrixHost(const MatrixHost& other);
+	MatrixHost(int rows, int cols, int offset, eleType *buffer);
+	MatrixHost(const MatrixHost<eleType>& other);
 
-	bool moveToGpu(MatrixDevice output);
-	bool moveToHost(MatrixDevice input);
+	bool moveToGpu(MatrixDevice<eleType> output);
+	bool moveToHost(MatrixDevice<eleType> input);
 
-	MatrixHost &operator=(const MatrixHost &other);
+	MatrixHost<eleType> &operator=(const MatrixHost<eleType> &other);
 
 	void debug();
 
 	~MatrixHost();
+protected:
+	using Matrix<eleType>::buffer_;
+	using Matrix<eleType>::rows_;
+	using Matrix<eleType>::cols_;
+	using Matrix<eleType>::offset_;
+
 private:
 	bool fr_;
-};
-
-class SquareMatrixHost: public MatrixHost {
-public:
-	SquareMatrixHost(int size);
 };
 
 }

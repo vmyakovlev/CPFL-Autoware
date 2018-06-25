@@ -126,8 +126,8 @@ static int init_pos_set = 0;
 static pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
 static cpu::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> anh_ndt;
 #ifdef CUDA_FOUND
-static std::shared_ptr<gpu::GNormalDistributionsTransform> anh_gpu_ndt_ptr =
-    std::make_shared<gpu::GNormalDistributionsTransform>();
+static std::shared_ptr<gpu::GNormalDistributionsTransform<> > anh_gpu_ndt_ptr =
+    std::make_shared<gpu::GNormalDistributionsTransform<> >();
 #endif
 #ifdef USE_PCL_OPENMP
 static pcl_omp::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> omp_ndt;
@@ -474,8 +474,8 @@ static void map_callback(const sensor_msgs::PointCloud2::ConstPtr& input)
 #ifdef CUDA_FOUND
     else if (_method_type == MethodType::PCL_ANH_GPU)
     {
-      std::shared_ptr<gpu::GNormalDistributionsTransform> new_anh_gpu_ndt_ptr =
-          std::make_shared<gpu::GNormalDistributionsTransform>();
+      std::shared_ptr<gpu::GNormalDistributionsTransform<> > new_anh_gpu_ndt_ptr =
+          std::make_shared<gpu::GNormalDistributionsTransform<> >();
       new_anh_gpu_ndt_ptr->setResolution(ndt_res);
       new_anh_gpu_ndt_ptr->setInputTarget(map_ptr);
       new_anh_gpu_ndt_ptr->setMaximumIterations(max_iter);

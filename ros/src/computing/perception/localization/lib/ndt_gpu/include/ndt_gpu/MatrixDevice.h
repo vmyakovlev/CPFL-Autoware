@@ -4,38 +4,46 @@
 #include "Matrix.h"
 
 namespace gpu {
-class MatrixDevice : public Matrix {
+template <typename eleType = float>
+class MatrixDevice : public Matrix<eleType> {
 public:
 	CUDAH MatrixDevice();
 
 	MatrixDevice(int rows, int cols);
 
-	CUDAH MatrixDevice(int rows, int cols, int offset, double *buffer);
+	CUDAH MatrixDevice(int rows, int cols, int offset, eleType *buffer);
 
 	CUDAH bool isEmpty();
 
-	CUDAH MatrixDevice col(int index);
+	CUDAH MatrixDevice<eleType> col(int index);
 
-	CUDAH MatrixDevice row(int index);
+	CUDAH MatrixDevice<eleType> row(int index);
 
-	CUDAH void setBuffer(double *buffer);
+	CUDAH void setBuffer(eleType *buffer);
 
 	void memAlloc();
 
 	void memFree();
+protected:
+	using Matrix<eleType>::buffer_;
+	using Matrix<eleType>::rows_;
+	using Matrix<eleType>::cols_;
+	using Matrix<eleType>::offset_;
 
 private:
 	bool fr_;
 };
 
-CUDAH MatrixDevice::MatrixDevice()
+template <typename eleType>
+CUDAH MatrixDevice<eleType>::MatrixDevice()
 {
 	rows_ = cols_ = offset_ = 0;
 	buffer_ = NULL;
 	fr_ = true;
 }
 
-CUDAH MatrixDevice::MatrixDevice(int rows, int cols, int offset, double *buffer)
+template <typename eleType>
+CUDAH MatrixDevice<eleType>::MatrixDevice(int rows, int cols, int offset, eleType *buffer)
 {
 	rows_ = rows;
 	cols_ = cols;
@@ -44,33 +52,31 @@ CUDAH MatrixDevice::MatrixDevice(int rows, int cols, int offset, double *buffer)
 	fr_ = false;
 }
 
-CUDAH bool MatrixDevice::isEmpty()
+template <typename eleType>
+CUDAH bool MatrixDevice<eleType>::isEmpty()
 {
 	return (rows_ == 0 || cols_ == 0 || buffer_ == NULL);
 }
 
-CUDAH MatrixDevice MatrixDevice::col(int index)
+template <typename eleType>
+CUDAH MatrixDevice<eleType> MatrixDevice<eleType>::col(int index)
 {
-	return MatrixDevice(rows_, 1, offset_ * cols_, buffer_ + index * offset_);
+	return MatrixDevice<eleType>(rows_, 1, offset_ * cols_, buffer_ + index * offset_);
 }
 
-CUDAH MatrixDevice MatrixDevice::row(int index)
+template <typename eleType>
+CUDAH MatrixDevice<eleType> MatrixDevice<eleType>::row(int index)
 {
-	return MatrixDevice(1, cols_, offset_, buffer_ + index * cols_ * offset_);
+	return MatrixDevice<eleType>(1, cols_, offset_, buffer_ + index * cols_ * offset_);
 }
 
-CUDAH void MatrixDevice::setBuffer(double *buffer)
+template <typename eleType>
+CUDAH void MatrixDevice<eleType>::setBuffer(eleType *buffer)
 {
 	buffer_ = buffer;
 }
 
-
-
-class SquareMatrixDevice : public MatrixDevice {
-public:
-	SquareMatrixDevice(int size);
-};
-
 }
 
 #endif
+

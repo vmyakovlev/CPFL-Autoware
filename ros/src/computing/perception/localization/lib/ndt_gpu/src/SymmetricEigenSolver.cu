@@ -1,15 +1,17 @@
-#include "ndt_gpu/SymmetricEigenSolver.h"
+#include "ndt_gpu/common.h"
 #include "ndt_gpu/debug.h"
+#include "ndt_gpu/SymmetricEigenSolver.h"
 
 namespace gpu {
 
-SymmetricEigensolver3x3::SymmetricEigensolver3x3(int offset)
+template <typename eleType>
+SymmetricEigensolver3x3<eleType>::SymmetricEigensolver3x3(int offset)
 {
 	offset_ = offset;
 
-	checkCudaErrors(cudaMalloc(&buffer_, sizeof(double) * 18 * offset_));
-	checkCudaErrors(cudaMalloc(&maxAbsElement_, sizeof(double) * offset_));
-	checkCudaErrors(cudaMalloc(&norm_, sizeof(double) * offset_));
+	checkCudaErrors(cudaMalloc(&buffer_, sizeof(eleType) * 18 * offset_));
+	checkCudaErrors(cudaMalloc(&maxAbsElement_, sizeof(eleType) * offset_));
+	checkCudaErrors(cudaMalloc(&norm_, sizeof(eleType) * offset_));
 	checkCudaErrors(cudaMalloc(&i02_, sizeof(int) * 2 * offset_));
 
 	eigenvectors_ = NULL;
@@ -19,27 +21,32 @@ SymmetricEigensolver3x3::SymmetricEigensolver3x3(int offset)
 	is_copied_ = false;
 }
 
-void SymmetricEigensolver3x3::setInputMatrices(double *input_matrices)
+template <typename eleType>
+void SymmetricEigensolver3x3<eleType>::setInputMatrices(eleType *input_matrices)
 {
 	input_matrices_ = input_matrices;
 }
 
-void SymmetricEigensolver3x3::setEigenvectors(double *eigenvectors)
+template <typename eleType>
+void SymmetricEigensolver3x3<eleType>::setEigenvectors(eleType *eigenvectors)
 {
 	eigenvectors_ = eigenvectors;
 }
 
-void SymmetricEigensolver3x3::setEigenvalues(double *eigenvalues)
+template <typename eleType>
+void SymmetricEigensolver3x3<eleType>::setEigenvalues(eleType *eigenvalues)
 {
 	eigenvalues_ = eigenvalues;
 }
 
-double* SymmetricEigensolver3x3::getBuffer() const
+template <typename eleType>
+eleType* SymmetricEigensolver3x3<eleType>::getBuffer() const
 {
 	return buffer_;
 }
 
-void SymmetricEigensolver3x3::memFree()
+template <typename eleType>
+void SymmetricEigensolver3x3<eleType>::memFree()
 {
 	if (!is_copied_) {
 		if (buffer_ != NULL) {
@@ -63,4 +70,7 @@ void SymmetricEigensolver3x3::memFree()
 		}
 	}
 }
+
+template class SymmetricEigensolver3x3<float>;
+template class SymmetricEigensolver3x3<double>;
 }

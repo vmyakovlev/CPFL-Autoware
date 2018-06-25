@@ -119,7 +119,7 @@ static pcl::PointCloud<pcl::PointXYZI> map;
 static pcl::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> ndt;
 static cpu::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> anh_ndt;
 #ifdef CUDA_FOUND
-static gpu::GNormalDistributionsTransform anh_gpu_ndt;
+static gpu::GNormalDistributionsTransform<> anh_gpu_ndt;
 #endif
 #ifdef USE_PCL_OPENMP
 static pcl_omp::NormalDistributionsTransform<pcl::PointXYZI, pcl::PointXYZI> omp_ndt;
