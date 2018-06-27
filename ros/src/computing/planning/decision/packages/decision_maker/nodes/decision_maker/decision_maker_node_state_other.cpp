@@ -65,7 +65,11 @@ void DecisionMakerNode::updateDriveReadyState(cstring_t& state_name, int status)
 void DecisionMakerNode::updateMissionCompleteState(cstring_t& state_name, int status)
 {
   sleep(1);
-  //  tryNextState("goto_wait_order");
-  tryNextState("re_enter_mission");
+  if (isEventFlagTrue("received_based_lane_waypoint"))
+  {
+    setEventFlag("received_based_lane_waypoint", false);
+  }
+  tryNextState("goto_wait_order");
+  // tryNextState("re_enter_mission");
 }
 }
