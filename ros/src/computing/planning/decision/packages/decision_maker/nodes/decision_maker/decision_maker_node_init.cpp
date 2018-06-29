@@ -166,6 +166,8 @@ void DecisionMakerNode::createSubscriber(void)
       nh_.subscribe("/config/decision_maker", 3, &DecisionMakerNode::callbackFromConfig, this);
 
   Subs["state_cmd"] = nh_.subscribe("/state_cmd", 1, &DecisionMakerNode::callbackFromStateCmd, this);
+  Subs["current_velocity"] =
+      nh_.subscribe("/current_velocity", 1, &DecisionMakerNode::callbackFromCurrentVelocity, this);
 }
 void DecisionMakerNode::createPublisher(void)
 {

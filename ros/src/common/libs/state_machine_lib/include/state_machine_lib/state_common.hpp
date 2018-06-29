@@ -1,7 +1,7 @@
 #ifndef __COMMON_HPP__
 #define __COMMON_HPP__
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DEBUG_PRINT(...)                                                                                               \

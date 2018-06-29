@@ -26,7 +26,36 @@ void DecisionMakerNode::exitWaitMissionOrderState(cstring_t& state_name, int sta
 
 void DecisionMakerNode::entryMissionCheckState(cstring_t& state_name, int status)
 {
-  publishOperatorHelpMessage("Received mission, DM is checking this mission, please wait.");
+  publishOperatorHelpMessage("Received mission, checking now...");
+
+  for (auto& lane : current_status_.based_lane_array.lanes)
+  {
+    for (auto& wp : lane.waypoints)
+    {
+      wp.wpstate.aid = 0;
+      wp.wpstate.steering_state = autoware_msgs::WaypointState::NULLSTATE;
+      wp.wpstate.accel_state = autoware_msgs::WaypointState::NULLSTATE;
+      wp.wpstate.stop_state = autoware_msgs::WaypointState::NULLSTATE;
+      wp.wpstate.lanechange_state = autoware_msgs::WaypointState::NULLSTATE;
+      wp.wpstate.event_state = 0;
+    }
+  }
+
+  // waypoint-state set and insert interpolation waypoint for stopline
+  setWaypointState(current_status_.based_lane_array);
+
+  // indexing
+  int gid = 0;
+  for (auto& lane : current_status_.based_lane_array.lanes)
+  {
+    int lid = 0;
+    for (auto& wp : lane.waypoints)
+    {
+      wp.gid = gid++;
+      wp.lid = lid++;
+    }
+  }
+
   current_status_.using_lane_array = current_status_.based_lane_array;
   Pubs["lane_waypoints_array"].publish(current_status_.using_lane_array);
   if (!isSubscriberRegistered("final_waypoints"))

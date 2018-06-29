@@ -102,6 +102,7 @@ struct AutowareStatus
   double velocity;  // kmph
 
   int found_stopsign_idx;
+  int prev_stopped_wpidx;
 
   AutowareStatus(void) : closest_waypoint(-1), velocity(0), found_stopsign_idx(-1)
   {
@@ -332,6 +333,8 @@ public:
     ctx = new state_machine::StateContext(file_name);
     init();
     setupStateCallback();
+
+    current_status_.prev_stopped_wpidx = -1;
   }
 
   void init(void);

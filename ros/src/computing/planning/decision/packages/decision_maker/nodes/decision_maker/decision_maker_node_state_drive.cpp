@@ -56,9 +56,12 @@ std::pair<uint8_t, int> DecisionMakerNode::getStopSignStateFromWaypoint(void)
 {
   static const size_t ignore_idx = 0;
   static const double mu = 0.7;  // dry ground/ asphalt/ normal tire
-  static const double g = 9.8;
-  static const double reaction_time = 0.3;  // system delay(sec)
+  static const double g = 9.80665;
+  static const double margin = 5;
+  static const double reaction_time = 0.3 + margin;  // system delay(sec)
+  static const size_t reset_count = 20;              //
   const double velocity = amathutils::kmph2mps(current_status_.velocity);
+
   const double free_running_distance = reaction_time * velocity;
   const double braking_distance = velocity * velocity / (2 * g * mu);
   const double distance_to_target = (free_running_distance + braking_distance) * 2 /* safety margin*/;
@@ -69,9 +72,17 @@ std::pair<uint8_t, int> DecisionMakerNode::getStopSignStateFromWaypoint(void)
   geometry_msgs::Pose prev_pose = current_status_.pose;
   uint8_t state = 0;
 
-  if (ignore_idx > current_status_.finalwaypoints.waypoints.size())
+  if (ignore_idx > current_status_.finalwaypoints.waypoints.size() ||
+      3 > current_status_.finalwaypoints.waypoints.size())
   {
     return ret;
+  }
+
+  // reset previous stop
+  if (current_status_.finalwaypoints.waypoints.at(1).gid > current_status_.prev_stopped_wpidx ||
+      current_status_.prev_stopped_wpidx - current_status_.finalwaypoints.waypoints.at(1).gid > reset_count)
+  {
+    current_status_.prev_stopped_wpidx = -1;
   }
 
   for (auto idx = 0; idx < current_status_.finalwaypoints.waypoints.size() - 1; idx++)
@@ -79,20 +90,27 @@ std::pair<uint8_t, int> DecisionMakerNode::getStopSignStateFromWaypoint(void)
     distance += amathutils::find_distance(prev_pose, current_status_.finalwaypoints.waypoints.at(idx).pose.pose);
     state = current_status_.finalwaypoints.waypoints.at(idx).wpstate.stop_state;
 
-    if (state && distance >= distance_to_target)
+    if (state)
     {
-      ret.first = state;
-      ret.second = idx;
+      if (current_status_.prev_stopped_wpidx != current_status_.finalwaypoints.waypoints.at(idx).gid)
+      {
+        ret.first = state;
+        ret.second = current_status_.finalwaypoints.waypoints.at(idx).gid;
+        break;
+      }
+    }
+
+    if (distance > distance_to_target)
+    {
       break;
     }
+
     prev_pose = current_status_.finalwaypoints.waypoints.at(idx).pose.pose;
   }
   return ret;
 }
 void DecisionMakerNode::updateLaneAreaState(cstring_t& state_name, int status)
 {
-  fprintf(stderr, "DEBUG_INFO: %s: ", __func__);
-
   if (current_status_.finalwaypoints.waypoints.empty())
   {
     ROS_WARN("\"/final_waypoints.\" is not contain waypoints");
@@ -141,10 +159,10 @@ void DecisionMakerNode::updateRightTurnState(cstring_t& state_name, int status)
 
 void DecisionMakerNode::updateGoState(cstring_t& state_name, int status)
 {
-  std::pair<uint8_t, int> got_stopsign = getStopSignStateFromWaypoint();
-  if (got_stopsign.first != 0)
+  std::pair<uint8_t, int> get_stopsign = getStopSignStateFromWaypoint();
+  if (get_stopsign.first != 0)
   {
-    current_status_.found_stopsign_idx = got_stopsign.second;
+    current_status_.found_stopsign_idx = get_stopsign.second;
     tryNextState("found_stopline");
   }
 }
@@ -157,8 +175,14 @@ void DecisionMakerNode::updateWaitState(cstring_t& state_name, int status)
 
 void DecisionMakerNode::updateStoplineState(cstring_t& state_name, int status)
 {
+  std::pair<uint8_t, int> get_stopsign = getStopSignStateFromWaypoint();
+  if (get_stopsign.first != 0)
+  {
+    current_status_.found_stopsign_idx = get_stopsign.second;
+  }
+
   publishStoplineWaypointIdx(current_status_.found_stopsign_idx);
-  /* clear found_risk*/
+  /* wait for clearing risk*/
 
   static bool timerflag = false;
   static ros::Timer stopping_timer;
@@ -168,6 +192,7 @@ void DecisionMakerNode::updateStoplineState(cstring_t& state_name, int status)
     stopping_timer = nh_.createTimer(ros::Duration(0.5),
                                      [&](const ros::TimerEvent&) {
                                        timerflag = false;
+                                       current_status_.prev_stopped_wpidx = current_status_.found_stopsign_idx;
                                        tryNextState("clear");
                                        /*if found risk,
                                         * tryNextState("found_risk");*/

@@ -65,15 +65,13 @@ void DecisionMakerNode::updateMapInitState(cstring_t &state_name, int status)
 {
   bool vmap_loaded = false;
 
-  g_vmap.subscribe(nh_,
-                   Category::POINT | Category::LINE | Category::VECTOR | Category::AREA |
-                       Category::POLE |  // basic class
-                       Category::DTLANE | Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD,
+  g_vmap.subscribe(nh_, Category::POINT | Category::LINE | Category::VECTOR | Category::AREA | Category::DTLANE |
+                            Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD,
                    ros::Duration(5.0));
 
   vmap_loaded =
-      g_vmap.hasSubscribed(Category::POINT | Category::LINE | Category::VECTOR | Category::AREA | Category::POLE |
-                           Category::DTLANE | Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD);
+      g_vmap.hasSubscribed(Category::POINT | Category::LINE | Category::VECTOR | Category::AREA | Category::DTLANE |
+                           Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD);
   if (!vmap_loaded)
   {
     ROS_WARN("Necessary vectormap have not been loaded");
