@@ -244,6 +244,7 @@ void MotionPrediction::callbackGetTrackedObjects(const autoware_msgs::DetectedOb
 		{
 			curr_curbs_obstacles.clear();
 			GenerateCurbsObstacles(curr_curbs_obstacles);
+			std::cout << "Curbs No: " << curr_curbs_obstacles.size() << endl;
 			for(unsigned int i = 0 ; i <curr_curbs_obstacles.size(); i++)
 			{
 				PlannerHNS::RosHelpers::ConvertFromOpenPlannerDetectedObjectToAutowareDetectedObject(curr_curbs_obstacles.at(i), false, pred_obj);
@@ -304,8 +305,8 @@ void MotionPrediction::VisualizePrediction()
 //	PlannerHNS::RosHelpers::ConvertPredictedTrqajectoryMarkers(m_all_pred_paths, m_PredictedTrajectoriesActual, m_PredictedTrajectoriesDummy);
 //	pub_PredictedTrajectoriesRviz.publish(m_PredictedTrajectoriesActual);
 //
-//	PlannerHNS::RosHelpers::ConvertCurbsMarkers(curr_curbs_obstacles, m_CurbsActual, m_CurbsDummy);
-//	pub_CurbsRviz.publish(m_CurbsActual);
+	PlannerHNS::RosHelpers::ConvertCurbsMarkers(curr_curbs_obstacles, m_CurbsActual, m_CurbsDummy);
+	pub_CurbsRviz.publish(m_CurbsActual);
 
 	m_all_pred_paths.clear();
 	m_particles_points.clear();

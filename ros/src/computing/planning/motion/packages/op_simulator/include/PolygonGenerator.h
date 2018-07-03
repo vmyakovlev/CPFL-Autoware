@@ -104,7 +104,6 @@ public:
 	GPSPoint m_Centroid;
 	PolygonGenerator();
 	virtual ~PolygonGenerator();
-	void CheckConvexPoligon(std::vector<WayPoint>& polygon);
 	GPSPoint CalculateCentroid(const pcl::PointCloud<pcl::PointXYZ>& cluster);
 	std::vector<QuarterView> CreateQuarterViews(const int& nResolution);
 	std::vector<GPSPoint> EstimateClusterPolygon(const pcl::PointCloud<pcl::PointXYZ>& cluster, const GPSPoint& original_centroid );

@@ -123,7 +123,7 @@ void ContourTracker::ReadNodeParams()
 void ContourTracker::ReadCommonParams()
 {
 	ros::NodeHandle _nh("~");
-	_nh.getParam("/op_common_params/horizonDistance" , m_Params.DetectionRadius);
+	bool bret = _nh.getParam("/op_common_params/horizonDistance" , m_Params.DetectionRadius);
 
 	m_ObstacleTracking.m_CirclesResolution = m_Params.DetectionRadius*0.05;
 
@@ -364,6 +364,7 @@ void ContourTracker::LogAndSend()
 			m_tracking_time+m_FilteringTime+m_PolyEstimationTime<< ",";
 	m_LogData.push_back(dataLine.str());
 
+	//For Debugging
 //	cout << "dt: " << m_dt << endl;
 //	cout << "num_Tracked_Objects: " << m_ObstacleTracking.m_DetectedObjects.size() << endl;
 //	cout << "num_new_objects: " << m_OriginalClusters.size() << endl;

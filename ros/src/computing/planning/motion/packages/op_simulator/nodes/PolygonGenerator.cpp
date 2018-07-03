@@ -13,13 +13,12 @@ namespace OpenPlannerSimulatorNS
 {
 
 
-PolygonGenerator::PolygonGenerator() {
-	// TODO Auto-generated constructor stub
-
+PolygonGenerator::PolygonGenerator()
+{
 }
 
-PolygonGenerator::~PolygonGenerator() {
-	// TODO Auto-generated destructor stub
+PolygonGenerator::~PolygonGenerator()
+{
 }
 
 GPSPoint PolygonGenerator::CalculateCentroid(const pcl::PointCloud<pcl::PointXYZ>& cluster)
@@ -118,33 +117,6 @@ std::vector<QuarterView> PolygonGenerator::CreateQuarterViews(const int& nResolu
 	}
 
 	return quarters;
-}
-
-void CheckConvexPoligon(std::vector<WayPoint>& polygon)
-{
-
-//	if(polygon.size() <= 3)
-//		return;
-//
-//	WayPoint p1 = polygon.at(0);
-//	WayPoint p3;
-//	WayPoint p2;
-//
-//	for(int i=1; i< polygon.size()-1; i++)
-//	{
-//		p1 = polygon.at(i-1);
-//		if(i+2 == polygon.size())
-//		{
-//			p2 = polygon.at(polygon.size()-1);
-//			p3 = polygon.at(0);
-//		}
-//		else
-//		{
-//			p2 = polygon.at(i);
-//			p3 = polygon.at(i+1);
-//		}
-//
-//	}
 }
 
 } /* namespace PlannerXNS */
