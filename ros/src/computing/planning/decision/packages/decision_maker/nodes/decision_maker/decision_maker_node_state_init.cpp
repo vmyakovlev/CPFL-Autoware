@@ -71,9 +71,11 @@ void DecisionMakerNode::updateMapInitState(cstring_t &state_name, int status)
                        Category::DTLANE | Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD,
                    ros::Duration(5.0));
 
-  vmap_loaded =
-      g_vmap.hasSubscribed(Category::POINT | Category::LINE | Category::VECTOR | Category::AREA | Category::POLE |
-                           Category::DTLANE | Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD);
+  // vmap_loaded =
+  //     g_vmap.hasSubscribed(Category::POINT | Category::LINE | Category::VECTOR | Category::AREA | Category::POLE |
+  //                          Category::DTLANE | Category::STOP_LINE | Category::ROAD_SIGN | Category::CROSS_ROAD);
+  vmap_loaded = g_vmap.hasSubscribed(Category::POINT | Category::LINE | Category::AREA | Category::DTLANE | Category::STOP_LINE);
+
   if (!vmap_loaded)
   {
     ROS_WARN("Necessary vectormap have not been loaded");
