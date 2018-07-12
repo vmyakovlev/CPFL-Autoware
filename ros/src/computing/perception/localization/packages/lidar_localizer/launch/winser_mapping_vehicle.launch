@@ -4,17 +4,22 @@
   <!-- send table.xml to param server -->
   <arg name="parent_frame" default="map" />
   <arg name="child_frame" default="velodyne" />
-  <!-- <arg name="child_frame" default="velodyne" /> -->
   <arg name="points_topic" default="points_raw" />
   <arg name="scan_num" default="100" />
+  <arg name="window_size" default="30" />
   <arg name="use_slam" default="true" />
-  <arg name="output_dir" default="/tmp/" />
-  
+  <arg name="output_dir" default="/media/kitsukawa/work/winser/" />
+
+  <include file="$(find lidar_localizer)/launch/tf_winser_vehicle.launch" />
+
+<!--  <node pkg="topic_tools" type="relay" name="relay" args="/applanix/nmea_sentence /nmea_sentence" />-->
+
   <node pkg="lidar_localizer" type="tf_mapping" name="tf_mapping" output="screen">
     <param name="parent_frame" value="$(arg parent_frame)" />
     <param name="child_frame" value="$(arg child_frame)" />
     <param name="points_topic" value="$(arg points_topic)" />
     <param name="scan_num" value="$(arg scan_num)" />
+    <param name="window_size" value="$(arg window_size)" />
     <param name="use_slam" value="$(arg use_slam)" />
     <param name="output_dir" value="$(arg output_dir)" />
   </node>

@@ -35,9 +35,6 @@
 
 #include "nmea2tfpose_core.h"
 
-double previous_yaw = 0.0;
-double diff_yaw = 0.0;
-
 namespace gnss_localizer {
 // Constructor
 Nmea2TFPoseNode::Nmea2TFPoseNode()
@@ -124,13 +121,12 @@ void Nmea2TFPoseNode::publishTF() {
 }
 
 void Nmea2TFPoseNode::createOrientation() {
-  yaw_ = atan2(geo_.x() - last_geo_.x(), geo_.y() - last_geo_.y());
-  roll_ = 0;
-  pitch_ = 0;
+//  yaw_ = atan2(geo_.x() - last_geo_.x(), geo_.y() - last_geo_.y());
+//  roll_ = 0;
+//  pitch_ = 0;
 }
 
-void Nmea2TFPoseNode::convert(std::vector<std::string> nmea,
-                              ros::Time current_stamp) {
+void Nmea2TFPoseNode::convert(std::vector<std::string> nmea, ros::Time current_stamp) {
   try {
     if (nmea.at(0).compare(0, 2, "QQ") == 0) {
       orientation_time_ = stod(nmea.at(3));
@@ -144,6 +140,7 @@ void Nmea2TFPoseNode::convert(std::vector<std::string> nmea,
       roll_ = stod(nmea.at(4)) * M_PI / 180.;
       pitch_ = -1 * stod(nmea.at(5)) * M_PI / 180.;
       yaw_ = -1 * stod(nmea.at(2)) * M_PI / 180. + M_PI / 2;
+      orientation_stamp_ = current_stamp;
       ROS_INFO("PASHR is subscribed.");
     } else if (nmea.at(0).compare(3, 3, "GGA") == 0) {
       position_time_ = stod(nmea.at(1));
@@ -163,18 +160,17 @@ void Nmea2TFPoseNode::convert(std::vector<std::string> nmea,
   } catch (const std::exception &e) {
     ROS_WARN_STREAM("Message is invalid : " << e.what());
   }
-  double diff_yaw = yaw_ - previous_yaw;
-  std::cout << "diff_yaw: " << diff_yaw << std::endl;
-  previous_yaw = yaw_;
 }
 
-void Nmea2TFPoseNode::callbackFromNmeaSentence(
-    const nmea_msgs::Sentence::ConstPtr &msg) {
+void Nmea2TFPoseNode::callbackFromNmeaSentence(const nmea_msgs::Sentence::ConstPtr &msg) {
   current_time_ = msg->header.stamp;
+  std::string tag = split(msg->sentence).at(0);
   convert(split(msg->sentence), msg->header.stamp);
 
   double timeout = 10.0;
-  if (fabs(orientation_stamp_.toSec() - msg->header.stamp.toSec()) > timeout) {
+
+  if(tag == "$GPGGA") {
+    if (fabs(orientation_stamp_.toSec() - msg->header.stamp.toSec()) > timeout) {
     double dt = sqrt(pow(geo_.x() - last_geo_.x(), 2) +
                      pow(geo_.y() - last_geo_.y(), 2));
     double threshold = 0.2;
@@ -190,13 +186,18 @@ void Nmea2TFPoseNode::callbackFromNmeaSentence(
     return;
   }
 
-  double e = 1e-2;
-  if (fabs(orientation_time_ - position_time_) < e) {
-    publishPoseStamped();
-    publishOdometry();
-    publishImu();
-    publishTF();
-    return;
+    double e = 1e-2;
+    if (fabs(orientation_time_ - position_time_) < e) {
+      std::cout << "orientation_time: " << orientation_time_ << std::endl;
+      std::cout << "position_time: " << position_time_ << std::endl;
+      std::cout << std::endl;
+      publishPoseStamped();
+      publishOdometry();
+      publishImu();
+      publishTF();
+      std::cout << "TF Published." << std::endl;
+      return;
+    }
   }
 }
 
